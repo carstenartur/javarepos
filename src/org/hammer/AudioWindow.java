@@ -160,7 +160,7 @@ public class AudioWindow extends JFrame {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            JOptionPane.showMessageDialog(null, "Testversion");
+            JOptionPane.showMessageDialog(null, "Carsten Hammer carsten.hammer@t-online.de");
         }
     }
 }
