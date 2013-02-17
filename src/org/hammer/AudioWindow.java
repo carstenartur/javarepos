@@ -23,6 +23,10 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.GridLayout;
 
+/**
+ *
+ * @author chammer
+ */
 public class AudioWindow extends JFrame {
 
     private JPanel contentPane;
@@ -33,6 +37,7 @@ public class AudioWindow extends JFrame {
 
     /**
      * Launch the application.
+     * @param args 
      */
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {

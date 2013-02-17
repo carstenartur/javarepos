@@ -13,6 +13,10 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.JPanel;
 
+/**
+ *
+ * @author chammer
+ */
 public final class AudioIn extends JPanel {
     /**
      * Tausendstel also jede Millisekunde ein Tick
@@ -34,19 +38,34 @@ public final class AudioIn extends JPanel {
     private int divisor = 1;
     AudioFormat format;
 
+    /**
+     *
+     * @return
+     */
     public int getDivisor() {
         return divisor;
     }
 
+    /**
+     *
+     * @param divisor
+     */
     public void setDivisor(int divisor) {
         this.divisor = divisor;
         computedatasize();
     }
 
+    /**
+     *
+     * @return
+     */
     public int getDatasize() {
         return datasize;
     }
 
+    /**
+     *
+     */
     public AudioIn() {
         super(true);
 
@@ -83,6 +102,9 @@ public final class AudioIn extends JPanel {
         });
     }
 
+    /**
+     *
+     */
     public void recomputexvalues() {
         for (int i = 0; i < datasize/channels; i++) {
             xPoints[i] = (getWidth() * i) / datasize*channels;
@@ -138,6 +160,9 @@ public final class AudioIn extends JPanel {
         }
     };
 
+    /**
+     *
+     */
     public void computedatasize() {
         //		int bufferSize = (int)format.getSampleRate() * 
         //			    format.getFrameSize();
