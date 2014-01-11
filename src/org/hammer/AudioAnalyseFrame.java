@@ -22,6 +22,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.GridLayout;
+import javax.swing.JCheckBoxMenuItem;
 
 /**
  * 
@@ -35,6 +36,7 @@ public class AudioAnalyseFrame extends JFrame {
 	private JTextField audioformat;
 	final WaveformPanel panel = new WaveformPanel();
 	private Thread thread;
+	JCheckBoxMenuItem mntmStart;
 
 	/**
 	 * Launch the application.
@@ -68,22 +70,25 @@ public class AudioAnalyseFrame extends JFrame {
 
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
-
-		JMenuItem mntmStart = new JMenuItem("Start");
+		mntmStart = new JCheckBoxMenuItem("Start/Stop");
+		
 		mntmStart.setIcon(null);
 		mntmStart.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (thread != null && thread.isAlive())
+				if (thread != null && thread.isAlive()) {
 					AudioInDataRunnable.INSTANCE.stopped = true;
-				else {
-					
+					mntmStart.setSelected(false);
+				}				else {
 					thread = new Thread(AudioInDataRunnable.INSTANCE);
+					mntmStart.setSelected(true);
 					thread.start();
+					
 				}
 			}
 		});
 		mnFile.add(mntmStart);
+		
 		menuBar.add(Box.createGlue());
 
 		JMenu mnHelp = new JMenu("Help");
@@ -115,7 +120,7 @@ public class AudioAnalyseFrame extends JFrame {
 
 		scrollPane.setViewportView(panel);
 
-		textFielddatasize.setText("" + panel.getDatasize());
+		textFielddatasize.setText("" + AudioInDataRunnable.INSTANCE.datasize);
 
 		JLabel lblChannel = new JLabel("channel");
 		textfelder.add(lblChannel);

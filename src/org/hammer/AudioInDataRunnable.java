@@ -60,7 +60,7 @@ public enum AudioInDataRunnable implements Runnable {
 		}
 	}
 
-	public void process(JPanel panel, float sampleRate,
+	public void init(JPanel panel, float sampleRate,
 			int sampleSizeInBits, int channels, boolean signed,
 			boolean bigEndian, int divisor) {
 		this.sampleRate = sampleRate;
@@ -105,7 +105,6 @@ public enum AudioInDataRunnable implements Runnable {
 		datas = new byte[datasize];
 		xPoints = new int[relation];
 		yPoints = new int[2][relation];
-
 	}
 
 	/**
