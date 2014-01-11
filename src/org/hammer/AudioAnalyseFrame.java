@@ -23,6 +23,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.GridLayout;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.border.TitledBorder;
+import javax.swing.border.EtchedBorder;
 
 /**
  * 
@@ -37,7 +39,6 @@ public class AudioAnalyseFrame extends JFrame {
 	final WaveformPanel panel = new WaveformPanel();
 	private Thread thread;
 	JCheckBoxMenuItem mntmStart;
-
 	/**
 	 * Launch the application.
 	 * 
@@ -71,7 +72,7 @@ public class AudioAnalyseFrame extends JFrame {
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
 		mntmStart = new JCheckBoxMenuItem("Start/Stop");
-		
+
 		mntmStart.setIcon(null);
 		mntmStart.addActionListener(new ActionListener() {
 			@Override
@@ -79,16 +80,16 @@ public class AudioAnalyseFrame extends JFrame {
 				if (thread != null && thread.isAlive()) {
 					AudioInDataRunnable.INSTANCE.stopped = true;
 					mntmStart.setSelected(false);
-				}				else {
+				} else {
 					thread = new Thread(AudioInDataRunnable.INSTANCE);
 					mntmStart.setSelected(true);
 					thread.start();
-					
+
 				}
 			}
 		});
 		mnFile.add(mntmStart);
-		
+
 		menuBar.add(Box.createGlue());
 
 		JMenu mnHelp = new JMenu("Help");
@@ -103,6 +104,7 @@ public class AudioAnalyseFrame extends JFrame {
 		setContentPane(contentPane);
 
 		JPanel textfelder = new JPanel();
+		textfelder.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null), "Settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		contentPane.add(textfelder, BorderLayout.NORTH);
 		textfelder.setLayout(new GridLayout(3, 2, 0, 0));
 
@@ -166,6 +168,7 @@ public class AudioAnalyseFrame extends JFrame {
 			public void stateChanged(ChangeEvent e) {
 				int value = ((JSlider) e.getSource()).getValue();
 				AudioInDataRunnable.INSTANCE.divisor = value;
+				AudioInDataRunnable.INSTANCE.computedatasize();
 				AudioInDataRunnable.INSTANCE.recomputexvalues();
 				textFielddivisor.setText("" + value);
 				contentPane.repaint();
@@ -178,7 +181,6 @@ public class AudioAnalyseFrame extends JFrame {
 	}
 
 	private class SwingAction extends AbstractAction {
-
 		public SwingAction() {
 			putValue(NAME, "About");
 			putValue(SHORT_DESCRIPTION, "Some short description");

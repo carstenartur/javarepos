@@ -20,7 +20,8 @@ public final class WaveformPanel extends JPanel {
 	public WaveformPanel() {
 		super(true);
 
-		AudioInDataRunnable.INSTANCE.init(this, 16000.0f, 8, 2, false, false, 1);
+		AudioInDataRunnable.INSTANCE
+				.init(this, 16000.0f, 8, 2, false, false, 1);
 		AudioInDataRunnable.INSTANCE.computedatasize();
 
 		javax.swing.Timer t = new javax.swing.Timer(200, new ActionListener() {
@@ -46,22 +47,17 @@ public final class WaveformPanel extends JPanel {
 		g.setXORMode(Color.yellow);
 		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints,
 				AudioInDataRunnable.INSTANCE.yPoints[0],
-				AudioInDataRunnable.INSTANCE.relation);
+				AudioInDataRunnable.INSTANCE.numberofpoints);
 		g.setXORMode(Color.cyan);
 		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints,
 				AudioInDataRunnable.INSTANCE.yPoints[1],
-				AudioInDataRunnable.INSTANCE.relation);
+				AudioInDataRunnable.INSTANCE.numberofpoints);
 		g.setXORMode(Color.red);
 		g.drawLine(0, getHeight() / 2, getWidth() - 1, getHeight() / 2);
-		try {
-			for (int i = 0; i < AudioInDataRunnable.INSTANCE.relation; i += AudioInDataRunnable.INSTANCE.tickeverynsample) {
-				g.drawLine(AudioInDataRunnable.INSTANCE.xPoints[i],
-						getHeight() / 2,
-						AudioInDataRunnable.INSTANCE.xPoints[i],
-						getHeight() / 2 + 6);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		for (int i = 0; i < AudioInDataRunnable.INSTANCE.numberofpoints; i += AudioInDataRunnable.INSTANCE.tickeverynsample) {
+			g.drawLine(AudioInDataRunnable.INSTANCE.xPoints[i],
+					getHeight() / 2, AudioInDataRunnable.INSTANCE.xPoints[i],
+					getHeight() / 2 + 6);
 		}
 	}
 }

@@ -28,7 +28,7 @@ public enum AudioInDataRunnable implements Runnable {
 	public int divisor;
 	public AudioFormat format;
 	JPanel panel;
-	public int relation;
+	public int numberofpoints;
 
 	@Override
 	public void run() {
@@ -100,18 +100,18 @@ public enum AudioInDataRunnable implements Runnable {
 		// format.getFrameSize();
 		// byte buffer[] = new byte[bufferSize];
 		datasize = line.getBufferSize() / divisor;
-		relation = datasize / channels;
+		numberofpoints = datasize / channels;
 		// if((datasize%2)>0)datasize=+1;
 		datas = new byte[datasize];
-		xPoints = new int[relation];
-		yPoints = new int[2][relation];
+		xPoints = new int[numberofpoints];
+		yPoints = new int[2][numberofpoints];
 	}
 
 	/**
    *
    */
 	public void recomputexvalues() {
-		for (int i = 0; i < relation; i++) {
+		for (int i = 0; i < numberofpoints; i++) {
 			xPoints[i] = (panel.getWidth() * i) / datasize * channels;
 		}
 	}
