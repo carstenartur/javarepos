@@ -105,7 +105,8 @@ public class AudioAnalyseFrame extends JFrame {
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				stopAudioThreadIfRunning();
+				// Stop audio thread in a background thread to avoid blocking the EDT
+				new Thread(() -> stopAudioThreadIfRunning()).start();
 				if (refreshTimer.isRunning()) {
 					refreshTimer.stop();
 				}
