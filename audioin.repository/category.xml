@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description name="AudioIn Update Site" url="">
+      AudioIn p2 repository
+   </description>
+   <feature url="features/audioin.feature_0.0.1.qualifier.jar" id="audioin.feature" version="0.0.1.qualifier">
+      <category name="audioin"/>
+   </feature>
+   <category-def name="audioin" label="Audioin">
+      <description>
+         AudioIn audio analyzer
+      </description>
+   </category-def>
+</site>

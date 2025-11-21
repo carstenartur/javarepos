@@ -12,3 +12,10 @@ bin-release/
 /dist/
 /target/
 /nbproject/
+
+# Maven/Tycho build artifacts
+**/target/
+*.class
+
+# Backup files
+*.backup

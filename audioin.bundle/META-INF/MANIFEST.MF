@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: AudioIn
+Bundle-SymbolicName: audioin.bundle
+Bundle-Version: 0.0.1.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-17
+Export-Package: org.hammer
+Automatic-Module-Name: audioin.bundle
