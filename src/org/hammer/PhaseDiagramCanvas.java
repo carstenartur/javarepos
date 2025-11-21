@@ -25,9 +25,9 @@ public class PhaseDiagramCanvas extends JPanel {
 		super.paintComponent(g);
 		g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 		g.setXORMode(Color.yellow);
-		g.translate(-AudioInDataRunnable.INSTANCE.yPoints[0][0], -AudioInDataRunnable.INSTANCE.yPoints[1][0]);
-		g.drawPolyline(AudioInDataRunnable.INSTANCE.yPoints[0],
-				AudioInDataRunnable.INSTANCE.yPoints[1],
-				AudioInDataRunnable.INSTANCE.numberofpoints);
+		g.translate(-AudioInDataRunnable.INSTANCE.yPoints()[0][0], -AudioInDataRunnable.INSTANCE.yPoints()[1][0]);
+		g.drawPolyline(AudioInDataRunnable.INSTANCE.yPoints()[0],
+				AudioInDataRunnable.INSTANCE.yPoints()[1],
+				AudioInDataRunnable.INSTANCE.numberOfPoints());
 	}
 }

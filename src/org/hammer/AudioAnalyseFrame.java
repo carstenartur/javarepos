@@ -201,7 +201,7 @@ public class AudioAnalyseFrame extends JFrame {
             public void stateChanged(ChangeEvent e) {
                 int value = ((JSlider) e.getSource()).getValue();
                 if (AudioInDataRunnable.INSTANCE != null) {
-                    AudioInDataRunnable.INSTANCE.divisor = value;
+                    AudioInDataRunnable.INSTANCE.setDivisor(value);
                     AudioInDataRunnable.INSTANCE.computedatasize();
                     AudioInDataRunnable.INSTANCE.recomputexvalues();
                 }
@@ -215,7 +215,7 @@ public class AudioAnalyseFrame extends JFrame {
     private void toggleAudioStartStop(ActionEvent evt) {
         if (isAudioThreadRunning()) {
             if (AudioInDataRunnable.INSTANCE != null) {
-                AudioInDataRunnable.INSTANCE.stopped = true;
+                AudioInDataRunnable.INSTANCE.stopCapture();
             }
             mntmStart.setSelected(false);
             Thread t = audioThreadRef.getAndSet(null);
@@ -224,7 +224,6 @@ public class AudioAnalyseFrame extends JFrame {
             }
         } else {
             if (AudioInDataRunnable.INSTANCE != null) {
-                AudioInDataRunnable.INSTANCE.stopped = false;
                 Thread t = new Thread(AudioInDataRunnable.INSTANCE, "AudioInDataRunnable");
                 if (audioThreadRef.compareAndSet(null, t)) {
                     mntmStart.setSelected(true);
@@ -246,7 +245,7 @@ public class AudioAnalyseFrame extends JFrame {
     private void stopAudioThreadIfRunning() {
         if (isAudioThreadRunning()) {
             if (AudioInDataRunnable.INSTANCE != null) {
-                AudioInDataRunnable.INSTANCE.stopped = true;
+                AudioInDataRunnable.INSTANCE.stopCapture();
             }
             Thread t = audioThreadRef.getAndSet(null);
             if (t != null) {
@@ -266,10 +265,10 @@ public class AudioAnalyseFrame extends JFrame {
             return;
         }
         if (AudioInDataRunnable.INSTANCE != null) {
-            textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize));
-            textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor));
-            textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format != null
-                    ? AudioInDataRunnable.INSTANCE.format.toString() : "n/a");
+            textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize()));
+            textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor()));
+            textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format() != null
+                    ? AudioInDataRunnable.INSTANCE.format().toString() : "n/a");
         } else {
             textFieldDataSize.setText("");
             textFieldDivisor.setText("");
@@ -280,7 +279,7 @@ public class AudioAnalyseFrame extends JFrame {
 
     private Integer getModelDivisor() {
         if (AudioInDataRunnable.INSTANCE != null) {
-            return AudioInDataRunnable.INSTANCE.divisor;
+            return AudioInDataRunnable.INSTANCE.divisor();
         }
         return null;
     }
