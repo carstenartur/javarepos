@@ -293,25 +293,16 @@ public class AudioAnalyseFrame extends JFrame {
 			SwingUtilities.invokeLater(this::updateUIFromModel);
 			return;
 		}
-		if (AudioInDataRunnable.INSTANCE != null) {
-			textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize));
-			textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor));
-			textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format != null
-					? AudioInDataRunnable.INSTANCE.format.toString() : "n/a");
-		} else {
-			textFieldDataSize.setText("");
-			textFieldDivisor.setText("");
-			textFieldAudioFormat.setText("");
-		}
+		textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize));
+		textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor));
+		textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format != null
+				? AudioInDataRunnable.INSTANCE.format.toString() : "n/a");
 		// reflect thread state in menu item
 		mntmStart.setSelected(isAudioThreadRunning());
 	}
 
 	private Integer getModelDivisor() {
-		if (AudioInDataRunnable.INSTANCE != null) {
-			return AudioInDataRunnable.INSTANCE.divisor;
-		}
-		return null;
+		return AudioInDataRunnable.INSTANCE.divisor;
 	}
 
 	private class SwingAction extends AbstractAction {
