@@ -271,9 +271,7 @@ public class AudioAnalyseFrame extends JFrame {
 
 	private void stopAudioThreadIfRunning() {
 		if (isAudioThreadRunning()) {
-			if (AudioInDataRunnable.INSTANCE != null) {
-				AudioInDataRunnable.INSTANCE.stopped = true;
-			}
+			AudioInDataRunnable.INSTANCE.stopped = true;
 			Thread t = audioThreadRef.getAndSet(null);
 			if (t != null) {
 				t.interrupt();
