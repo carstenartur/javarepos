@@ -251,9 +251,8 @@ public class AudioAnalyseFrame extends JFrame {
 			// start
 			if (AudioInDataRunnable.INSTANCE != null) {
 				Thread t = new Thread(AudioInDataRunnable.INSTANCE, "AudioInDataRunnable");
+				AudioInDataRunnable.INSTANCE.stopped = false;
 				if (audioThreadRef.compareAndSet(null, t)) {
-					// Set stopped flag only after successfully setting the thread reference
-					AudioInDataRunnable.INSTANCE.stopped = false;
 					mntmStart.setSelected(true);
 					t.setDaemon(true);
 					t.start();
