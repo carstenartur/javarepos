@@ -97,17 +97,16 @@ public class AudioAnalyseFrame extends JFrame {
 		initCenterAndEast();
 		initSouthSlider();
 
-		// periodic refresh of UI components from AudioInDataRunnable
+		// Create timer for periodic refresh of UI components from AudioInDataRunnable
 		refreshTimer = new Timer(250, e -> updateUIFromModel());
 		refreshTimer.setRepeats(true);
-		refreshTimer.start();
 
 		// ensure we stop background thread when window closes
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				stopAudioThreadIfRunning();
-				if (refreshTimer != null && refreshTimer.isRunning()) {
+				if (refreshTimer.isRunning()) {
 					refreshTimer.stop();
 				}
 			}
@@ -116,6 +115,9 @@ public class AudioAnalyseFrame extends JFrame {
 		pack();
 		setSize(640, 420);
 		setLocationRelativeTo(null);
+
+		// Start timer after all UI initialization is complete
+		refreshTimer.start();
 	}
 
 	private void initMenu() {
