@@ -55,9 +55,9 @@ public class AudioAnalyseFrame extends JFrame {
 	private final JPanel contentPane;
 	private final WaveformPanel waveformPanel = new WaveformPanel();
 
-	private JTextField textFieldDataSize;
-	private JTextField textFieldDivisor;
-	private JTextField textFieldAudioFormat;
+	private final JTextField textFieldDataSize;
+	private final JTextField textFieldDivisor;
+	private final JTextField textFieldAudioFormat;
 
 	private final AtomicReference<Thread> audioThreadRef = new AtomicReference<>(null);
 	private JCheckBoxMenuItem mntmStart;
