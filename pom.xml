@@ -1,30 +1,73 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>audioin</groupId>
-  <artifactId>audioin</artifactId>
+  <artifactId>audioin-parent</artifactId>
   <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Audio Analyzer Parent</name>
+  <description>Audio Analyzer Tycho-based Eclipse/OSGi Build</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>17</java.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <tycho.version>4.0.5</tycho.version>
+    <eclipse.repository>https://download.eclipse.org/releases/2024-12</eclipse.repository>
+  </properties>
+
+  <modules>
+    <module>audioin.bundle</module>
+    <module>audioin.feature</module>
+    <module>audioin.repository</module>
+  </modules>
+
   <build>
-    <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.1</version>
-        <configuration>
-          <release>17</release>
-        </configuration>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-maven-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <extensions>true</extensions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-       <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <mainClass>org.hammer.AudioWindow</mainClass>
-            </manifest>
-          </archive>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>target-platform-configuration</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <environments>
+            <environment>
+              <os>linux</os>
+              <ws>gtk</ws>
+              <arch>x86_64</arch>
+            </environment>
+            <environment>
+              <os>win32</os>
+              <ws>win32</ws>
+              <arch>x86_64</arch>
+            </environment>
+            <environment>
+              <os>macosx</os>
+              <ws>cocoa</ws>
+              <arch>x86_64</arch>
+            </environment>
+          </environments>
+          <executionEnvironment>JavaSE-17</executionEnvironment>
         </configuration>
       </plugin>
     </plugins>
   </build>
+
+  <repositories>
+    <repository>
+      <id>eclipse-2024-12</id>
+      <url>${eclipse.repository}</url>
+      <layout>p2</layout>
+    </repository>
+  </repositories>
 </project>

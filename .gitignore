@@ -12,3 +12,12 @@ bin-release/
 /dist/
 /target/
 /nbproject/
+
+# Tycho build artifacts
+*/target/
+*.class
+*.jar
+*.war
+*.ear
+.metadata/
+.recommenders/

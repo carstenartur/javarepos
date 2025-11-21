@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="audioin.feature"
+      label="Audio Analyzer Feature"
+      version="0.0.1.qualifier"
+      provider-name="Carsten Hammer">
+
+   <description url="https://github.com/carstenartur/javarepos">
+      Audio Analyzer application for analyzing audio input in real-time.
+   </description>
+
+   <copyright>
+      Copyright (c) Carsten Hammer
+   </copyright>
+
+   <license url="">
+      This software is provided as-is without warranty of any kind.
+   </license>
+
+   <plugin
+         id="audioin.bundle"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

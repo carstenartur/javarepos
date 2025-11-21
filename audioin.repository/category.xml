@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description>
+      Audio Analyzer P2 Repository
+   </description>
+   <feature url="features/audioin.feature_0.0.1.qualifier.jar" id="audioin.feature" version="0.0.1.qualifier">
+      <category name="audioin.category"/>
+   </feature>
+   <category-def name="audioin.category" label="Audio Analyzer">
+      <description>
+         Audio Analyzer application for analyzing audio input in real-time.
+      </description>
+   </category-def>
+</site>
