@@ -34,6 +34,7 @@ import javax.swing.border.EtchedBorder;
 /**
  * Refactored AudioAnalyseFrame
  *
+ * @author chammer
  * Improvements:
  * - clearer field names
  * - split constructor into init* methods for readability
