@@ -216,17 +216,15 @@ public class AudioAnalyseFrame extends JFrame {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				int value = ((JSlider) e.getSource()).getValue();
-				// update model safely on EDT
-				SwingUtilities.invokeLater(() -> {
-					if (AudioInDataRunnable.INSTANCE != null) {
-						AudioInDataRunnable.INSTANCE.divisor = value;
-						AudioInDataRunnable.INSTANCE.computedatasize();
-						AudioInDataRunnable.INSTANCE.recomputexvalues();
-					}
-					textFieldDivisor.setText(String.valueOf(value));
-					// repaint UI so waveform panel can reflect changes immediately
-					contentPane.repaint();
-				});
+				// ChangeListener is already called on EDT, so we can update directly
+				if (AudioInDataRunnable.INSTANCE != null) {
+					AudioInDataRunnable.INSTANCE.divisor = value;
+					AudioInDataRunnable.INSTANCE.computedatasize();
+					AudioInDataRunnable.INSTANCE.recomputexvalues();
+				}
+				textFieldDivisor.setText(String.valueOf(value));
+				// repaint UI so waveform panel can reflect changes immediately
+				contentPane.repaint();
 			}
 		});
 		contentPane.add(slider, BorderLayout.SOUTH);
@@ -250,9 +248,10 @@ public class AudioAnalyseFrame extends JFrame {
 		} else {
 			// start
 			if (AudioInDataRunnable.INSTANCE != null) {
-				AudioInDataRunnable.INSTANCE.stopped = false;
 				Thread t = new Thread(AudioInDataRunnable.INSTANCE, "AudioInDataRunnable");
 				if (audioThreadRef.compareAndSet(null, t)) {
+					// Set stopped flag only after successfully setting the thread reference
+					AudioInDataRunnable.INSTANCE.stopped = false;
 					mntmStart.setSelected(true);
 					t.setDaemon(true);
 					t.start();
