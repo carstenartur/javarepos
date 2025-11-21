@@ -2,8 +2,13 @@ package org.hammer;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.Box;
@@ -18,42 +23,58 @@ import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import java.awt.GridLayout;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.border.TitledBorder;
 import javax.swing.border.EtchedBorder;
 
 /**
- * 
- * @author chammer
+ * Refactored AudioAnalyseFrame
+ *
+ * Improvements:
+ * - clearer field names
+ * - split constructor into init* methods for readability
+ * - safer thread start/stop with synchronization and interruption
+ * - periodic UI refresh using Swing Timer (updates fields from model on EDT)
+ * - tidy up UI creation and use pack()/setLocationRelativeTo
+ * - window close handling to ensure background thread is stopped
+ *
+ * Note: This class still relies on AudioInDataRunnable.INSTANCE API (stopped,
+ * divisor, datasize, format, computedatasize(), recomputexvalues()) and assumes
+ * those members are thread-safe or designed to be used from other threads.
+ *
+ * @author chammer (refactored by copilot)
  */
 public class AudioAnalyseFrame extends JFrame {
-	private JPanel contentPane;
-	private final Action action = new SwingAction();
-	private JTextField textFielddatasize;
-	private JTextField textFielddivisor;
-	private JTextField audioformat;
-	final WaveformPanel panel = new WaveformPanel();
-	private Thread thread;
-	JCheckBoxMenuItem mntmStart;
+	private static final long serialVersionUID = 1L;
+
+	private final JPanel contentPane;
+	private final WaveformPanel waveformPanel = new WaveformPanel();
+
+	private JTextField textFieldDataSize;
+	private JTextField textFieldDivisor;
+	private JTextField textFieldAudioFormat;
+
+	private final AtomicReference<Thread> audioThreadRef = new AtomicReference<>(null);
+	private JCheckBoxMenuItem mntmStart;
+
+	// timer to periodically refresh UI values from the model on the EDT
+	private final Timer refreshTimer;
+
 	/**
 	 * Launch the application.
-	 * 
-	 * @param args
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					AudioAnalyseFrame frame = new AudioAnalyseFrame();
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+		EventQueue.invokeLater(() -> {
+			try {
+				AudioAnalyseFrame frame = new AudioAnalyseFrame();
+				frame.setVisible(true);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		});
 	}
@@ -63,31 +84,50 @@ public class AudioAnalyseFrame extends JFrame {
 	 */
 	public AudioAnalyseFrame() {
 		setTitle("AudioAnalyzer");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 512, 406);
+		// we'll handle proper shutdown to stop audio thread
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
+		contentPane = new JPanel(new BorderLayout(0, 0));
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+
+		// initialize components
+		initMenu();
+		initTopSettingsPanel();
+		initCenterAndEast();
+		initSouthSlider();
+
+		// periodic refresh of UI components from AudioInDataRunnable
+		refreshTimer = new Timer(250, e -> updateUIFromModel());
+		refreshTimer.setRepeats(true);
+		refreshTimer.start();
+
+		// ensure we stop background thread when window closes
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				stopAudioThreadIfRunning();
+				if (refreshTimer != null && refreshTimer.isRunning()) {
+					refreshTimer.stop();
+				}
+			}
+		});
+
+		pack();
+		setSize(640, 420);
+		setLocationRelativeTo(null);
+	}
+
+	private void initMenu() {
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
+
 		mntmStart = new JCheckBoxMenuItem("Start/Stop");
-
-		mntmStart.setIcon(null);
-		mntmStart.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (thread != null && thread.isAlive()) {
-					AudioInDataRunnable.INSTANCE.stopped = true;
-					mntmStart.setSelected(false);
-				} else {
-					thread = new Thread(AudioInDataRunnable.INSTANCE);
-					mntmStart.setSelected(true);
-					thread.start();
-
-				}
-			}
-		});
+		mntmStart.setToolTipText("Start or stop audio input");
+		mntmStart.addActionListener(this::toggleAudioStartStop);
 		mnFile.add(mntmStart);
 
 		menuBar.add(Box.createGlue());
@@ -95,35 +135,29 @@ public class AudioAnalyseFrame extends JFrame {
 		JMenu mnHelp = new JMenu("Help");
 		menuBar.add(mnHelp);
 
-		JMenuItem mntmAbout = new JMenuItem("About");
-		mntmAbout.setAction(action);
+		JMenuItem mntmAbout = new JMenuItem();
+		mntmAbout.setAction(new SwingAction());
 		mnHelp.add(mntmAbout);
-		contentPane = new JPanel();
-		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-		contentPane.setLayout(new BorderLayout(0, 0));
-		setContentPane(contentPane);
+	}
 
+	private void initTopSettingsPanel() {
 		JPanel textfelder = new JPanel();
-		textfelder.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null), "Settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		textfelder.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null),
+				"Settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		contentPane.add(textfelder, BorderLayout.NORTH);
 		textfelder.setLayout(new GridLayout(3, 2, 0, 0));
 
+		// datasize
 		JLabel lblDatasize = new JLabel("datasize");
 		textfelder.add(lblDatasize);
 
-		textFielddatasize = new JTextField();
-		textFielddatasize.setEnabled(false);
-		textFielddatasize.setEditable(false);
-		textfelder.add(textFielddatasize);
-		textFielddatasize.setColumns(10);
+		textFieldDataSize = new JTextField();
+		textFieldDataSize.setEnabled(false);
+		textFieldDataSize.setEditable(false);
+		textFieldDataSize.setColumns(10);
+		textfelder.add(textFieldDataSize);
 
-		JScrollPane scrollPane = new JScrollPane();
-		contentPane.add(scrollPane, BorderLayout.CENTER);
-
-		scrollPane.setViewportView(panel);
-
-		textFielddatasize.setText("" + AudioInDataRunnable.INSTANCE.datasize);
-
+		// channel placeholder (kept as original)
 		JLabel lblChannel = new JLabel("channel");
 		textfelder.add(lblChannel);
 
@@ -133,54 +167,158 @@ public class AudioAnalyseFrame extends JFrame {
 		label_1.setEditable(false);
 		textfelder.add(label_1);
 
+		// divisor
 		JLabel lblDivisor = new JLabel("divisor");
 		textfelder.add(lblDivisor);
 
-		textFielddivisor = new JTextField();
-		textFielddivisor.setEnabled(false);
-		textFielddivisor.setEditable(false);
-		textfelder.add(textFielddivisor);
-		textFielddivisor.setColumns(10);
-		textFielddivisor.setText("" + AudioInDataRunnable.INSTANCE.divisor);
+		textFieldDivisor = new JTextField();
+		textFieldDivisor.setEnabled(false);
+		textFieldDivisor.setEditable(false);
+		textFieldDivisor.setColumns(10);
+		textfelder.add(textFieldDivisor);
 
+		// filler row (kept)
 		JLabel label_2 = new JLabel("");
 		textfelder.add(label_2);
-
 		JLabel label_3 = new JLabel("");
 		textfelder.add(label_3);
 
+		// audioformat
 		JLabel lblAudioformat = new JLabel("audioformat");
 		textfelder.add(lblAudioformat);
 
-		audioformat = new JTextField();
-		audioformat.setHorizontalAlignment(SwingConstants.CENTER);
-		audioformat.setEnabled(false);
-		audioformat.setEditable(false);
-		textfelder.add(audioformat);
-		audioformat.setColumns(30);
-		audioformat.setText(AudioInDataRunnable.INSTANCE.format.toString());
+		textFieldAudioFormat = new JTextField();
+		textFieldAudioFormat.setHorizontalAlignment(SwingConstants.CENTER);
+		textFieldAudioFormat.setEnabled(false);
+		textFieldAudioFormat.setEditable(false);
+		textFieldAudioFormat.setColumns(30);
+		textfelder.add(textFieldAudioFormat);
 
+		// initialize values from model (if present)
+		updateUIFromModel();
+	}
+
+	private void initCenterAndEast() {
+		JScrollPane scrollPane = new JScrollPane();
+		contentPane.add(scrollPane, BorderLayout.CENTER);
+		scrollPane.setViewportView(waveformPanel);
+
+		JPanel panelEast = new PhaseDiagramPanel();
+		contentPane.add(panelEast, BorderLayout.EAST);
+	}
+
+	private void initSouthSlider() {
 		JSlider slider = new JSlider();
 		slider.setMinimum(1);
-		slider.setValue(1);
+		slider.setValue(Objects.requireNonNullElse(getModelDivisor(), 1));
+		slider.setToolTipText("Adjust divisor (affects sampling / display)");
 		slider.addChangeListener(new ChangeListener() {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				int value = ((JSlider) e.getSource()).getValue();
-				AudioInDataRunnable.INSTANCE.divisor = value;
-				AudioInDataRunnable.INSTANCE.computedatasize();
-				AudioInDataRunnable.INSTANCE.recomputexvalues();
-				textFielddivisor.setText("" + value);
-				contentPane.repaint();
+				// update model safely on EDT
+				SwingUtilities.invokeLater(() -> {
+					if (AudioInDataRunnable.INSTANCE != null) {
+						AudioInDataRunnable.INSTANCE.divisor = value;
+						AudioInDataRunnable.INSTANCE.computedatasize();
+						AudioInDataRunnable.INSTANCE.recomputexvalues();
+					}
+					textFieldDivisor.setText(String.valueOf(value));
+					// repaint UI so waveform panel can reflect changes immediately
+					contentPane.repaint();
+				});
 			}
 		});
 		contentPane.add(slider, BorderLayout.SOUTH);
+	}
 
-		JPanel panel_1 = new PhaseDiagramPanel();
-		contentPane.add(panel_1, BorderLayout.EAST);
+	/**
+	 * Toggle start/stop of the audio thread when menu item is clicked.
+	 */
+	private void toggleAudioStartStop(ActionEvent evt) {
+		if (isAudioThreadRunning()) {
+			// request stop
+			if (AudioInDataRunnable.INSTANCE != null) {
+				AudioInDataRunnable.INSTANCE.stopped = true;
+			}
+			mntmStart.setSelected(false);
+			// attempt to interrupt the thread so it can terminate more promptly
+			Thread t = audioThreadRef.getAndSet(null);
+			if (t != null) {
+				t.interrupt();
+			}
+		} else {
+			// start
+			if (AudioInDataRunnable.INSTANCE != null) {
+				AudioInDataRunnable.INSTANCE.stopped = false;
+				Thread t = new Thread(AudioInDataRunnable.INSTANCE, "AudioInDataRunnable");
+				if (audioThreadRef.compareAndSet(null, t)) {
+					mntmStart.setSelected(true);
+					t.setDaemon(true);
+					t.start();
+				}
+			} else {
+				JOptionPane.showMessageDialog(this, "AudioInDataRunnable.INSTANCE is not available.",
+					"Error", JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+
+	private boolean isAudioThreadRunning() {
+		Thread t = audioThreadRef.get();
+		return t != null && t.isAlive();
+	}
+
+	private void stopAudioThreadIfRunning() {
+		if (isAudioThreadRunning()) {
+			if (AudioInDataRunnable.INSTANCE != null) {
+				AudioInDataRunnable.INSTANCE.stopped = true;
+			}
+			Thread t = audioThreadRef.getAndSet(null);
+			if (t != null) {
+				t.interrupt();
+				try {
+					t.join(500);
+				} catch (InterruptedException ex) {
+					// restore interrupted flag
+					Thread.currentThread().interrupt();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Update the UI fields from the AudioInDataRunnable model. Must be called on EDT.
+	 */
+	private void updateUIFromModel() {
+		if (!SwingUtilities.isEventDispatchThread()) {
+			SwingUtilities.invokeLater(this::updateUIFromModel);
+			return;
+		}
+		if (AudioInDataRunnable.INSTANCE != null) {
+			textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize));
+			textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor));
+			textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format != null
+					? AudioInDataRunnable.INSTANCE.format.toString() : "n/a");
+		} else {
+			textFieldDataSize.setText("");
+			textFieldDivisor.setText("");
+			textFieldAudioFormat.setText("");
+		}
+		// reflect thread state in menu item
+		mntmStart.setSelected(isAudioThreadRunning());
+	}
+
+	private Integer getModelDivisor() {
+		if (AudioInDataRunnable.INSTANCE != null) {
+			return AudioInDataRunnable.INSTANCE.divisor;
+		}
+		return null;
 	}
 
 	private class SwingAction extends AbstractAction {
+		private static final long serialVersionUID = 1L;
+
 		public SwingAction() {
 			putValue(NAME, "About");
 			putValue(SHORT_DESCRIPTION, "Some short description");
@@ -188,7 +326,7 @@ public class AudioAnalyseFrame extends JFrame {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			JOptionPane.showMessageDialog(null,
+			JOptionPane.showMessageDialog(AudioAnalyseFrame.this,
 					"Carsten Hammer carsten.hammer@t-online.de");
 		}
 	}
