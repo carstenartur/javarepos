@@ -240,9 +240,7 @@ public class AudioAnalyseFrame extends JFrame {
 	private void toggleAudioStartStop(ActionEvent evt) {
 		if (isAudioThreadRunning()) {
 			// request stop
-			if (AudioInDataRunnable.INSTANCE != null) {
-				AudioInDataRunnable.INSTANCE.stopped = true;
-			}
+			AudioInDataRunnable.INSTANCE.stopped = true;
 			mntmStart.setSelected(false);
 			// attempt to interrupt the thread so it can terminate more promptly
 			Thread t = audioThreadRef.getAndSet(null);
