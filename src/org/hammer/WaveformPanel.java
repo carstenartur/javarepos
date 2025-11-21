@@ -45,18 +45,18 @@ public final class WaveformPanel extends JPanel {
 		super.paintComponent(g);
 		g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 		g.setXORMode(Color.yellow);
-		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints,
-				AudioInDataRunnable.INSTANCE.yPoints[0],
-				AudioInDataRunnable.INSTANCE.numberofpoints);
+		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints(),
+				AudioInDataRunnable.INSTANCE.yPoints()[0],
+				AudioInDataRunnable.INSTANCE.numberOfPoints());
 		g.setXORMode(Color.cyan);
-		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints,
-				AudioInDataRunnable.INSTANCE.yPoints[1],
-				AudioInDataRunnable.INSTANCE.numberofpoints);
+		g.drawPolyline(AudioInDataRunnable.INSTANCE.xPoints(),
+				AudioInDataRunnable.INSTANCE.yPoints()[1],
+				AudioInDataRunnable.INSTANCE.numberOfPoints());
 		g.setXORMode(Color.red);
 		g.drawLine(0, getHeight() / 2, getWidth() - 1, getHeight() / 2);
-		for (int i = 0; i < AudioInDataRunnable.INSTANCE.numberofpoints; i += AudioInDataRunnable.INSTANCE.tickeverynsample) {
-			g.drawLine(AudioInDataRunnable.INSTANCE.xPoints[i],
-					getHeight() / 2, AudioInDataRunnable.INSTANCE.xPoints[i],
+		for (int i = 0; i < AudioInDataRunnable.INSTANCE.numberOfPoints(); i += AudioInDataRunnable.INSTANCE.tickEveryNSample()) {
+			g.drawLine(AudioInDataRunnable.INSTANCE.xPoints()[i],
+					getHeight() / 2, AudioInDataRunnable.INSTANCE.xPoints()[i],
 					getHeight() / 2 + 6);
 		}
 	}
