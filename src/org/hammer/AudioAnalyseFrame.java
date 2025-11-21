@@ -213,7 +213,8 @@ public class AudioAnalyseFrame extends JFrame {
 	private void initSouthSlider() {
 		JSlider slider = new JSlider();
 		slider.setMinimum(1);
-		slider.setValue(Objects.requireNonNullElse(getModelDivisor(), 1));
+		Integer divisor = getModelDivisor();
+		slider.setValue(divisor == null || divisor < 1 ? 1 : divisor);
 		slider.setToolTipText("Adjust divisor (affects sampling / display)");
 		slider.addChangeListener(new ChangeListener() {
 			@Override
