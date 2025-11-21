@@ -60,7 +60,7 @@ public class AudioAnalyseFrame extends JFrame {
 	private final JTextField textFieldAudioFormat;
 
 	private final AtomicReference<Thread> audioThreadRef = new AtomicReference<>(null);
-	private JCheckBoxMenuItem mntmStart;
+	private final JCheckBoxMenuItem mntmStart;
 
 	// timer to periodically refresh UI values from the model on the EDT
 	private final Timer refreshTimer;
