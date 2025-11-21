@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  *
  * Verbesserungen:
  * - Thread-sicherer Stopp-Flag (volatile).
- * - Korrekte Behandlung von sample size (8/16 bit), signed/unsigned und endianess.
+ * - Korrekte Behandlung von sample size (8/16 bit), signed/unsigned und endianness.
  * - Vermeidet direkte Swing-Operationen im Audio-Thread (nur repaint() auf EDT).
  * - Benutzt tatsächlich gelesene Bytes (numBytesRead) und berechnet Frames korrekt.
  * - yPoints dimensioniert dynamisch nach Anzahl der Kanäle.
