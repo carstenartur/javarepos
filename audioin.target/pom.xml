@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>audioin.target</artifactId>
-  <packaging>eclipse-target-definition</packaging>
+  <packaging>eclipse-target</packaging>
 
   <name>AudioIn Target Platform</name>
 </project>
