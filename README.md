@@ -17,7 +17,7 @@ The project uses a dedicated `.target` file (`audioin.target/audioin.target`) th
 - Primary repository: https://download.eclipse.org/releases/2024-03
 - Includes: `org.eclipse.platform.feature.group` and `org.eclipse.equinox.executable.feature.group`
 
-**Note:** The project uses Eclipse 2024-03 instead of 2025-06 because Java 17 compatibility is required, and Eclipse 2025-06 requires Java 21. Eclipse 2024-03 is the latest stable release fully compatible with Java 17.
+**Note:** The original requirement (as stated in the PR title) was to use Eclipse SimRel 2025-06 as the target platform. However, during implementation, it was determined that Eclipse 2025-06 requires Java 21, while this project must remain compatible with Java 17. Therefore, the target platform was changed to Eclipse 2024-03, which is the latest stable release fully compatible with Java 17.
 
 ## Building
 
