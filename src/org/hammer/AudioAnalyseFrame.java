@@ -199,15 +199,13 @@ public class AudioAnalyseFrame extends JFrame {
             @Override
             public void stateChanged(ChangeEvent e) {
                 int value = ((JSlider) e.getSource()).getValue();
-                SwingUtilities.invokeLater(() -> {
-                    if (AudioInDataRunnable.INSTANCE != null) {
-                        AudioInDataRunnable.INSTANCE.divisor = value;
-                        AudioInDataRunnable.INSTANCE.computedatasize();
-                        AudioInDataRunnable.INSTANCE.recomputexvalues();
-                    }
-                    textFieldDivisor.setText(String.valueOf(value));
-                    contentPane.repaint();
-                });
+                if (AudioInDataRunnable.INSTANCE != null) {
+                    AudioInDataRunnable.INSTANCE.divisor = value;
+                    AudioInDataRunnable.INSTANCE.computedatasize();
+                    AudioInDataRunnable.INSTANCE.recomputexvalues();
+                }
+                textFieldDivisor.setText(String.valueOf(value));
+                contentPane.repaint();
             }
         });
         contentPane.add(slider, BorderLayout.SOUTH);
