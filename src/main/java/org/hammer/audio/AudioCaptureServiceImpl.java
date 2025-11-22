@@ -6,6 +6,9 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -54,7 +57,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     
     private TargetDataLine line;
     private AudioFormat format;
-    private Thread workerThread;
+    private ExecutorService workerExecutor;
     
     // Model data (protected by modelLock)
     private byte[] datas;
@@ -100,9 +103,12 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
             computeDataSize();
             running.set(true);
             
-            workerThread = new Thread(this::captureLoop, "AudioCaptureWorker");
-            workerThread.setDaemon(true);
-            workerThread.start();
+            workerExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "AudioCaptureWorker");
+                t.setDaemon(true);
+                return t;
+            });
+            workerExecutor.submit(this::captureLoop);
             
             LOGGER.info("AudioCaptureService started successfully");
         } catch (Exception e) {
@@ -120,14 +126,16 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         
         running.set(false);
         
-        if (workerThread != null) {
-            workerThread.interrupt();
+        if (workerExecutor != null) {
+            workerExecutor.shutdownNow();
             try {
-                workerThread.join(1000);
-            } catch (InterruptedException e) {
+                if (!workerExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+                    workerExecutor.shutdownNow();
+                }
+            } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             }
-            workerThread = null;
+            workerExecutor = null;
         }
         
         if (line != null) {
