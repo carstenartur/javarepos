@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 /** Tests for AudioCaptureServiceImpl sample scaling to pixel coordinates. */
 class AudioCaptureServiceImplSampleScalingTest {
 
+  /** Tolerance for rounding errors in pixel coordinate calculations. */
+  private static final int ROUNDING_TOLERANCE = 1;
+
   private AudioCaptureServiceImpl service;
 
   @AfterEach
@@ -70,7 +73,9 @@ class AudioCaptureServiceImplSampleScalingTest {
     // Note: Due to rounding, values can slightly exceed panelHeight
     for (int y : yPoints) {
       assertTrue(y >= 0, "Y value " + y + " should be >= 0");
-      assertTrue(y <= panelHeight + 1, "Y value " + y + " should be <= " + (panelHeight + 1));
+      assertTrue(
+          y <= panelHeight + ROUNDING_TOLERANCE,
+          "Y value " + y + " should be <= " + (panelHeight + ROUNDING_TOLERANCE));
     }
 
     // For signed samples, zero should be near center (height/2)
