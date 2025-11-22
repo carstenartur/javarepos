@@ -25,10 +25,10 @@ jobs:
         java: [ '17', '21' ]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
     
     - name: Set up JDK ${{ matrix.java }}
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v4
       with:
         java-version: ${{ matrix.java }}
         distribution: 'temurin'
@@ -130,13 +130,17 @@ jobs:
         if-no-files-found: ignore
         retention-days: 30
     
+    - name: Debug coverage path
+      if: matrix.java == '21' && always()
+      run: ls -al target/site/jacoco || echo "JaCoCo directory missing"
+    
     - name: Upload coverage reports to Codecov
-      if: matrix.java == '21'
+      if: matrix.java == '21' && always()
       uses: codecov/codecov-action@v5
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         files: ./target/site/jacoco/jacoco.xml
         fail_ci_if_error: false
+        verbose: true
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
 #    - name: Update dependency graph
