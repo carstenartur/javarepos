@@ -22,6 +22,7 @@
     
     <!-- Dependency versions -->
     <junit.version>5.11.3</junit.version>
+    <mockito.version>5.14.2</mockito.version>
     
     <!-- Plugin versions -->
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -47,6 +48,20 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Mockito for mocking in tests -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Mockito JUnit Jupiter integration for annotation-based mocking -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>${mockito.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
