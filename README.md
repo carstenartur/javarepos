@@ -27,9 +27,11 @@ mvn clean verify
 
 The project uses GitHub Actions for continuous integration with the following features:
 
-- **Multi-version Testing**: Tests are run on Java 17 and 21 (Note: Java 21 is required for successful builds due to maven-enforcer-plugin)
+- **Multi-version Testing**: Build matrix includes Java 17 and 21
+  - **Note**: Java 21 is required for successful builds (maven-enforcer-plugin requirement)
+  - Java 17 jobs skip with informational notice
 - **Dependency Caching**: Maven dependencies are cached to improve build times
-- **Code Coverage**: JaCoCo reports are generated and uploaded to Codecov (current coverage: ~10%)
+- **Code Coverage**: JaCoCo reports are generated and uploaded to Codecov (current coverage: ~9%)
 - **Static Analysis**: The build includes:
   - **Checkstyle**: Google Java Style checks
   - **SpotBugs**: Bug pattern detection

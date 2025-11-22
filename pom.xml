@@ -185,6 +185,7 @@
                     <limit>
                       <counter>LINE</counter>
                       <value>COVEREDRATIO</value>
+                      <!-- Current coverage baseline: 9%. Target to incrementally increase to 40% -->
                       <minimum>0.09</minimum>
                     </limit>
                   </limits>
