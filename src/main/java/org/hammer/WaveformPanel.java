@@ -2,8 +2,6 @@ package org.hammer;
 
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
@@ -35,12 +33,7 @@ public final class WaveformPanel extends JPanel {
 		super(true);
 
 		// Timer to periodically repaint
-		javax.swing.Timer t = new javax.swing.Timer(200, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				repaint();
-			}
-		});
+		javax.swing.Timer t = new javax.swing.Timer(200, e -> repaint());
 		t.start();
 
 		// Notify service when panel is resized
