@@ -1,5 +1,6 @@
 package org.hammer.audio;
 
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -346,9 +347,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
             System.arraycopy(workingYPoints[ch], 0, yPoints[ch], 0, points);
             if (points < pointCount) {
               // Fill remaining points with 0 for partial reads
-              for (int i = points; i < pointCount; i++) {
-                yPoints[ch][i] = 0;
-              }
+              Arrays.fill(yPoints[ch], points, pointCount, 0);
             }
           }
 
