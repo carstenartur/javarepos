@@ -126,6 +126,33 @@ The project uses GitHub Actions for continuous integration with the following fe
 
 For more details, see the workflow files in `.github/workflows/`.
 
+## Tests
+
+### Viewing JUnit Test Reports
+
+JUnit test results are automatically uploaded as build artifacts in GitHub Actions, making it easy to review test outcomes and debug failures:
+
+**Available Artifacts:**
+
+- **junit-xml**: JUnit XML reports (`.xml` files) containing structured test results
+- **surefire-raw**: Raw Surefire console output (`.txt` files) and thread dumps (`.dump` files) for detailed test logs
+- **surefire-html**: HTML-formatted test summary report (when successfully generated)
+
+**How to Access:**
+
+1. Navigate to the [Actions tab](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml) in the repository
+2. Select a workflow run
+3. Scroll to the "Artifacts" section at the bottom of the page
+4. Download the desired artifact(s)
+
+**Pull Request Checks:**
+
+When test-reporter is integrated, an additional "JUnit Tests" check appears on pull requests, providing a quick summary of passed/failed tests directly in the PR interface without needing to download artifacts.
+
+**Code Coverage:**
+
+For code coverage metrics, refer to the [![codecov](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos) badge above or visit the [Codecov dashboard](https://codecov.io/gh/carstenartur/javarepos).
+
 ## Static Analysis
 
 The project uses multiple static analysis tools to maintain code quality. All tools are configured to report issues without blocking the build (`failOnViolation=false`).
