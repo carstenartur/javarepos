@@ -1,6 +1,5 @@
 package org.hammer.audio;
 
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -56,12 +55,13 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private ExecutorService workerExecutor;
 
   // Model data (protected by modelLock)
-  private byte[] datas;
+  private byte[] dataBuffer;
   private int[] xPoints;
   private int[][] yPoints;
+  private int[][] workingYPoints; // Reusable buffer to avoid per-iteration allocations
   private int tickEveryNSample;
   private int datasize;
-  private int numberOfPoints;
+  private int pointCount;
 
   // Audio line provider (for testability)
   private final AudioLineProvider lineProvider;
@@ -225,6 +225,16 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     return divisor;
   }
 
+  /**
+   * Recompute the X-axis layout based on new panel dimensions.
+   *
+   * <p>This method recalculates x-coordinate positions when the display panel is resized,
+   * distributing points evenly across the new width. It does not affect Y-axis calculations or
+   * trigger new audio capture; only the horizontal layout is updated.
+   *
+   * @param width new panel width in pixels
+   * @param height new panel height in pixels
+   */
   @Override
   public void recomputeLayout(int width, int height) {
     this.panelWidth = width;
@@ -247,16 +257,27 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
 
     modelLock.lock();
     try {
-      datasize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
-      numberOfPoints = datasize / Math.max(1, (sampleSizeInBits / 8) * channels);
-      if (numberOfPoints <= 0) numberOfPoints = 1;
+      final int frameSize = Math.max(1, (sampleSizeInBits / 8) * channels);
 
-      datas = new byte[datasize];
-      xPoints = new int[numberOfPoints];
-      yPoints = new int[channels][numberOfPoints];
+      // Calculate desired datasize, then align to frame boundaries to prevent partial frames
+      int desiredSize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
+      datasize = (desiredSize / frameSize) * frameSize; // Truncate to nearest frame multiple
+      if (datasize < frameSize) {
+        datasize = frameSize; // Ensure at least one frame
+      }
+
+      pointCount = datasize / frameSize;
+      if (pointCount <= 0) {
+        pointCount = 1;
+      }
+
+      dataBuffer = new byte[datasize];
+      xPoints = new int[pointCount];
+      yPoints = new int[channels][pointCount];
+      workingYPoints = new int[channels][pointCount]; // Allocate reusable working buffer
       recomputeXValues();
 
-      LOGGER.fine(String.format("Computed data size: %d, points: %d", datasize, numberOfPoints));
+      LOGGER.fine(String.format("Computed data size: %d, points: %d", datasize, pointCount));
     } finally {
       modelLock.unlock();
     }
@@ -266,13 +287,15 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private void recomputeXValues() {
     modelLock.lock();
     try {
-      if (xPoints == null || numberOfPoints <= 1) {
-        if (xPoints != null && xPoints.length > 0) xPoints[0] = 0;
+      if (xPoints == null || pointCount <= 1) {
+        if (xPoints != null && xPoints.length > 0) {
+          xPoints[0] = 0;
+        }
         return;
       }
 
-      for (int i = 0; i < numberOfPoints; i++) {
-        xPoints[i] = Math.round((panelWidth - 1) * (i / (float) (numberOfPoints - 1)));
+      for (int i = 0; i < pointCount; i++) {
+        xPoints[i] = Math.round((panelWidth - 1) * (i / (float) (pointCount - 1)));
       }
     } finally {
       modelLock.unlock();
@@ -293,38 +316,40 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
 
     while (running.get() && !Thread.currentThread().isInterrupted()) {
       try {
-        int numBytesRead = line.read(datas, 0, datas.length);
-        if (numBytesRead <= 0) {
-          continue;
+        int numBytesRead = line.read(dataBuffer, 0, dataBuffer.length);
+        if (numBytesRead <= 0 || numBytesRead < frameSize) {
+          continue; // Guard against partial frames
         }
 
         final int framesRead = numBytesRead / frameSize;
-        final int points = Math.min(numberOfPoints, framesRead);
+        final int points = Math.min(pointCount, framesRead);
 
-        // Prepare temporary arrays
-        int[][] tmpY = new int[channels][points];
-
+        // Use reusable working buffer instead of allocating per iteration
         for (int frame = 0; frame < points; frame++) {
-          int frameOffset = frame * frameSize;
+          final int frameOffset = frame * frameSize;
           for (int ch = 0; ch < channels; ch++) {
-            int sampleOffset = frameOffset + ch * bytesPerSample;
-            int sample = readSample(sampleOffset, bytesPerSample);
-            tmpY[ch][frame] = scaleToPixel(sample);
+            final int sampleOffset = frameOffset + ch * bytesPerSample;
+            final int sample = readSample(sampleOffset, bytesPerSample);
+            workingYPoints[ch][frame] = scaleToPixel(sample);
           }
         }
 
         // Update model atomically
         modelLock.lock();
         try {
-          if (yPoints == null
-              || yPoints.length != channels
-              || yPoints[0].length != numberOfPoints) {
-            yPoints = new int[channels][numberOfPoints];
+          if (yPoints == null || yPoints.length != channels || yPoints[0].length != pointCount) {
+            yPoints = new int[channels][pointCount];
           }
 
+          // Copy from working buffer to model, filling remainder with 0 if partial read
           for (int ch = 0; ch < channels; ch++) {
-            Arrays.fill(yPoints[ch], 0);
-            System.arraycopy(tmpY[ch], 0, yPoints[ch], 0, tmpY[ch].length);
+            System.arraycopy(workingYPoints[ch], 0, yPoints[ch], 0, points);
+            if (points < pointCount) {
+              // Fill remaining points with 0 for partial reads
+              for (int i = points; i < pointCount; i++) {
+                yPoints[ch][i] = 0;
+              }
+            }
           }
 
           // Cache the latest model (WaveformModel is immutable, no defensive copy needed)
@@ -343,21 +368,26 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     LOGGER.fine("Capture loop ended");
   }
 
-  /** Read a sample from the data buffer. */
-  private int readSample(int offset, int bytesPerSample) {
+  /** Read a sample from the data buffer with bounds checking. */
+  private int readSample(final int offset, final int bytesPerSample) {
+    // Defensive bounds check to prevent IndexOutOfBounds with partial frames
+    if (offset + bytesPerSample > dataBuffer.length) {
+      return 0; // Return silence for out-of-bounds reads
+    }
+
     int sample = 0;
 
     if (bytesPerSample == 1) {
-      int b = datas[offset] & 0xFF;
+      final int b = dataBuffer[offset] & 0xFF;
       if (signed) {
         sample = (byte) b; // sign extend
       } else {
         sample = b;
       }
     } else if (bytesPerSample == 2) {
-      int hi = datas[offset + (bigEndian ? 0 : 1)] & 0xFF;
-      int lo = datas[offset + (bigEndian ? 1 : 0)] & 0xFF;
-      int raw = (hi << 8) | lo;
+      final int hi = dataBuffer[offset + (bigEndian ? 0 : 1)] & 0xFF;
+      final int lo = dataBuffer[offset + (bigEndian ? 1 : 0)] & 0xFF;
+      final int raw = (hi << 8) | lo;
       if (signed) {
         sample = (short) raw; // sign extend to int
       } else {
@@ -367,7 +397,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       // Support for other sample sizes (assumes big-endian byte order)
       // This is a fallback for non-standard sample sizes
       for (int b = 0; b < bytesPerSample; b++) {
-        sample = (sample << 8) | (datas[offset + b] & 0xFF);
+        sample = (sample << 8) | (dataBuffer[offset + b] & 0xFF);
       }
     }
 
@@ -375,17 +405,17 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   }
 
   /** Scale a sample value to pixel coordinates. */
-  private int scaleToPixel(int sample) {
+  private int scaleToPixel(final int sample) {
     int y = 0;
 
     if (panelHeight > 0) {
       if (signed) {
-        int maxAbs = (1 << (sampleSizeInBits - 1)) - 1;
-        float norm = (float) sample / (float) maxAbs; // -1..1
+        final int maxAbs = (1 << (sampleSizeInBits - 1)) - 1;
+        final float norm = (float) sample / (float) maxAbs; // -1..1
         y = Math.round((panelHeight / 2f) - norm * (panelHeight / 2f));
       } else {
-        int max = (1 << sampleSizeInBits) - 1;
-        float norm = (float) sample / (float) max; // 0..1
+        final int max = (1 << sampleSizeInBits) - 1;
+        final float norm = (float) sample / (float) max; // 0..1
         y = Math.round(panelHeight - norm * panelHeight);
       }
     }

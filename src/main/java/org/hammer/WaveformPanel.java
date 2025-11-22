@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.WaveformModel;
@@ -18,6 +19,8 @@ import org.hammer.audio.WaveformModel;
  */
 public final class WaveformPanel extends JPanel {
 
+  private static final Logger LOGGER = Logger.getLogger(WaveformPanel.class.getName());
+
   private AudioCaptureService audioCaptureService;
 
   /**
@@ -29,8 +32,8 @@ public final class WaveformPanel extends JPanel {
   public WaveformPanel() {
     super(true);
 
-    // Timer to periodically repaint
-    javax.swing.Timer t = new javax.swing.Timer(200, e -> repaint());
+    // Timer to periodically repaint at consistent interval for smooth display updates
+    javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     t.start();
 
     // Notify service when panel is resized
@@ -39,6 +42,9 @@ public final class WaveformPanel extends JPanel {
           @Override
           public void componentResized(ComponentEvent e) {
             if (audioCaptureService != null) {
+              LOGGER.fine(
+                  String.format(
+                      "Panel resized to %dx%d, recomputing layout", getWidth(), getHeight()));
               audioCaptureService.recomputeLayout(getWidth(), getHeight());
             }
           }
@@ -64,6 +70,7 @@ public final class WaveformPanel extends JPanel {
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
+      LOGGER.warning("No audio service connected during paintComponent");
       // Draw placeholder message
       g.drawString("No audio service connected", 10, getHeight() / 2);
       return;
@@ -72,7 +79,8 @@ public final class WaveformPanel extends JPanel {
     // Get thread-safe snapshot of model
     WaveformModel model = audioCaptureService.getLatestModel();
 
-    if (model.getNumberOfPoints() == 0) {
+    final int points = model.getNumberOfPoints();
+    if (points == 0) {
       return;
     }
 
@@ -82,22 +90,22 @@ public final class WaveformPanel extends JPanel {
     // Draw channel 0 (yellow)
     if (yPoints.length > 0) {
       g.setColor(Color.yellow);
-      g.drawPolyline(xPoints, yPoints[0], model.getNumberOfPoints());
+      g.drawPolyline(xPoints, yPoints[0], points);
     }
 
     // Draw channel 1 (cyan)
     if (yPoints.length > 1) {
       g.setColor(Color.cyan);
-      g.drawPolyline(xPoints, yPoints[1], model.getNumberOfPoints());
+      g.drawPolyline(xPoints, yPoints[1], points);
     }
 
     // Draw center line and tick marks
     g.setColor(Color.red);
     g.drawLine(0, getHeight() / 2, getWidth() - 1, getHeight() / 2);
 
-    int tickEvery = model.getTickEveryNSample();
-    if (tickEvery > 0) {
-      for (int i = 0; i < model.getNumberOfPoints(); i += tickEvery) {
+    int tickEveryNSample = model.getTickEveryNSample();
+    if (tickEveryNSample > 0) {
+      for (int i = 0; i < points; i += tickEveryNSample) {
         g.drawLine(xPoints[i], getHeight() / 2, xPoints[i], getHeight() / 2 + 6);
       }
     }

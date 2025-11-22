@@ -1,6 +1,7 @@
 package org.hammer;
 
 import java.awt.BorderLayout;
+import java.util.logging.Logger;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
@@ -13,6 +14,8 @@ import org.hammer.audio.AudioCaptureService;
  * @author chammer
  */
 public class PhaseDiagramPanel extends JPanel {
+
+  private static final Logger LOGGER = Logger.getLogger(PhaseDiagramPanel.class.getName());
 
   private final PhaseDiagramCanvas canvas;
 
@@ -33,6 +36,7 @@ public class PhaseDiagramPanel extends JPanel {
    * @param service the AudioCaptureService
    */
   public void setAudioCaptureService(AudioCaptureService service) {
+    LOGGER.fine("Audio capture service set for phase diagram panel");
     canvas.setAudioCaptureService(service);
   }
 }
