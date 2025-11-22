@@ -6,6 +6,8 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.JCheckBoxMenuItem;
@@ -41,6 +43,7 @@ import org.hammer.audio.AudioCaptureServiceImpl;
  */
 public class AudioAnalyseFrame extends JFrame {
   private static final long serialVersionUID = 1L;
+  private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
 
   private final JPanel contentPane;
   private final WaveformPanel waveformPanel = new WaveformPanel();
@@ -60,15 +63,18 @@ public class AudioAnalyseFrame extends JFrame {
     EventQueue.invokeLater(
         () -> {
           try {
+            LOGGER.info("Starting AudioAnalyseFrame application");
             AudioAnalyseFrame frame = new AudioAnalyseFrame();
             frame.setVisible(true);
           } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to start application", e);
             e.printStackTrace();
           }
         });
   }
 
   public AudioAnalyseFrame() {
+    LOGGER.info("AudioAnalyseFrame constructor started");
     setTitle("AudioAnalyzer");
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -90,7 +96,7 @@ public class AudioAnalyseFrame extends JFrame {
     initCenterAndEast();
     initSouthSlider();
 
-    refreshTimer = new Timer(250, e -> updateUIFromModel());
+    refreshTimer = new Timer(UiConstants.REFRESH_INTERVAL_MS, e -> updateUIFromModel());
     refreshTimer.setRepeats(true);
     refreshTimer.start();
 
@@ -108,10 +114,12 @@ public class AudioAnalyseFrame extends JFrame {
     pack();
     setSize(640, 420);
     setLocationRelativeTo(null);
+    LOGGER.info("AudioAnalyseFrame initialized successfully");
   }
 
   /** Initialize the audio capture service and inject into panels. */
   private void initializeAudioService() {
+    LOGGER.info("Initializing audio capture service");
     // Create service with default audio parameters
     // 16 kHz, 8-bit, 2 channels (stereo), unsigned, little-endian, divisor 1
     audioCaptureService = new AudioCaptureServiceImpl(16000.0f, 8, 2, false, false, 1);
@@ -227,19 +235,23 @@ public class AudioAnalyseFrame extends JFrame {
 
   private void toggleAudioStartStop(ActionEvent evt) {
     if (audioCaptureService == null) {
+      LOGGER.warning("toggleAudioStartStop: audioCaptureService is null");
       JOptionPane.showMessageDialog(
           this, "AudioCaptureService is not available.", "Error", JOptionPane.ERROR_MESSAGE);
       return;
     }
 
     if (audioCaptureService.isRunning()) {
+      LOGGER.info("Stopping audio capture");
       audioCaptureService.stop();
       mntmStart.setSelected(false);
     } else {
+      LOGGER.info("Starting audio capture");
       try {
         audioCaptureService.start();
         mntmStart.setSelected(true);
       } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Failed to start audio capture", ex);
         JOptionPane.showMessageDialog(
             this,
             "Failed to start audio capture: " + ex.getMessage(),

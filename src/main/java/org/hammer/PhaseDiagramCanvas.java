@@ -2,6 +2,8 @@ package org.hammer;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.WaveformModel;
@@ -16,11 +18,14 @@ import org.hammer.audio.WaveformModel;
  */
 public class PhaseDiagramCanvas extends JPanel {
 
+  private static final Logger LOGGER = Logger.getLogger(PhaseDiagramCanvas.class.getName());
+
   private AudioCaptureService audioCaptureService;
 
   public PhaseDiagramCanvas() {
     super(true);
-    javax.swing.Timer t = new javax.swing.Timer(200, e -> repaint());
+    LOGGER.info("PhaseDiagramCanvas created");
+    javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     t.start();
   }
 
@@ -30,15 +35,18 @@ public class PhaseDiagramCanvas extends JPanel {
    * @param service the AudioCaptureService
    */
   public void setAudioCaptureService(AudioCaptureService service) {
+    LOGGER.info("AudioCaptureService set: " + (service != null));
     this.audioCaptureService = service;
   }
 
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    LOGGER.fine("paintComponent called");
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
+      LOGGER.warning("paintComponent: audioCaptureService is null");
       g.drawString("No audio service", 10, getHeight() / 2);
       return;
     }
@@ -53,12 +61,18 @@ public class PhaseDiagramCanvas extends JPanel {
     int[][] yPoints = model.getYPoints();
 
     // Draw phase diagram (channel 0 vs channel 1)
-    g.setColor(Color.yellow);
+    // Fix: Use Graphics2D copy to avoid transform leak
+    Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setColor(Color.yellow);
 
-    // Translate to center the diagram based on first point
-    if (yPoints[0].length > 0 && yPoints[1].length > 0) {
-      g.translate(-yPoints[0][0], -yPoints[1][0]);
-      g.drawPolyline(yPoints[0], yPoints[1], model.getNumberOfPoints());
+      // Translate to center the diagram based on first point
+      if (yPoints[0].length > 0 && yPoints[1].length > 0) {
+        g2.translate(-yPoints[0][0], -yPoints[1][0]);
+        g2.drawPolyline(yPoints[0], yPoints[1], model.getNumberOfPoints());
+      }
+    } finally {
+      g2.dispose();
     }
   }
 }

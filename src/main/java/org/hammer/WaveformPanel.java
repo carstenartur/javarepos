@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.WaveformModel;
@@ -18,6 +19,8 @@ import org.hammer.audio.WaveformModel;
  */
 public final class WaveformPanel extends JPanel {
 
+  private static final Logger LOGGER = Logger.getLogger(WaveformPanel.class.getName());
+
   private AudioCaptureService audioCaptureService;
 
   /**
@@ -28,9 +31,10 @@ public final class WaveformPanel extends JPanel {
    */
   public WaveformPanel() {
     super(true);
+    LOGGER.info("WaveformPanel created");
 
     // Timer to periodically repaint
-    javax.swing.Timer t = new javax.swing.Timer(200, e -> repaint());
+    javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     t.start();
 
     // Notify service when panel is resized
@@ -38,6 +42,7 @@ public final class WaveformPanel extends JPanel {
         new ComponentAdapter() {
           @Override
           public void componentResized(ComponentEvent e) {
+            LOGGER.fine(String.format("WaveformPanel resized to %dx%d", getWidth(), getHeight()));
             if (audioCaptureService != null) {
               audioCaptureService.recomputeLayout(getWidth(), getHeight());
             }
@@ -52,6 +57,7 @@ public final class WaveformPanel extends JPanel {
    */
   public void setAudioCaptureService(AudioCaptureService service) {
     this.audioCaptureService = service;
+    LOGGER.info("AudioCaptureService set: " + (service != null));
     if (service != null) {
       // Initial layout computation
       service.recomputeLayout(getWidth(), getHeight());
@@ -61,9 +67,11 @@ public final class WaveformPanel extends JPanel {
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    LOGGER.fine("paintComponent called");
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
+      LOGGER.warning("paintComponent: audioCaptureService is null");
       // Draw placeholder message
       g.drawString("No audio service connected", 10, getHeight() / 2);
       return;
