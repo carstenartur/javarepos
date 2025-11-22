@@ -21,6 +21,42 @@ This project requires **Java 21** or higher.
 mvn clean verify
 ```
 
+## Code Style
+
+This project uses [Spotless](https://github.com/diffplug/spotless) with [google-java-format](https://github.com/google/google-java-format) to maintain consistent code formatting across all Java sources.
+
+### Formatting Code
+
+To format all code according to the project's style guidelines:
+
+```bash
+mvn spotless:apply
+```
+
+This will automatically format:
+- Java source files (`src/main/java` and `src/test/java`) using google-java-format
+- XML files (including `pom.xml`) with consistent indentation
+- Markdown documentation files
+
+### Checking Formatting
+
+The build process includes a format check. To verify your code is properly formatted without applying changes:
+
+```bash
+mvn spotless:check
+```
+
+### Editor Configuration
+
+The project includes an `.editorconfig` file with settings for:
+- Character encoding (UTF-8)
+- Line endings (LF)
+- Indentation (4 spaces for Java, 2 spaces for XML/Markdown)
+- Trailing whitespace removal
+- Final newline insertion
+
+Most modern IDEs and editors support EditorConfig automatically or via plugins.
+
 ## CI/CD
 
 ### Continuous Integration
