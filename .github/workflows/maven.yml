@@ -25,10 +25,10 @@ jobs:
         java: [ '17', '21' ]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
     
     - name: Set up JDK ${{ matrix.java }}
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v4
       with:
         java-version: ${{ matrix.java }}
         distribution: 'temurin'
@@ -51,6 +51,49 @@ jobs:
         else
           mvn -B clean verify --file pom.xml
         fi
+    
+    - name: Upload JUnit XML reports
+      if: matrix.java == '21' && always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-xml
+        path: target/surefire-reports/*.xml
+        if-no-files-found: ignore
+        retention-days: 30
+    
+    - name: Upload Surefire raw reports
+      if: matrix.java == '21' && always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: surefire-raw
+        path: |
+          target/surefire-reports/*.txt
+          target/surefire-reports/*.dump
+        if-no-files-found: ignore
+        retention-days: 30
+    
+    - name: Generate Surefire HTML report
+      if: matrix.java == '21' && always()
+      run: mvn -B surefire-report:report
+      continue-on-error: true
+    
+    - name: Upload Surefire HTML report
+      if: matrix.java == '21' && always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: surefire-html
+        path: target/site/
+        if-no-files-found: ignore
+        retention-days: 30
+    
+    - name: Publish Test Report
+      if: matrix.java == '21' && always()
+      uses: dorny/test-reporter@v1.9.1
+      with:
+        name: JUnit Tests
+        path: target/surefire-reports/*.xml
+        reporter: java-junit
+        fail-on-error: false
     
     - name: Upload Jacoco coverage report
       if: matrix.java == '21'
@@ -87,13 +130,17 @@ jobs:
         if-no-files-found: ignore
         retention-days: 30
     
+    - name: Debug coverage path
+      if: matrix.java == '21' && always()
+      run: ls -al target/site/jacoco || echo "JaCoCo directory missing"
+    
     - name: Upload coverage reports to Codecov
-      if: matrix.java == '21'
+      if: matrix.java == '21' && always()
       uses: codecov/codecov-action@v5
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         files: ./target/site/jacoco/jacoco.xml
         fail_ci_if_error: false
+        verbose: true
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
 #    - name: Update dependency graph
