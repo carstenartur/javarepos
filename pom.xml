@@ -250,7 +250,8 @@
             </goals>
             <phase>verify</phase>
             <configuration>
-              <configLocation>google_checks.xml</configLocation>
+              <configLocation>checkstyle.xml</configLocation>
+              <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
               <consoleOutput>true</consoleOutput>
               <failOnViolation>false</failOnViolation>
               <violationSeverity>warning</violationSeverity>
@@ -274,6 +275,7 @@
               <effort>Max</effort>
               <threshold>Low</threshold>
               <xmlOutput>true</xmlOutput>
+              <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
             </configuration>
           </execution>
         </executions>
@@ -293,7 +295,7 @@
               <failOnViolation>false</failOnViolation>
               <printFailingErrors>true</printFailingErrors>
               <rulesets>
-                <ruleset>/rulesets/java/quickstart.xml</ruleset>
+                <ruleset>pmd-ruleset.xml</ruleset>
               </rulesets>
             </configuration>
           </execution>
