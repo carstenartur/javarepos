@@ -13,12 +13,15 @@
   
   <properties>
     <!-- Java version -->
-    <java.version>21</java.version>
+    <java.version>17</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     
     <!-- Encoding -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    
+    <!-- Dependency versions -->
+    <junit.version>5.11.3</junit.version>
     
     <!-- Plugin versions -->
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -31,9 +34,27 @@
     <maven-site-plugin.version>3.20.0</maven-site-plugin.version>
   </properties>
   
+  <dependencies>
+    <!-- JUnit 5 (Jupiter) API -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- JUnit 5 (Jupiter) Engine -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  
   <build>
     <!-- TODO: Move to standard Maven structure (src/main/java) in the future. Non-standard source directory preserved for backward compatibility. -->
     <sourceDirectory>src</sourceDirectory>
+    <testSourceDirectory>src/test/java</testSourceDirectory>
     
     <pluginManagement>
       <plugins>
@@ -86,7 +107,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>[21,)</version>
+                  <version>[17,)</version>
                 </requireJavaVersion>
               </rules>
               <fail>true</fail>
@@ -101,6 +122,9 @@
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
           <encoding>${project.build.sourceEncoding}</encoding>
+          <excludes>
+            <exclude>**/test/**/*.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
@@ -112,6 +136,14 @@
               <mainClass>org.hammer.AudioAnalyseFrame</mainClass>
             </manifest>
           </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
         </configuration>
       </plugin>
     </plugins>
