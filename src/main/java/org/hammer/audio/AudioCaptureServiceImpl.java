@@ -43,6 +43,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Lock modelLock = new ReentrantLock();
     
+    // Cached latest model (volatile for thread-safety, immutable so no defensive copy needed)
+    private volatile WaveformModel latestModel;
+    
     // Audio configuration
     private final float sampleRate;
     private final int sampleSizeInBits;
@@ -159,12 +162,12 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     
     @Override
     public WaveformModel getLatestModel() {
-        modelLock.lock();
-        try {
-            return new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);
-        } finally {
-            modelLock.unlock();
+        WaveformModel cached = latestModel;
+        if (cached != null) {
+            return cached;
         }
+        // Return empty model if no data captured yet
+        return WaveformModel.EMPTY;
     }
     
     @Override
@@ -307,6 +310,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
                         Arrays.fill(yPoints[ch], 0);
                         System.arraycopy(tmpY[ch], 0, yPoints[ch], 0, tmpY[ch].length);
                     }
+                    
+                    // Cache the latest model (WaveformModel is immutable, no defensive copy needed)
+                    latestModel = new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);
                 } finally {
                     modelLock.unlock();
                 }

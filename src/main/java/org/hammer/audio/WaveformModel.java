@@ -16,6 +16,11 @@ import java.util.Arrays;
  */
 public final class WaveformModel {
     
+    /**
+     * Empty WaveformModel instance for use when no data is available.
+     */
+    public static final WaveformModel EMPTY = new WaveformModel(new int[0], new int[0][], 0, 0);
+    
     private final int[] xPoints;
     private final int[][] yPoints;
     private final int tickEveryNSample;
