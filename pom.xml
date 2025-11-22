@@ -228,8 +228,8 @@
                     <limit>
                       <counter>LINE</counter>
                       <value>COVEREDRATIO</value>
-                      <!-- Current coverage baseline maintained at 0.09 (9%) to pass builds. Target to incrementally increase to 40% in future PRs. -->
-                      <minimum>0.09</minimum>
+                      <!-- Coverage raised to 30% (0.30) with comprehensive test suite for core audio components. -->
+                      <minimum>0.30</minimum>
                     </limit>
                   </limits>
                 </rule>
