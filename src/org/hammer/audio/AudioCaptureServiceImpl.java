@@ -32,6 +32,11 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
      */
     private static final float TICK_SECONDS = 1f / 1000f;
     
+    /**
+     * Minimum buffer size in bytes to prevent overly small allocations.
+     */
+    private static final int MIN_BUFFER_SIZE = 256;
+    
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Lock modelLock = new ReentrantLock();
     
@@ -73,6 +78,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
                                    boolean signed, boolean bigEndian, int divisor) {
         this.sampleRate = sampleRate;
         this.sampleSizeInBits = sampleSizeInBits;
+        // Ensure at least 1 channel (mono) - invalid values are normalized
         this.channels = Math.max(1, channels);
         this.signed = signed;
         this.bigEndian = bigEndian;
@@ -212,7 +218,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         
         modelLock.lock();
         try {
-            datasize = Math.max(256, line.getBufferSize() / Math.max(1, divisor));
+            datasize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
             numberOfPoints = datasize / Math.max(1, (sampleSizeInBits / 8) * channels);
             if (numberOfPoints <= 0) numberOfPoints = 1;
             
@@ -330,7 +336,8 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
                 sample = raw & 0xFFFF;
             }
         } else {
-            // support for other sizes
+            // Support for other sample sizes (assumes big-endian byte order)
+            // This is a fallback for non-standard sample sizes
             for (int b = 0; b < bytesPerSample; b++) {
                 sample = (sample << 8) | (datas[offset + b] & 0xFF);
             }
