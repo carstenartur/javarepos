@@ -32,7 +32,7 @@
   </properties>
   
   <build>
-    <!-- Non-standard source directory preserved for backward compatibility -->
+    <!-- TODO: Move to standard Maven structure (src/main/java) in the future. Non-standard source directory preserved for backward compatibility. -->
     <sourceDirectory>src</sourceDirectory>
     
     <pluginManagement>
