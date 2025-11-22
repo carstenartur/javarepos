@@ -1,3 +1,5 @@
+<a href="https://github.com/carstenartur/javarepos/actions"><img src="https://github.com/carstenartur/javarepos/actions/workflows/maven.yml/badge.svg"></a>
+
 javarepos
 =========
 
