@@ -42,7 +42,9 @@ public final class WaveformPanel extends JPanel {
         new ComponentAdapter() {
           @Override
           public void componentResized(ComponentEvent e) {
-            LOGGER.fine(String.format("WaveformPanel resized to %dx%d", getWidth(), getHeight()));
+            if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+              LOGGER.fine(String.format("WaveformPanel resized to %dx%d", getWidth(), getHeight()));
+            }
             if (audioCaptureService != null) {
               audioCaptureService.recomputeLayout(getWidth(), getHeight());
             }
@@ -67,7 +69,9 @@ public final class WaveformPanel extends JPanel {
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
-    LOGGER.fine("paintComponent called");
+    if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+      LOGGER.fine("paintComponent called");
+    }
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
