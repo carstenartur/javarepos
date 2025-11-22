@@ -118,9 +118,6 @@
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
           <encoding>${project.build.sourceEncoding}</encoding>
-          <excludes>
-            <exclude>**/test/**/*.java</exclude>
-          </excludes>
         </configuration>
       </plugin>
       <plugin>
