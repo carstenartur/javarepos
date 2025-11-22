@@ -6,6 +6,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.JCheckBoxMenuItem;
@@ -41,6 +42,7 @@ import org.hammer.audio.AudioCaptureServiceImpl;
  */
 public class AudioAnalyseFrame extends JFrame {
   private static final long serialVersionUID = 1L;
+  private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
 
   private final JPanel contentPane;
   private final WaveformPanel waveformPanel = new WaveformPanel();
@@ -69,8 +71,9 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   public AudioAnalyseFrame() {
+    LOGGER.info("Initializing AudioAnalyseFrame");
     setTitle("AudioAnalyzer");
-    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
     contentPane = new JPanel(new BorderLayout(0, 0));
     contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -90,7 +93,8 @@ public class AudioAnalyseFrame extends JFrame {
     initCenterAndEast();
     initSouthSlider();
 
-    refreshTimer = new Timer(250, e -> updateUIFromModel());
+    // Timer to periodically refresh UI from model at consistent interval
+    refreshTimer = new Timer(UiConstants.REFRESH_INTERVAL_MS, e -> updateUIFromModel());
     refreshTimer.setRepeats(true);
     refreshTimer.start();
 
@@ -112,6 +116,7 @@ public class AudioAnalyseFrame extends JFrame {
 
   /** Initialize the audio capture service and inject into panels. */
   private void initializeAudioService() {
+    LOGGER.info("Initializing audio capture service");
     // Create service with default audio parameters
     // 16 kHz, 8-bit, 2 channels (stereo), unsigned, little-endian, divisor 1
     audioCaptureService = new AudioCaptureServiceImpl(16000.0f, 8, 2, false, false, 1);
