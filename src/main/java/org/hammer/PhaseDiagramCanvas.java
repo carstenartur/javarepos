@@ -2,8 +2,6 @@ package org.hammer;
 
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 import javax.swing.JPanel;
 
@@ -24,12 +22,7 @@ public class PhaseDiagramCanvas extends JPanel {
 
 	public PhaseDiagramCanvas() {
 		super(true);
-		javax.swing.Timer t = new javax.swing.Timer(200, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				repaint();
-			}
-		});
+		javax.swing.Timer t = new javax.swing.Timer(200, e -> repaint());
 		t.start();
 	}
 	
