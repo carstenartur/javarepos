@@ -6,8 +6,6 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.swing.AbstractAction;
 import javax.swing.Box;
@@ -31,37 +29,34 @@ import javax.swing.JCheckBoxMenuItem;
 import javax.swing.border.TitledBorder;
 import javax.swing.border.EtchedBorder;
 
+import org.hammer.audio.AudioCaptureService;
+import org.hammer.audio.AudioCaptureServiceImpl;
+
 /**
- * Refactored AudioAnalyseFrame
+ * Main application frame for audio analysis and visualization.
+ * 
+ * <p>Refactored to use dependency injection with AudioCaptureService instead
+ * of direct singleton access. The frame creates the service and injects it
+ * into UI panels. Audio capture is started/stopped via the menu.
  *
  * @author chammer
- * Improvements:
- * - clearer field names
- * - split constructor into init* methods for readability
- * - safer thread start/stop with synchronization and interruption
- * - periodic UI refresh using Swing Timer (updates fields from model on EDT)
- * - tidy up UI creation and use pack()/setLocationRelativeTo
- * - window close handling to ensure background thread is stopped
- *
- * Note: This class still relies on AudioInDataRunnable.INSTANCE API (stopped,
- * divisor, datasize, format, computedatasize(), recomputexvalues()) and assumes
- * those members are thread-safe or designed to be used from other threads.
  */
 public class AudioAnalyseFrame extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final JPanel contentPane;
     private final WaveformPanel waveformPanel = new WaveformPanel();
+    private final PhaseDiagramPanel phaseDiagramPanel = new PhaseDiagramPanel();
 
     private final JTextField textFieldDataSize;
     private final JTextField textFieldDivisor;
     private final JTextField textFieldAudioFormat;
 
-    private final AtomicReference<Thread> audioThreadRef = new AtomicReference<>(null);
     private final JCheckBoxMenuItem mntmStart;
-
-    // timer to periodically refresh UI values from the model on the EDT
     private final Timer refreshTimer;
+    
+    // Audio capture service
+    private AudioCaptureService audioCaptureService;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -88,6 +83,9 @@ public class AudioAnalyseFrame extends JFrame {
         textFieldAudioFormat = new JTextField();
         mntmStart = new JCheckBoxMenuItem("Start/Stop");
 
+        // Create audio capture service
+        initializeAudioService();
+        
         initMenu();
         initTopSettingsPanel();
         initCenterAndEast();
@@ -100,7 +98,7 @@ public class AudioAnalyseFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                stopAudioThreadIfRunning();
+                stopAudioIfRunning();
                 if (refreshTimer != null && refreshTimer.isRunning()) {
                     refreshTimer.stop();
                 }
@@ -110,6 +108,19 @@ public class AudioAnalyseFrame extends JFrame {
         pack();
         setSize(640, 420);
         setLocationRelativeTo(null);
+    }
+    
+    /**
+     * Initialize the audio capture service and inject into panels.
+     */
+    private void initializeAudioService() {
+        // Create service with default audio parameters
+        // 16 kHz, 8-bit, 2 channels (stereo), unsigned, little-endian, divisor 1
+        audioCaptureService = new AudioCaptureServiceImpl(16000.0f, 8, 2, false, false, 1);
+        
+        // Inject service into panels
+        waveformPanel.setAudioCaptureService(audioCaptureService);
+        phaseDiagramPanel.setAudioCaptureService(audioCaptureService);
     }
 
     private void initMenu() {
@@ -187,23 +198,20 @@ public class AudioAnalyseFrame extends JFrame {
         contentPane.add(scrollPane, BorderLayout.CENTER);
         scrollPane.setViewportView(waveformPanel);
 
-        JPanel panelEast = new PhaseDiagramPanel();
-        contentPane.add(panelEast, BorderLayout.EAST);
+        contentPane.add(phaseDiagramPanel, BorderLayout.EAST);
     }
 
     private void initSouthSlider() {
         JSlider slider = new JSlider();
         slider.setMinimum(1);
-        slider.setValue(Objects.requireNonNullElse(getModelDivisor(), 1));
+        slider.setValue(audioCaptureService != null ? audioCaptureService.getDivisor() : 1);
         slider.setToolTipText("Adjust divisor (affects sampling / display)");
         slider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
                 int value = ((JSlider) e.getSource()).getValue();
-                if (AudioInDataRunnable.INSTANCE != null) {
-                    AudioInDataRunnable.INSTANCE.setDivisor(value);
-                    AudioInDataRunnable.INSTANCE.computedatasize();
-                    AudioInDataRunnable.INSTANCE.recomputexvalues();
+                if (audioCaptureService != null) {
+                    audioCaptureService.setDivisor(value);
                 }
                 textFieldDivisor.setText(String.valueOf(value));
                 contentPane.repaint();
@@ -213,49 +221,31 @@ public class AudioAnalyseFrame extends JFrame {
     }
 
     private void toggleAudioStartStop(ActionEvent evt) {
-        if (isAudioThreadRunning()) {
-            if (AudioInDataRunnable.INSTANCE != null) {
-                AudioInDataRunnable.INSTANCE.stopCapture();
-            }
+        if (audioCaptureService == null) {
+            JOptionPane.showMessageDialog(this, "AudioCaptureService is not available.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        if (audioCaptureService.isRunning()) {
+            audioCaptureService.stop();
             mntmStart.setSelected(false);
-            Thread t = audioThreadRef.getAndSet(null);
-            if (t != null) {
-                t.interrupt();
-            }
         } else {
-            if (AudioInDataRunnable.INSTANCE != null) {
-                Thread t = new Thread(AudioInDataRunnable.INSTANCE, "AudioInDataRunnable");
-                if (audioThreadRef.compareAndSet(null, t)) {
-                    mntmStart.setSelected(true);
-                    t.setDaemon(true);
-                    t.start();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "AudioInDataRunnable.INSTANCE is not available.",
+            try {
+                audioCaptureService.start();
+                mntmStart.setSelected(true);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, 
+                        "Failed to start audio capture: " + ex.getMessage(),
                         "Error", JOptionPane.ERROR_MESSAGE);
+                mntmStart.setSelected(false);
             }
         }
     }
 
-    private boolean isAudioThreadRunning() {
-        Thread t = audioThreadRef.get();
-        return t != null && t.isAlive();
-    }
-
-    private void stopAudioThreadIfRunning() {
-        if (isAudioThreadRunning()) {
-            if (AudioInDataRunnable.INSTANCE != null) {
-                AudioInDataRunnable.INSTANCE.stopCapture();
-            }
-            Thread t = audioThreadRef.getAndSet(null);
-            if (t != null) {
-                t.interrupt();
-                try {
-                    t.join(500);
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+    private void stopAudioIfRunning() {
+        if (audioCaptureService != null && audioCaptureService.isRunning()) {
+            audioCaptureService.stop();
         }
     }
 
@@ -264,24 +254,19 @@ public class AudioAnalyseFrame extends JFrame {
             SwingUtilities.invokeLater(this::updateUIFromModel);
             return;
         }
-        if (AudioInDataRunnable.INSTANCE != null) {
-            textFieldDataSize.setText(String.valueOf(AudioInDataRunnable.INSTANCE.datasize()));
-            textFieldDivisor.setText(String.valueOf(AudioInDataRunnable.INSTANCE.divisor()));
-            textFieldAudioFormat.setText(AudioInDataRunnable.INSTANCE.format() != null
-                    ? AudioInDataRunnable.INSTANCE.format().toString() : "n/a");
+        
+        if (audioCaptureService != null) {
+            textFieldDataSize.setText(String.valueOf(audioCaptureService.getLatestModel().getDataSize()));
+            textFieldDivisor.setText(String.valueOf(audioCaptureService.getDivisor()));
+            textFieldAudioFormat.setText(audioCaptureService.getFormat() != null
+                    ? audioCaptureService.getFormat().toString() : "n/a");
+            mntmStart.setSelected(audioCaptureService.isRunning());
         } else {
             textFieldDataSize.setText("");
             textFieldDivisor.setText("");
             textFieldAudioFormat.setText("");
+            mntmStart.setSelected(false);
         }
-        mntmStart.setSelected(isAudioThreadRunning());
-    }
-
-    private Integer getModelDivisor() {
-        if (AudioInDataRunnable.INSTANCE != null) {
-            return AudioInDataRunnable.INSTANCE.divisor();
-        }
-        return null;
     }
 
     private class SwingAction extends AbstractAction {
