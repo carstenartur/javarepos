@@ -17,9 +17,55 @@ This project follows the standard Maven directory layout:
 
 This project requires **Java 21** or higher.
 
+### Using Maven Wrapper (Recommended)
+
+The project includes a Maven Wrapper (mvnw) that automatically downloads and uses the correct Maven version (3.9.9), eliminating the need to install Maven manually:
+
+```bash
+./mvnw clean verify
+```
+
+On Windows:
+
+```cmd
+mvnw.cmd clean verify
+```
+
+### Using System Maven
+
+If you prefer to use your system-installed Maven:
+
 ```bash
 mvn clean verify
 ```
+
+### Reproducible Builds
+
+This project is configured for reproducible builds. The JAR artifacts include a fixed timestamp (`project.build.outputTimestamp`) ensuring that repeated builds with the same source code produce byte-for-byte identical artifacts. This improves build verification and supply chain security.
+
+To verify reproducibility:
+
+```bash
+./mvnw clean package
+sha256sum target/audioin-0.0.1-SNAPSHOT.jar
+
+# Build again
+./mvnw clean package
+sha256sum target/audioin-0.0.1-SNAPSHOT.jar
+# Checksums should match
+```
+
+### Updating Maven Wrapper
+
+To regenerate or update the Maven Wrapper:
+
+```bash
+mvn -N wrapper:wrapper -Dmaven=3.9.9
+```
+
+### Dependency Management
+
+This project uses JUnit BOM (Bill of Materials) for consistent JUnit dependency version management. JUnit dependencies are declared without explicit versions, inheriting from the BOM instead.
 
 ## Code Style
 
@@ -69,9 +115,9 @@ The project uses GitHub Actions for continuous integration with the following fe
 - **Dependency Caching**: Maven dependencies are cached to improve build times
 - **Code Coverage**: JaCoCo reports are generated and uploaded to Codecov (current coverage: ~9%)
 - **Static Analysis**: The build includes:
-  - **Checkstyle**: Google Java Style checks
-  - **SpotBugs**: Bug pattern detection
-  - **PMD**: Source code analyzer
+  - **Checkstyle**: Custom configuration based on Google Java Style
+  - **SpotBugs**: Bug pattern detection with GUI-specific exclusions
+  - **PMD**: Curated ruleset for best practices and code quality
 - **Artifacts**: Test reports and static analysis results are available as build artifacts
 
 ### Security Scanning

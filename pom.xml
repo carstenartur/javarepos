@@ -19,6 +19,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <!-- Reproducible builds - fixed timestamp for deterministic JAR output -->
+    <project.build.outputTimestamp>2025-11-22T15:00:00Z</project.build.outputTimestamp>
+
     <!-- Dependency versions -->
     <junit.version>5.11.3</junit.version>
     <mockito.version>5.14.2</mockito.version>
@@ -42,19 +45,30 @@
     <jmh.version>1.37</jmh.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- JUnit BOM for consistent version management -->
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <!-- JUnit 5 (Jupiter) API -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
     <!-- JUnit 5 (Jupiter) Engine -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
     <!-- Mockito for mocking in tests -->
@@ -198,6 +212,18 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Explicit fork configuration for stability and future parallelization -->
+          <forkCount>1</forkCount>
+          <reuseForks>true</reuseForks>
+          <!-- Fail build if no tests are found -->
+          <failIfNoTests>true</failIfNoTests>
+          <!-- System properties for consistent test environment -->
+          <systemPropertyVariables>
+            <!-- Ensure headless mode for GUI-related tests in CI -->
+            <java.awt.headless>true</java.awt.headless>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -231,8 +257,8 @@
                     <limit>
                       <counter>LINE</counter>
                       <value>COVEREDRATIO</value>
-                      <!-- Current coverage baseline maintained at 0.09 (9%) to pass builds. Target to incrementally increase to 40% in future PRs. -->
-                      <minimum>0.09</minimum>
+                      <!-- Coverage raised to 30% (0.30) with comprehensive test suite for core audio components. -->
+                      <minimum>0.30</minimum>
                     </limit>
                   </limits>
                 </rule>
@@ -245,6 +271,13 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>${maven-checkstyle-plugin.version}</version>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+          <consoleOutput>true</consoleOutput>
+          <failOnViolation>false</failOnViolation>
+          <violationSeverity>warning</violationSeverity>
+        </configuration>
         <executions>
           <execution>
             <id>checkstyle</id>
@@ -252,12 +285,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <configLocation>google_checks.xml</configLocation>
-              <consoleOutput>true</consoleOutput>
-              <failOnViolation>false</failOnViolation>
-              <violationSeverity>warning</violationSeverity>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -265,6 +292,13 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <version>${spotbugs-maven-plugin.version}</version>
+        <configuration>
+          <failOnError>false</failOnError>
+          <effort>Max</effort>
+          <threshold>Low</threshold>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
         <executions>
           <execution>
             <id>spotbugs</id>
@@ -272,12 +306,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <failOnError>false</failOnError>
-              <effort>Max</effort>
-              <threshold>Low</threshold>
-              <xmlOutput>true</xmlOutput>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -285,6 +313,13 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
         <version>${maven-pmd-plugin.version}</version>
+        <configuration>
+          <failOnViolation>false</failOnViolation>
+          <printFailingErrors>true</printFailingErrors>
+          <rulesets>
+            <ruleset>pmd-ruleset.xml</ruleset>
+          </rulesets>
+        </configuration>
         <executions>
           <execution>
             <id>pmd</id>
@@ -292,13 +327,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <failOnViolation>false</failOnViolation>
-              <printFailingErrors>true</printFailingErrors>
-              <rulesets>
-                <ruleset>/rulesets/java/quickstart.xml</ruleset>
-              </rulesets>
-            </configuration>
           </execution>
         </executions>
       </plugin>

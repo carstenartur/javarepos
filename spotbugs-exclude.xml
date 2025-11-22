@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusion filter for Audio Analyzer project
+  
+  Rationale for exclusions:
+  - EI_EXPOSE_REP/EI_EXPOSE_REP2: WaveformModel uses defensive copies in getters/constructor
+    to ensure immutability. While SpotBugs may flag direct field returns, our implementation
+    properly handles this with Arrays.copyOf(), making the warning a false positive.
+  - SE_BAD_FIELD: GUI components extending Swing classes may have non-serializable fields.
+    This is acceptable as we don't serialize GUI components.
+  - MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR: Swing components often call overridable methods
+    in constructors (e.g., setLayout, add). This is standard Swing pattern and safe.
+  
+  TODO: Reevaluate EI_EXPOSE_REP exclusions after performance refactor to ensure
+        defensive copying strategy remains appropriate
+-->
+
+<FindBugsFilter>
+  <!-- Suppress EI_EXPOSE_REP warnings for WaveformModel - defensive copies are used -->
+  <Match>
+    <Class name="org.hammer.audio.WaveformModel"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+  
+  <!-- Suppress EI_EXPOSE_REP2 for service setters in GUI components -->
+  <Match>
+    <Or>
+      <Class name="~.*Frame"/>
+      <Class name="~.*Panel"/>
+      <Class name="~.*Canvas"/>
+    </Or>
+    <Method name="setAudioCaptureService"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  
+  <!-- Suppress serialization warnings for GUI components and service fields -->
+  <Match>
+    <Or>
+      <Class name="~.*Frame"/>
+      <Class name="~.*Panel"/>
+      <Class name="~.*Canvas"/>
+    </Or>
+    <Or>
+      <Bug pattern="SE_BAD_FIELD"/>
+      <Bug pattern="SE_BAD_FIELD_STORE"/>
+    </Or>
+  </Match>
+  
+  <!-- Suppress overridable method call in constructor for Swing components -->
+  <Match>
+    <Or>
+      <Class name="~.*Frame"/>
+      <Class name="~.*Panel"/>
+      <Class name="~.*Canvas"/>
+    </Or>
+    <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR"/>
+  </Match>
+  
+  <!-- Suppress RV_RETURN_VALUE_IGNORED for GUI setup methods and thread management -->
+  <!-- ExecutorService.submit() return value may be intentionally ignored -->
+  <Match>
+    <Or>
+      <Class name="~.*Frame"/>
+      <Class name="~.*Panel"/>
+      <Class name="org.hammer.audio.AudioCaptureServiceImpl"/>
+    </Or>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+  </Match>
+</FindBugsFilter>

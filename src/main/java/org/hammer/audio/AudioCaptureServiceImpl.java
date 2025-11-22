@@ -10,9 +10,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
 /**
@@ -90,6 +87,35 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       boolean signed,
       boolean bigEndian,
       int divisor) {
+    this(
+        sampleRate,
+        sampleSizeInBits,
+        channels,
+        signed,
+        bigEndian,
+        divisor,
+        new DefaultAudioLineProvider());
+  }
+
+  /**
+   * Package-private constructor for testing with custom AudioLineProvider.
+   *
+   * @param sampleRate sample rate in Hz (e.g., 16000.0f)
+   * @param sampleSizeInBits sample size in bits (e.g., 8 or 16)
+   * @param channels number of audio channels (e.g., 1 for mono, 2 for stereo)
+   * @param signed true if samples are signed
+   * @param bigEndian true if samples are big-endian
+   * @param divisor initial divisor for buffer size calculation
+   * @param lineProvider provider for acquiring audio lines
+   */
+  AudioCaptureServiceImpl(
+      float sampleRate,
+      int sampleSizeInBits,
+      int channels,
+      boolean signed,
+      boolean bigEndian,
+      int divisor,
+      AudioLineProvider lineProvider) {
     this.sampleRate = sampleRate;
     this.sampleSizeInBits = sampleSizeInBits;
     // Ensure at least 1 channel (mono) - invalid values are normalized
@@ -100,6 +126,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     this.tickEveryNSample = (int) (TICK_SECONDS * sampleRate);
     this.panelWidth = 640;
     this.panelHeight = 200;
+    this.lineProvider = lineProvider;
   }
 
   @Override
