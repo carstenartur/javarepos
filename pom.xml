@@ -268,6 +268,13 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>${maven-checkstyle-plugin.version}</version>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+          <consoleOutput>true</consoleOutput>
+          <failOnViolation>false</failOnViolation>
+          <violationSeverity>warning</violationSeverity>
+        </configuration>
         <executions>
           <execution>
             <id>checkstyle</id>
@@ -275,12 +282,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <configLocation>google_checks.xml</configLocation>
-              <consoleOutput>true</consoleOutput>
-              <failOnViolation>false</failOnViolation>
-              <violationSeverity>warning</violationSeverity>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -288,6 +289,13 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <version>${spotbugs-maven-plugin.version}</version>
+        <configuration>
+          <failOnError>false</failOnError>
+          <effort>Max</effort>
+          <threshold>Low</threshold>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
         <executions>
           <execution>
             <id>spotbugs</id>
@@ -295,12 +303,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <failOnError>false</failOnError>
-              <effort>Max</effort>
-              <threshold>Low</threshold>
-              <xmlOutput>true</xmlOutput>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -308,6 +310,13 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
         <version>${maven-pmd-plugin.version}</version>
+        <configuration>
+          <failOnViolation>false</failOnViolation>
+          <printFailingErrors>true</printFailingErrors>
+          <rulesets>
+            <ruleset>pmd-ruleset.xml</ruleset>
+          </rulesets>
+        </configuration>
         <executions>
           <execution>
             <id>pmd</id>
@@ -315,13 +324,6 @@
               <goal>check</goal>
             </goals>
             <phase>verify</phase>
-            <configuration>
-              <failOnViolation>false</failOnViolation>
-              <printFailingErrors>true</printFailingErrors>
-              <rulesets>
-                <ruleset>/rulesets/java/quickstart.xml</ruleset>
-              </rulesets>
-            </configuration>
           </execution>
         </executions>
       </plugin>
