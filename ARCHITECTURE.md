@@ -57,6 +57,7 @@ This document describes the refactored architecture that implements a clean sepa
 ## Key Components
 
 ### 1. AudioCaptureService (Interface)
+
 - **Location**: `org.hammer.audio.AudioCaptureService`
 - **Responsibility**: Defines the contract for audio capture operations
 - **Key Methods**:
@@ -67,8 +68,9 @@ This document describes the refactored architecture that implements a clean sepa
   - `recomputeLayout(int, int)`: Update coordinates based on panel dimensions
 
 ### 2. AudioCaptureServiceImpl (Implementation)
+
 - **Location**: `org.hammer.audio.AudioCaptureServiceImpl`
-- **Responsibility**: 
+- **Responsibility**:
   - Audio device management (TargetDataLine)
   - Background thread for continuous audio capture
   - Sample processing and conversion to display coordinates
@@ -80,6 +82,7 @@ This document describes the refactored architecture that implements a clean sepa
   - All public methods are thread-safe
 
 ### 3. WaveformModel (Immutable Data Model)
+
 - **Location**: `org.hammer.audio.WaveformModel`
 - **Responsibility**: Immutable snapshot of waveform data
 - **Key Features**:
@@ -89,6 +92,7 @@ This document describes the refactored architecture that implements a clean sepa
   - Includes metadata (tick intervals, point count, etc.)
 
 ### 4. AudioAnalyseFrame (Main GUI)
+
 - **Location**: `org.hammer.AudioAnalyseFrame`
 - **Responsibility**:
   - Application lifecycle management
@@ -102,6 +106,7 @@ This document describes the refactored architecture that implements a clean sepa
   - Delegates start/stop to service
 
 ### 5. WaveformPanel & PhaseDiagramCanvas (UI Components)
+
 - **Locations**: `org.hammer.WaveformPanel`, `org.hammer.PhaseDiagramCanvas`
 - **Responsibility**: Visualize audio waveform data
 - **Refactoring Changes**:
@@ -113,22 +118,26 @@ This document describes the refactored architecture that implements a clean sepa
 ## Design Principles Applied
 
 ### 1. Separation of Concerns
+
 - **GUI Layer**: Only responsible for rendering and user interaction
 - **Service Layer**: Handles all audio capture logic
 - **Model Layer**: Pure data, no logic
 
 ### 2. Dependency Injection
+
 - Services are injected into UI components
 - No direct singleton access from UI code
 - Easier to test and maintain
 
 ### 3. Thread Safety
+
 - Immutable models prevent concurrent modification
 - Defensive copies ensure data integrity
 - Locks protect mutable state during updates
 - Clear ownership of worker threads
 
 ### 4. Clean APIs
+
 - Service interface defines clear contract
 - Model provides read-only access
 - No deprecated methods in new code
@@ -136,6 +145,7 @@ This document describes the refactored architecture that implements a clean sepa
 ## Data Flow
 
 ### Startup Sequence
+
 ```
 1. AudioAnalyseFrame constructor
    ↓
@@ -151,6 +161,7 @@ This document describes the refactored architecture that implements a clean sepa
 ```
 
 ### Audio Capture Flow (after user clicks Start)
+
 ```
 1. User clicks Start/Stop menu
    ↓
@@ -175,6 +186,7 @@ This document describes the refactored architecture that implements a clean sepa
 ```
 
 ### Shutdown Sequence
+
 ```
 1. User closes window or clicks Stop
    ↓
@@ -192,17 +204,20 @@ This document describes the refactored architecture that implements a clean sepa
 ## Thread Safety Guarantees
 
 ### AudioCaptureServiceImpl
+
 - **Worker Thread**: Internal, not exposed
 - **Model Data**: Protected by `ReentrantLock`
 - **Running State**: `AtomicBoolean` for lock-free checks
 - **Public Methods**: All synchronized where needed
 
 ### WaveformModel
+
 - **Immutability**: All fields final
 - **Defensive Copies**: Arrays copied on construction and access
 - **Thread-Safe**: Can be shared between threads safely
 
 ### UI Components
+
 - **Swing EDT**: All UI updates happen on Event Dispatch Thread
 - **Timer**: Periodic repaints scheduled on EDT
 - **Model Access**: Only reads immutable snapshots
@@ -210,17 +225,20 @@ This document describes the refactored architecture that implements a clean sepa
 ## Migration Notes
 
 ### Removed Components
+
 - **AudioInDataRunnable (Enum Singleton)**: Completely removed
   - Replaced by AudioCaptureServiceImpl
   - No more global mutable state
   - No more direct thread management in UI
 
 ### Deprecated Methods (Removed)
+
 - `AudioInDataRunnable.INSTANCE.*` - All singleton access removed
 - `init()`, `computedatasize()`, `recomputexvalues()` - Moved to service
 - Direct array access (`xPoints()`, `yPoints()`) - Replaced by model snapshots
 
 ### Breaking Changes
+
 - UI components must receive service via setter
 - No implicit initialization in UI constructors
 - Service must be started explicitly
@@ -269,6 +287,7 @@ The service uses `java.util.logging` for diagnostics:
 - **SEVERE**: Fatal errors (capture failures)
 
 Configure logging in your application as needed:
+
 ```java
 Logger.getLogger("org.hammer.audio").setLevel(Level.FINE);
 ```
