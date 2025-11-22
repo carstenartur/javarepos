@@ -79,3 +79,32 @@ The project uses GitHub Actions for continuous integration with the following fe
 - **CodeQL**: Automated security scanning runs on push and pull requests to detect vulnerabilities
 
 For more details, see the workflow files in `.github/workflows/`.
+
+## Performance
+
+### Audio Capture Optimizations
+
+The audio capture implementation has been optimized to reduce runtime allocations and GC pressure during continuous audio processing:
+
+- **Buffer Reuse**: The capture loop uses a reusable working buffer (`workingYPoints`) to eliminate per-iteration `int[][]` allocations.
+- **Precomputed Constants**: Audio format fields (`bytesPerSample`, `frameSize`) are computed once when the audio line is opened, avoiding repeated calculations in the hot path.
+- **Integer Arithmetic**: The `recomputeXValues` method uses integer arithmetic instead of floating-point operations to reduce conversion overhead.
+- **Narrow Lock Scope**: Critical sections are minimized; I/O operations and sample decoding happen outside the model lock.
+
+These optimizations maintain the same external behavior while improving throughput and reducing memory churn during live audio capture.
+
+### Performance Benchmarking
+
+An optional JMH (Java Microbenchmark Harness) profile is available for benchmarking sample decoding performance on synthetic buffers (without requiring an audio device).
+
+To build and run the JMH benchmarks:
+
+```bash
+# Compile with JMH profile
+mvn clean verify -Pjmh
+
+# Run benchmarks
+mvn exec:java -Pjmh
+```
+
+The JMH profile is **opt-in** and does not affect standard builds. Benchmarks are located in `src/jmh/java` and measure throughput for various audio format decoding paths (8-bit/16-bit, signed/unsigned, little/big endian).
