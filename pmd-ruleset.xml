@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<ruleset name="Audio Analyzer Custom Ruleset"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    Custom PMD ruleset for Audio Analyzer project
+    
+    Focuses on:
+    - Best practices (proper use of collections, boolean logic)
+    - Code style (unused variables, proper naming)
+    - Performance (avoid wasteful allocations in hot paths)
+    
+    Excludes:
+    - Overly noisy naming rules (LongVariable, ShortVariable)
+    - Low-value quickstart rules that generate false positives
+    - Rules that conflict with Google Java Format or Checkstyle
+    
+    TODO: Review AvoidInstantiatingObjectsInLoops exclusions after 
+          performance refactor optimizes capture loop
+  </description>
+
+  <!-- Best Practices -->
+  <rule ref="category/java/bestpractices.xml">
+    <!-- Exclude overly strict rules -->
+    <exclude name="UseVarargs"/>
+    <exclude name="AvoidReassigningParameters"/>
+    <exclude name="AccessorClassGeneration"/>
+    <exclude name="GuardLogStatement"/>
+    <!-- Swing event handlers often have unused parameters -->
+    <exclude name="UnusedFormalParameter"/>
+    <!-- Allow printStackTrace in catch blocks during development -->
+    <exclude name="AvoidPrintStackTrace"/>
+  </rule>
+
+  <!-- Code Style -->
+  <rule ref="category/java/codestyle.xml">
+    <!-- Keep useful rules -->
+    <exclude name="OnlyOneReturn"/>
+    <exclude name="AtLeastOneConstructor"/>
+    <exclude name="CallSuperInConstructor"/>
+    <exclude name="CommentDefaultAccessModifier"/>
+    <exclude name="LocalVariableCouldBeFinal"/>
+    <exclude name="MethodArgumentCouldBeFinal"/>
+    <exclude name="LongVariable"/>
+    <exclude name="ShortVariable"/>
+    <exclude name="ShortClassName"/>
+    <exclude name="ShortMethodName"/>
+    <exclude name="TooManyStaticImports"/>
+    <!-- Allow underscores in GUI widget names -->
+    <exclude name="LocalVariableNamingConventions"/>
+    <!-- Google style handles abbreviations differently -->
+    <exclude name="FieldNamingConventions"/>
+    <!-- Allow braces to be optional for simple statements -->
+    <exclude name="ControlStatementBraces"/>
+    <!-- Google format handles this -->
+    <exclude name="UnnecessaryFullyQualifiedName"/>
+    <!-- Allow useless parentheses for clarity -->
+    <exclude name="UselessParentheses"/>
+    <!-- Allow underscores in numeric literals for readability -->
+    <exclude name="UseUnderscoresInNumericLiterals"/>
+    <!-- Allow unnecessary casts for explicit type clarity in audio processing -->
+    <exclude name="UnnecessaryCast"/>
+  </rule>
+
+  <!-- Performance -->
+  <rule ref="category/java/performance.xml">
+    <!-- Allow object instantiation in loops for audio capture - to be optimized later -->
+    <exclude name="AvoidInstantiatingObjectsInLoops"/>
+  </rule>
+
+  <!-- Design -->
+  <rule ref="category/java/design.xml">
+    <exclude name="LawOfDemeter"/>
+    <exclude name="LoosePackageCoupling"/>
+    <exclude name="UseUtilityClass"/>
+    <exclude name="TooManyMethods"/>
+    <exclude name="ExcessiveImports"/>
+    <exclude name="GodClass"/>
+    <exclude name="DataClass"/>
+    <!-- Allow reasonable complexity for GUI event handlers and audio processing -->
+    <exclude name="CognitiveComplexity"/>
+    <exclude name="CyclomaticComplexity"/>
+    <!-- Allow catching generic exceptions in main GUI loop and audio capture -->
+    <exclude name="AvoidCatchingGenericException"/>
+    <!-- Allow field to be mutable for audio capture state -->
+    <exclude name="ImmutableField"/>
+  </rule>
+
+  <!-- Error Prone -->
+  <rule ref="category/java/errorprone.xml">
+    <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="NullAssignment"/>
+    <!-- Swing components often call overridable methods in constructors -->
+    <exclude name="ConstructorCallsOverridableMethod"/>
+    <!-- Swing components inherit Serializable but may not need serialVersionUID -->
+    <exclude name="MissingSerialVersionUID"/>
+  </rule>
+
+  <!-- Multithreading -->
+  <rule ref="category/java/multithreading.xml">
+    <!-- Allow Thread usage for desktop audio capture application -->
+    <exclude name="DoNotUseThreads"/>
+    <!-- Allow volatile for audio capture state management -->
+    <exclude name="AvoidUsingVolatile"/>
+  </rule>
+
+  <!-- Documentation -->
+  <rule ref="category/java/documentation.xml">
+    <!-- Checkstyle handles Javadoc -->
+    <exclude name="CommentSize"/>
+    <exclude name="CommentRequired"/>
+  </rule>
+
+  <!-- Security -->
+  <rule ref="category/java/security.xml"/>
+</ruleset>

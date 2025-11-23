@@ -6,6 +6,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
@@ -62,16 +63,18 @@ public class AudioAnalyseFrame extends JFrame {
     EventQueue.invokeLater(
         () -> {
           try {
+            LOGGER.info("Starting AudioAnalyseFrame application");
             AudioAnalyseFrame frame = new AudioAnalyseFrame();
             frame.setVisible(true);
           } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to start application", e);
             e.printStackTrace();
           }
         });
   }
 
   public AudioAnalyseFrame() {
-    LOGGER.info("Initializing AudioAnalyseFrame");
+    LOGGER.info("AudioAnalyseFrame constructor started");
     setTitle("AudioAnalyzer");
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
@@ -112,6 +115,7 @@ public class AudioAnalyseFrame extends JFrame {
     pack();
     setSize(640, 420);
     setLocationRelativeTo(null);
+    LOGGER.info("AudioAnalyseFrame initialized successfully");
   }
 
   /** Initialize the audio capture service and inject into panels. */
@@ -232,19 +236,23 @@ public class AudioAnalyseFrame extends JFrame {
 
   private void toggleAudioStartStop(ActionEvent evt) {
     if (audioCaptureService == null) {
+      LOGGER.warning("toggleAudioStartStop: audioCaptureService is null");
       JOptionPane.showMessageDialog(
           this, "AudioCaptureService is not available.", "Error", JOptionPane.ERROR_MESSAGE);
       return;
     }
 
     if (audioCaptureService.isRunning()) {
+      LOGGER.info("Stopping audio capture");
       audioCaptureService.stop();
       mntmStart.setSelected(false);
     } else {
+      LOGGER.info("Starting audio capture");
       try {
         audioCaptureService.start();
         mntmStart.setSelected(true);
       } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Failed to start audio capture", ex);
         JOptionPane.showMessageDialog(
             this,
             "Failed to start audio capture: " + ex.getMessage(),

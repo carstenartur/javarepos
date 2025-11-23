@@ -31,6 +31,7 @@ public final class WaveformPanel extends JPanel {
    */
   public WaveformPanel() {
     super(true);
+    LOGGER.info("WaveformPanel created");
 
     // Timer to periodically repaint at consistent interval for smooth display updates
     javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
@@ -41,6 +42,9 @@ public final class WaveformPanel extends JPanel {
         new ComponentAdapter() {
           @Override
           public void componentResized(ComponentEvent e) {
+            if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+              LOGGER.fine(String.format("WaveformPanel resized to %dx%d", getWidth(), getHeight()));
+            }
             if (audioCaptureService != null) {
               LOGGER.fine(
                   String.format(
@@ -58,6 +62,7 @@ public final class WaveformPanel extends JPanel {
    */
   public void setAudioCaptureService(AudioCaptureService service) {
     this.audioCaptureService = service;
+    LOGGER.info("AudioCaptureService set: " + (service != null));
     if (service != null) {
       // Initial layout computation
       service.recomputeLayout(getWidth(), getHeight());
@@ -67,6 +72,9 @@ public final class WaveformPanel extends JPanel {
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+      LOGGER.fine("paintComponent called");
+    }
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {

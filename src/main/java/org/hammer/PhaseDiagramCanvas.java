@@ -25,6 +25,7 @@ public class PhaseDiagramCanvas extends JPanel {
   public PhaseDiagramCanvas() {
     super(true);
     // Timer to periodically repaint at consistent interval for smooth display updates
+    LOGGER.info("PhaseDiagramCanvas created");
     javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     t.start();
   }
@@ -35,12 +36,16 @@ public class PhaseDiagramCanvas extends JPanel {
    * @param service the AudioCaptureService
    */
   public void setAudioCaptureService(AudioCaptureService service) {
+    LOGGER.info("AudioCaptureService set: " + (service != null));
     this.audioCaptureService = service;
   }
 
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+      LOGGER.fine("paintComponent called");
+    }
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
@@ -60,18 +65,18 @@ public class PhaseDiagramCanvas extends JPanel {
     int[][] yPoints = model.getYPoints();
 
     // Draw phase diagram (channel 0 vs channel 1)
-    // Use a Graphics2D copy to avoid accumulating transformations across multiple paint calls.
-    // The translation centers the diagram based on the first point, but we must restore
-    // the original transform to prevent drift or interference with future paint operations.
+    // Fix: Use Graphics2D copy to avoid transform leak
     Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setColor(Color.yellow);
+
+      // Translate to center the diagram based on first point
       if (yPoints[0].length > 0 && yPoints[1].length > 0) {
         g2.translate(-yPoints[0][0], -yPoints[1][0]);
-        g2.drawPolyline(yPoints[0], yPoints[1], points);
+        g2.drawPolyline(yPoints[0], yPoints[1], model.getNumberOfPoints());
       }
     } finally {
-      g2.dispose(); // Restore original graphics state
+      g2.dispose();
     }
   }
 }

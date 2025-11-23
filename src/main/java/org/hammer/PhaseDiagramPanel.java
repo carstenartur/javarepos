@@ -21,6 +21,7 @@ public class PhaseDiagramPanel extends JPanel {
 
   public PhaseDiagramPanel() {
     super();
+    LOGGER.info("PhaseDiagramPanel created");
     setLayout(new BorderLayout(0, 0));
 
     JLabel lblNewLabel = new JLabel("Phase diagram");
@@ -36,7 +37,7 @@ public class PhaseDiagramPanel extends JPanel {
    * @param service the AudioCaptureService
    */
   public void setAudioCaptureService(AudioCaptureService service) {
-    LOGGER.fine("Audio capture service set for phase diagram panel");
+    LOGGER.info("AudioCaptureService set: " + (service != null));
     canvas.setAudioCaptureService(service);
   }
 }

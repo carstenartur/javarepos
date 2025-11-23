@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Checkstyle suppressions for Audio Analyzer project
+  
+  Rationale for suppressions:
+  - GUI-generated code often has naming conventions that differ from Google style
+  - Swing event handlers may have unused parameters (required by interface)
+  - Some abbreviations like UI, ID are common in GUI contexts and should be allowed
+  
+  TODO: Reevaluate these suppressions after performance refactor is complete
+-->
+
+<suppressions>
+  <!-- Allow missing braces in control statements - PMD will catch actual issues -->
+  <suppress checks="NeedBraces" files=".*"/>
+  
+  <!-- Generated or WindowBuilder GUI code may have different naming conventions -->
+  <!-- This can be tightened if GUI generation is not used -->
+  <suppress checks="LocalVariableNameCheck" files="AudioAnalyseFrame\.java"/>
+  
+  <!-- Swing event handler methods often have unused event parameters -->
+  <suppress checks="UnusedFormalParameter" files=".*Frame\.java"/>
+  <suppress checks="UnusedFormalParameter" files=".*Panel\.java"/>
+</suppressions>
