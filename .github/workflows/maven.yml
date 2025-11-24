@@ -54,7 +54,7 @@ jobs:
     
     - name: Upload JUnit XML reports
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: junit-xml
         path: target/surefire-reports/*.xml
@@ -63,7 +63,7 @@ jobs:
     
     - name: Upload Surefire raw reports
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: surefire-raw
         path: |
@@ -79,7 +79,7 @@ jobs:
     
     - name: Upload Surefire HTML report
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: surefire-html
         path: target/site/
@@ -97,7 +97,7 @@ jobs:
     
     - name: Upload Jacoco coverage report
       if: matrix.java == '21'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: jacoco-report
         path: target/site/jacoco/
@@ -105,7 +105,7 @@ jobs:
     
     - name: Upload Checkstyle report
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: checkstyle-report
         path: target/checkstyle-result.xml
@@ -114,7 +114,7 @@ jobs:
     
     - name: Upload SpotBugs report
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: spotbugs-report
         path: target/spotbugsXml.xml
@@ -123,7 +123,7 @@ jobs:
     
     - name: Upload PMD report
       if: matrix.java == '21' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: pmd-report
         path: target/pmd.xml
