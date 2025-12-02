@@ -24,6 +24,7 @@ public class PhaseDiagramCanvas extends JPanel {
 
   public PhaseDiagramCanvas() {
     super(true);
+    // Timer to periodically repaint at consistent interval for smooth display updates
     LOGGER.info("PhaseDiagramCanvas created");
     javax.swing.Timer t = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     t.start();
@@ -48,7 +49,7 @@ public class PhaseDiagramCanvas extends JPanel {
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
-      LOGGER.warning("paintComponent: audioCaptureService is null");
+      LOGGER.warning("No audio service connected during paintComponent");
       g.drawString("No audio service", 10, getHeight() / 2);
       return;
     }
@@ -56,7 +57,8 @@ public class PhaseDiagramCanvas extends JPanel {
     // Get thread-safe snapshot of model
     WaveformModel model = audioCaptureService.getLatestModel();
 
-    if (model.getChannelCount() < 2 || model.getNumberOfPoints() == 0) {
+    final int points = model.getNumberOfPoints();
+    if (model.getChannelCount() < 2 || points == 0) {
       return;
     }
 
