@@ -76,7 +76,7 @@ public class AudioAnalyseFrame extends JFrame {
   public AudioAnalyseFrame() {
     LOGGER.info("AudioAnalyseFrame constructor started");
     setTitle("AudioAnalyzer");
-    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
     contentPane = new JPanel(new BorderLayout(0, 0));
     contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));

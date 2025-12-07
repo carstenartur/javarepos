@@ -16,7 +16,7 @@ class WaveformPanelTest {
     panel.setSize(120, 80);
 
     AudioCaptureService svc = mock(AudioCaptureService.class);
-    when(svc.getLatestModel()).thenReturn(new WaveformModel(new int[0], new int[0][], 0, 0));
+    when(svc.getLatestModel()).thenReturn(WaveformModel.EMPTY);
 
     panel.setAudioCaptureService(svc);
 
@@ -29,22 +29,21 @@ class WaveformPanelTest {
     panel.setSize(200, 100);
 
     AudioCaptureService svc = mock(AudioCaptureService.class);
-    when(svc.getLatestModel()).thenReturn(new WaveformModel(new int[0], new int[0][], 0, 0));
+    when(svc.getLatestModel()).thenReturn(WaveformModel.EMPTY);
 
     panel.setAudioCaptureService(svc);
 
-    // Clear any previous invocations
+    // Clear any previous invocations from initial layout computation
     clearInvocations(svc);
 
     // Resize the panel on EDT and manually dispatch resize event
     SwingUtilities.invokeAndWait(
         () -> {
           panel.setSize(300, 150);
-          // Manually dispatch ComponentEvent.COMPONENT_RESIZED to trigger componentResized
           panel.dispatchEvent(new ComponentEvent(panel, ComponentEvent.COMPONENT_RESIZED));
         });
 
-    // Verify that recomputeLayout was called with new dimensions
+    // Verify recomputeLayout invoked with new dimensions
     verify(svc, atLeastOnce()).recomputeLayout(300, 150);
   }
 }
