@@ -78,7 +78,7 @@ public final class WaveformPanel extends JPanel {
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
-      LOGGER.warning("No audio service connected during paintComponent");
+      LOGGER.warning("paintComponent: audioCaptureService is null");
       // Draw placeholder message
       g.drawString("No audio service connected", 10, getHeight() / 2);
       return;

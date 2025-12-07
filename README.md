@@ -155,34 +155,29 @@ For code coverage metrics, refer to the [![codecov](https://codecov.io/gh/carste
 
 ## Static Analysis
 
-The project uses multiple static analysis tools to maintain code quality. All tools are configured to report issues without blocking the build (`failOnViolation=false`).
+### Audio Capture Optimizations
 
-### Configuration Files
+The audio capture implementation has been optimized to reduce runtime allocations and GC pressure during continuous audio processing:
 
-- `checkstyle.xml` - Custom Checkstyle rules based on Google Java Style with relaxed rules for GUI/audio contexts
-- `checkstyle-suppressions.xml` - Suppressions for GUI-generated code and Swing patterns
-- `spotbugs-exclude.xml` - Exclusions for GUI/serialization false positives
-- `pmd-ruleset.xml` - Curated PMD rules focusing on best practices and performance
+- **Buffer Reuse**: The capture loop uses a reusable working buffer (`workingYPoints`) to eliminate per-iteration `int[][]` allocations.
+- **Precomputed Constants**: Audio format fields (`bytesPerSample`, `frameSize`) are computed once when the audio line is opened, avoiding repeated calculations in the hot path.
+- **Integer Arithmetic**: The `recomputeXValues` method uses integer arithmetic instead of floating-point operations to reduce conversion overhead.
+- **Narrow Lock Scope**: Critical sections are minimized; I/O operations and sample decoding happen outside the model lock.
 
-### Running Static Analysis
+These optimizations maintain the same external behavior while improving throughput and reducing memory churn during live audio capture.
 
-Run all static analysis tools as part of the standard build:
+### Performance Benchmarking
 
-```bash
-mvn clean verify
-```
+An optional JMH (Java Microbenchmark Harness) profile is available for benchmarking sample decoding performance on synthetic buffers (without requiring an audio device).
 
-Run individual tools:
+To build and run the JMH benchmarks:
 
 ```bash
-# Checkstyle - code style checks
-mvn checkstyle:check
+# Compile with JMH profile
+mvn clean verify -Pjmh
 
-# SpotBugs - bug pattern detection
-mvn spotbugs:check
-
-# PMD - source code analyzer
-mvn pmd:check
+# Run benchmarks
+mvn exec:java -Pjmh
 ```
 
 ### Viewing Reports

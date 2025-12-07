@@ -96,7 +96,6 @@ public class AudioAnalyseFrame extends JFrame {
     initCenterAndEast();
     initSouthSlider();
 
-    // Timer to periodically refresh UI from model at consistent interval
     refreshTimer = new Timer(UiConstants.REFRESH_INTERVAL_MS, e -> updateUIFromModel());
     refreshTimer.setRepeats(true);
     refreshTimer.start();

@@ -49,7 +49,7 @@ public class PhaseDiagramCanvas extends JPanel {
     g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 
     if (audioCaptureService == null) {
-      LOGGER.warning("No audio service connected during paintComponent");
+      LOGGER.warning("paintComponent: audioCaptureService is null");
       g.drawString("No audio service", 10, getHeight() / 2);
       return;
     }

@@ -36,8 +36,7 @@ class WaveformPanelTest {
     // Clear any previous invocations from initial layout computation
     clearInvocations(svc);
 
-    // Perform resize on the EDT and dispatch an artificial ComponentEvent to simulate a real
-    // resize.
+    // Resize the panel on EDT and manually dispatch resize event
     SwingUtilities.invokeAndWait(
         () -> {
           panel.setSize(300, 150);
