@@ -63,6 +63,13 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private int datasize;
   private int numberOfPoints;
 
+  // Precomputed audio format fields (immutable after line is opened)
+  private int bytesPerSample;
+  private int frameSize;
+
+  // Reusable working buffer for capture loop (avoids per-iteration allocation)
+  private int[][] workingYPoints;
+
   // Audio line provider (for testability)
   private final AudioLineProvider lineProvider;
 
@@ -236,6 +243,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private void initializeAudioLine() {
     format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
     line = lineProvider.acquireLine(format);
+    // Precompute audio format constants to avoid recalculation in hot path
+    this.bytesPerSample = Math.max(1, sampleSizeInBits / 8);
+    this.frameSize = bytesPerSample * channels;
     LOGGER.info("Opened audio line with format: " + format);
   }
 
@@ -248,12 +258,14 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     modelLock.lock();
     try {
       datasize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
-      numberOfPoints = datasize / Math.max(1, (sampleSizeInBits / 8) * channels);
+      numberOfPoints = datasize / Math.max(1, frameSize);
       if (numberOfPoints <= 0) numberOfPoints = 1;
 
       datas = new byte[datasize];
       xPoints = new int[numberOfPoints];
       yPoints = new int[channels][numberOfPoints];
+      // Allocate reusable working buffer to eliminate per-iteration allocation
+      workingYPoints = new int[channels][numberOfPoints];
       recomputeXValues();
 
       LOGGER.fine(String.format("Computed data size: %d, points: %d", datasize, numberOfPoints));
@@ -271,8 +283,11 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         return;
       }
 
+      // Use integer arithmetic to avoid float conversions and rounding overhead
+      final int panelW = panelWidth - 1;
+      final int pointsM1 = numberOfPoints - 1;
       for (int i = 0; i < numberOfPoints; i++) {
-        xPoints[i] = Math.round((panelWidth - 1) * (i / (float) (numberOfPoints - 1)));
+        xPoints[i] = (int) ((long) panelW * i / pointsM1);
       }
     } finally {
       modelLock.unlock();
@@ -288,32 +303,39 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
 
     line.start();
 
-    final int bytesPerSample = Math.max(1, sampleSizeInBits / 8);
-    final int frameSize = bytesPerSample * channels;
+    // Use precomputed format constants
+    final int bps = this.bytesPerSample;
+    final int fsize = this.frameSize;
 
     while (running.get() && !Thread.currentThread().isInterrupted()) {
       try {
-        int numBytesRead = line.read(datas, 0, datas.length);
+        // Read audio data outside lock (IO should not be inside critical section)
+        final int numBytesRead = line.read(datas, 0, datas.length);
         if (numBytesRead <= 0) {
           continue;
         }
 
-        final int framesRead = numBytesRead / frameSize;
+        final int framesRead = numBytesRead / fsize;
         final int points = Math.min(numberOfPoints, framesRead);
 
-        // Prepare temporary arrays
-        int[][] tmpY = new int[channels][points];
-
+        // Decode samples outside lock into reusable working buffer
         for (int frame = 0; frame < points; frame++) {
-          int frameOffset = frame * frameSize;
+          final int frameOffset = frame * fsize;
           for (int ch = 0; ch < channels; ch++) {
-            int sampleOffset = frameOffset + ch * bytesPerSample;
-            int sample = readSample(sampleOffset, bytesPerSample);
-            tmpY[ch][frame] = scaleToPixel(sample);
+            final int sampleOffset = frameOffset + ch * bps;
+            final int sample = readSample(sampleOffset, bps);
+            workingYPoints[ch][frame] = scaleToPixel(sample);
           }
         }
 
-        // Update model atomically
+        // Clear tail region if needed (only the portion not written)
+        if (points < numberOfPoints) {
+          for (int ch = 0; ch < channels; ch++) {
+            Arrays.fill(workingYPoints[ch], points, numberOfPoints, 0);
+          }
+        }
+
+        // Update model atomically - minimal critical section
         modelLock.lock();
         try {
           if (yPoints == null
@@ -322,9 +344,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
             yPoints = new int[channels][numberOfPoints];
           }
 
+          // Copy working buffer to yPoints
           for (int ch = 0; ch < channels; ch++) {
-            Arrays.fill(yPoints[ch], 0);
-            System.arraycopy(tmpY[ch], 0, yPoints[ch], 0, tmpY[ch].length);
+            System.arraycopy(workingYPoints[ch], 0, yPoints[ch], 0, numberOfPoints);
           }
 
           // Cache the latest model (WaveformModel is immutable, no defensive copy needed)
@@ -347,17 +369,18 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private int readSample(int offset, int bytesPerSample) {
     int sample = 0;
 
+    // Fast paths for common formats (hoisted branching)
     if (bytesPerSample == 1) {
-      int b = datas[offset] & 0xFF;
+      final int b = datas[offset] & 0xFF;
       if (signed) {
         sample = (byte) b; // sign extend
       } else {
         sample = b;
       }
     } else if (bytesPerSample == 2) {
-      int hi = datas[offset + (bigEndian ? 0 : 1)] & 0xFF;
-      int lo = datas[offset + (bigEndian ? 1 : 0)] & 0xFF;
-      int raw = (hi << 8) | lo;
+      final int hi = datas[offset + (bigEndian ? 0 : 1)] & 0xFF;
+      final int lo = datas[offset + (bigEndian ? 1 : 0)] & 0xFF;
+      final int raw = (hi << 8) | lo;
       if (signed) {
         sample = (short) raw; // sign extend to int
       } else {
