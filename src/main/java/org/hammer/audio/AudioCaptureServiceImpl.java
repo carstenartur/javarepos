@@ -70,6 +70,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   // Reusable working buffer for capture loop (avoids per-iteration allocation)
   private int[][] workingYPoints;
 
+  // Audio line provider (for testability)
+  private final AudioLineProvider lineProvider;
+
   /**
    * Create a new AudioCaptureServiceImpl with specified audio parameters.
    *
@@ -239,22 +242,11 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   /** Initialize and open the audio line. */
   private void initializeAudioLine() {
     format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
-    DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-
-    if (!AudioSystem.isLineSupported(info)) {
-      throw new IllegalStateException("TargetDataLine not supported for format: " + format);
-    }
-
-    try {
-      line = (TargetDataLine) AudioSystem.getLine(info);
-      line.open(format);
-      // Precompute audio format constants to avoid recalculation in hot path
-      this.bytesPerSample = Math.max(1, sampleSizeInBits / 8);
-      this.frameSize = bytesPerSample * channels;
-      LOGGER.info("Opened audio line with format: " + format);
-    } catch (LineUnavailableException ex) {
-      throw new IllegalStateException("Unable to open TargetDataLine", ex);
-    }
+    line = lineProvider.acquireLine(format);
+    // Precompute audio format constants to avoid recalculation in hot path
+    this.bytesPerSample = Math.max(1, sampleSizeInBits / 8);
+    this.frameSize = bytesPerSample * channels;
+    LOGGER.info("Opened audio line with format: " + format);
   }
 
   /** Compute buffer sizes and allocate arrays. */
