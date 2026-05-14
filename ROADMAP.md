@@ -12,7 +12,7 @@ Suggested next features and improvements for Audio Analyzer. Items are not stric
 
 ## Testing
 
-- More unit tests for `readSample`, `scaleToPixel`, `recomputeXValues`, and the threading paths in `AudioCaptureServiceImpl` (see [`docs/quality.md`](docs/quality.md)).
+- More unit tests for `readSample()`, `scaleToPixel()`, `recomputeXValues()`, and the threading paths in `AudioCaptureServiceImpl` (see [`docs/quality.md`](docs/quality.md)).
 - Integration test using the mock audio input to assert end-to-end model publication.
 
 ## Quality Gates

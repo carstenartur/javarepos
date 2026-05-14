@@ -15,7 +15,7 @@ Audio capture is configured via constructor parameters in `AudioCaptureServiceIm
 | `bigEndian`        | `boolean` | Byte order for multi-byte samples.                                    |
 | `divisor`          | `int`     | Buffer size divisor (≥ 1). Buffer = `line.getBufferSize() / divisor`. |
 
-Higher sample rates give better frequency resolution but larger buffers. A larger `divisor` yields smaller buffers (lower latency, higher CPU); a smaller divisor yields larger buffers (higher latency, more efficient).
+Higher sample rates give better frequency resolution. The capture buffer size is `line.getBufferSize() / divisor`, so a larger `divisor` yields smaller buffers (lower latency, higher CPU) while a smaller `divisor` yields larger buffers (higher latency, more efficient). Higher sample rates may require larger buffers to maintain the same time window of audio.
 
 Example — CD-quality mono:
 
