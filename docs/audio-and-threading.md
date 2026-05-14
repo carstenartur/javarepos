@@ -66,7 +66,7 @@ The capture pipeline is optimized for real-time processing:
 
 - **Buffer reuse** — the `datas` byte array is allocated once and reused across all capture iterations; the working `int[][]` (`workingYPoints`) is reused across loop iterations to eliminate per-iteration allocations.
 - **Precomputed constants** — `bytesPerSample` and `frameSize` are computed once when the audio line opens.
-- **Integer arithmetic** — `recomputeXValues()` uses integer scaling (`Math.round`) instead of floating-point throughout the rendering pipeline.
+- **Integer arithmetic** — `recomputeXValues()` distributes points using integer division (`(long) panelW * i / pointsM1`) instead of floating-point, avoiding `float` conversions and rounding overhead.
 - **Narrow lock scope** — sample I/O and decoding happen outside `modelLock`; only model publication is inside.
 
 These optimizations preserve external behavior while reducing GC churn and improving throughput.

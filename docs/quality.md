@@ -33,7 +33,7 @@ The intent is to tighten gates in three steps so that builds stay green during t
 Focus tests on these areas to reach the higher coverage tiers:
 
 1. **`readSample()` variants** — 8/16-bit, signed/unsigned, big/little-endian, fallback path.
-2. **`captureLoop()` buffer reuse** — verify the `datas` capture buffer is reused across reads (the field name is non-idiomatic but is the existing API), exercise partial buffer fills, validate atomic model updates under concurrent access.
+2. **`captureLoop()` buffer reuse** — verify the private `datas` capture buffer field is reused across reads (the name is non-idiomatic but is the existing implementation), exercise partial buffer fills, validate atomic model updates under concurrent access.
 3. **`recomputeXValues()`** — boundary conditions (`panelWidth=1`, `numberOfPoints=1`), even distribution, `numberOfPoints > panelWidth`.
 4. **`scaleToPixel()`** — signed normalization at extremes, unsigned scaling at boundaries, `panelHeight=0`.
 5. **Thread safety** — concurrent `setDivisor()` / `recomputeLayout()`, `modelLock` race protection, snapshot consistency under concurrent writes.

@@ -41,4 +41,4 @@ On Windows use `mvnw.cmd` instead of `./mvnw`.
 
 ## License
 
-See repository for license information.
+No license file is currently provided in this repository. Until one is added, all rights are reserved by the author.
