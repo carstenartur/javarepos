@@ -4,13 +4,28 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.TargetDataLine;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -29,8 +44,11 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.AudioCaptureServiceImpl;
+import org.hammer.audio.analysis.SpectrumSnapshot;
+import org.hammer.audio.core.AudioBlock;
 
 /**
  * Main application frame for audio analysis and visualization.
@@ -41,23 +59,42 @@ import org.hammer.audio.AudioCaptureServiceImpl;
  *
  * @author chammer
  */
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public class AudioAnalyseFrame extends JFrame {
   private static final long serialVersionUID = 1L;
   private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
+  private static final String ERROR_TITLE = "Error";
+  private static final int CONTENT_PANE_HGAP = 5;
+  private static final int CONTENT_PANE_VGAP = 5;
+  private static final int DEFAULT_WINDOW_WIDTH = 900;
+  private static final int DEFAULT_WINDOW_HEIGHT = 680;
+
+  // Keep the historic capture format so existing tests and supported-device checks stay aligned.
+  private static final float DEFAULT_SAMPLE_RATE = 16000.0f;
+  private static final int DEFAULT_SAMPLE_BITS = 8;
+  private static final int DEFAULT_CHANNELS = 2;
+  private static final boolean DEFAULT_SIGNED = false;
+  private static final boolean DEFAULT_BIG_ENDIAN = false;
 
   private final JPanel contentPane;
+  private final JPanel visualizationPanel = new JPanel(new BorderLayout(4, 4));
   private final WaveformPanel waveformPanel = new WaveformPanel();
   private final PhaseDiagramPanel phaseDiagramPanel = new PhaseDiagramPanel();
+  private final SpectrumPanel spectrumPanel = new SpectrumPanel();
 
   private final JTextField textFieldDataSize;
   private final JTextField textFieldDivisor;
   private final JTextField textFieldAudioFormat;
+  private final JTextField textFieldPeakFrequency;
+  private final JComboBox<AudioDeviceItem> comboBoxAudioDevice;
 
   private final JCheckBoxMenuItem mntmStart;
+  private final JCheckBoxMenuItem mntmFreeze;
   private final Timer refreshTimer;
 
   // Audio capture service
   private AudioCaptureService audioCaptureService;
+  private transient AudioBlock frozenBlock;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(
@@ -78,18 +115,20 @@ public class AudioAnalyseFrame extends JFrame {
     setTitle("AudioAnalyzer");
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
-    contentPane = new JPanel(new BorderLayout(0, 0));
+    contentPane = new JPanel(new BorderLayout(CONTENT_PANE_HGAP, CONTENT_PANE_VGAP));
     contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
     setContentPane(contentPane);
 
-    // Initialize text fields before calling init methods
+    // Initialize fields before calling init methods
     textFieldDataSize = new JTextField();
     textFieldDivisor = new JTextField();
     textFieldAudioFormat = new JTextField();
+    textFieldPeakFrequency = new JTextField();
+    comboBoxAudioDevice = new JComboBox<>();
     mntmStart = new JCheckBoxMenuItem("Start/Stop");
+    mntmFreeze = new JCheckBoxMenuItem("Pause/Freeze");
 
-    // Create audio capture service
-    initializeAudioService();
+    initializeAudioService(null);
 
     initMenu();
     initTopSettingsPanel();
@@ -112,21 +151,29 @@ public class AudioAnalyseFrame extends JFrame {
         });
 
     pack();
-    setSize(640, 420);
+    setSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
     setLocationRelativeTo(null);
     LOGGER.info("AudioAnalyseFrame initialized successfully");
   }
 
   /** Initialize the audio capture service and inject into panels. */
-  private void initializeAudioService() {
+  private void initializeAudioService(Mixer.Info mixerInfo) {
     LOGGER.info("Initializing audio capture service");
-    // Create service with default audio parameters
-    // 16 kHz, 8-bit, 2 channels (stereo), unsigned, little-endian, divisor 1
-    audioCaptureService = new AudioCaptureServiceImpl(16000.0f, 8, 2, false, false, 1);
+    int divisor = audioCaptureService != null ? audioCaptureService.getDivisor() : 1;
+    audioCaptureService =
+        new AudioCaptureServiceImpl(
+            DEFAULT_SAMPLE_RATE,
+            DEFAULT_SAMPLE_BITS,
+            DEFAULT_CHANNELS,
+            DEFAULT_SIGNED,
+            DEFAULT_BIG_ENDIAN,
+            divisor,
+            mixerInfo);
 
-    // Inject service into panels
     waveformPanel.setAudioCaptureService(audioCaptureService);
     phaseDiagramPanel.setAudioCaptureService(audioCaptureService);
+    spectrumPanel.setAudioCaptureService(audioCaptureService);
+    setFrozen(false);
   }
 
   private void initMenu() {
@@ -139,6 +186,20 @@ public class AudioAnalyseFrame extends JFrame {
     mntmStart.setToolTipText("Start or stop audio input");
     mntmStart.addActionListener(this::toggleAudioStartStop);
     mnFile.add(mntmStart);
+
+    mntmFreeze.setToolTipText("Freeze waveform and spectrum snapshots for inspection/export");
+    mntmFreeze.addActionListener(e -> setFrozen(mntmFreeze.isSelected()));
+    mnFile.add(mntmFreeze);
+
+    mnFile.addSeparator();
+
+    JMenuItem exportCsv = new JMenuItem("Export measurement CSV...");
+    exportCsv.addActionListener(e -> exportMeasurementCsv());
+    mnFile.add(exportCsv);
+
+    JMenuItem exportPng = new JMenuItem("Export measurement PNG...");
+    exportPng.addActionListener(e -> exportMeasurementPng());
+    mnFile.add(exportPng);
 
     menuBar.add(Box.createGlue());
 
@@ -161,7 +222,14 @@ public class AudioAnalyseFrame extends JFrame {
             null,
             null));
     contentPane.add(textfelder, BorderLayout.NORTH);
-    textfelder.setLayout(new GridLayout(3, 2, 0, 0));
+    textfelder.setLayout(new GridLayout(5, 2, 4, 2));
+
+    JLabel lblAudioDevice = new JLabel("Audio Device");
+    textfelder.add(lblAudioDevice);
+
+    populateAudioDeviceChoices();
+    comboBoxAudioDevice.addItemListener(this::audioDeviceSelectionChanged);
+    textfelder.add(comboBoxAudioDevice);
 
     JLabel lblDatasize = new JLabel("datasize");
     textfelder.add(lblDatasize);
@@ -171,15 +239,6 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldDataSize.setColumns(10);
     textfelder.add(textFieldDataSize);
 
-    JLabel lblChannel = new JLabel("channel");
-    textfelder.add(lblChannel);
-
-    JTextField label_1 = new JTextField();
-    label_1.setText("...");
-    label_1.setEnabled(false);
-    label_1.setEditable(false);
-    textfelder.add(label_1);
-
     JLabel lblDivisor = new JLabel("divisor");
     textfelder.add(lblDivisor);
 
@@ -187,11 +246,6 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldDivisor.setEditable(false);
     textFieldDivisor.setColumns(10);
     textfelder.add(textFieldDivisor);
-
-    JLabel label_2 = new JLabel("");
-    textfelder.add(label_2);
-    JLabel label_3 = new JLabel("");
-    textfelder.add(label_3);
 
     JLabel lblAudioformat = new JLabel("audioformat");
     textfelder.add(lblAudioformat);
@@ -202,15 +256,25 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldAudioFormat.setColumns(30);
     textfelder.add(textFieldAudioFormat);
 
+    JLabel lblPeakFrequency = new JLabel("Peak Frequency");
+    textfelder.add(lblPeakFrequency);
+
+    textFieldPeakFrequency.setHorizontalAlignment(SwingConstants.CENTER);
+    textFieldPeakFrequency.setEnabled(false);
+    textFieldPeakFrequency.setEditable(false);
+    textFieldPeakFrequency.setColumns(12);
+    textfelder.add(textFieldPeakFrequency);
+
     updateUIFromModel();
   }
 
   private void initCenterAndEast() {
     JScrollPane scrollPane = new JScrollPane();
-    contentPane.add(scrollPane, BorderLayout.CENTER);
     scrollPane.setViewportView(waveformPanel);
-
-    contentPane.add(phaseDiagramPanel, BorderLayout.EAST);
+    visualizationPanel.add(scrollPane, BorderLayout.CENTER);
+    visualizationPanel.add(phaseDiagramPanel, BorderLayout.EAST);
+    visualizationPanel.add(spectrumPanel, BorderLayout.SOUTH);
+    contentPane.add(visualizationPanel, BorderLayout.CENTER);
   }
 
   private void initSouthSlider() {
@@ -233,11 +297,54 @@ public class AudioAnalyseFrame extends JFrame {
     contentPane.add(slider, BorderLayout.SOUTH);
   }
 
+  private void populateAudioDeviceChoices() {
+    comboBoxAudioDevice.addItem(new AudioDeviceItem(null));
+    AudioFormat format = defaultAudioFormat();
+    DataLine.Info targetLineInfo = new DataLine.Info(TargetDataLine.class, format);
+    for (Mixer.Info mixerInfo : AudioSystem.getMixerInfo()) {
+      if (supportsTargetLine(mixerInfo, targetLineInfo)) {
+        comboBoxAudioDevice.addItem(new AudioDeviceItem(mixerInfo));
+      }
+    }
+  }
+
+  private boolean supportsTargetLine(Mixer.Info mixerInfo, DataLine.Info targetLineInfo) {
+    try (Mixer mixer = AudioSystem.getMixer(mixerInfo)) {
+      return mixer.isLineSupported(targetLineInfo);
+    }
+  }
+
+  private void audioDeviceSelectionChanged(ItemEvent event) {
+    if (event.getStateChange() != ItemEvent.SELECTED) {
+      return;
+    }
+    AudioDeviceItem item = (AudioDeviceItem) event.getItem();
+    boolean wasRunning = audioCaptureService != null && audioCaptureService.isRunning();
+    if (wasRunning) {
+      stopAudioIfRunning();
+      mntmStart.setSelected(false);
+    }
+    initializeAudioService(item.mixerInfo());
+    if (wasRunning) {
+      try {
+        audioCaptureService.start();
+        mntmStart.setSelected(true);
+      } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Failed to restart audio capture", ex);
+        JOptionPane.showMessageDialog(
+            this,
+            "Failed to start selected audio device: " + ex.getMessage(),
+            ERROR_TITLE,
+            JOptionPane.ERROR_MESSAGE);
+      }
+    }
+  }
+
   private void toggleAudioStartStop(ActionEvent evt) {
     if (audioCaptureService == null) {
       LOGGER.warning("toggleAudioStartStop: audioCaptureService is null");
       JOptionPane.showMessageDialog(
-          this, "AudioCaptureService is not available.", "Error", JOptionPane.ERROR_MESSAGE);
+          this, "AudioCaptureService is not available.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
       return;
     }
 
@@ -255,7 +362,7 @@ public class AudioAnalyseFrame extends JFrame {
         JOptionPane.showMessageDialog(
             this,
             "Failed to start audio capture: " + ex.getMessage(),
-            "Error",
+            ERROR_TITLE,
             JOptionPane.ERROR_MESSAGE);
         mntmStart.setSelected(false);
       }
@@ -266,6 +373,14 @@ public class AudioAnalyseFrame extends JFrame {
     if (audioCaptureService != null && audioCaptureService.isRunning()) {
       audioCaptureService.stop();
     }
+  }
+
+  private void setFrozen(boolean frozen) {
+    frozenBlock =
+        frozen && audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
+    waveformPanel.setFrozen(frozen);
+    spectrumPanel.setFrozen(frozen);
+    mntmFreeze.setSelected(frozen);
   }
 
   private void updateUIFromModel() {
@@ -280,20 +395,168 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldAudioFormat.setText(
           audioCaptureService.getFormat() != null
               ? audioCaptureService.getFormat().toString()
-              : "n/a");
+              : defaultAudioFormat().toString());
+      double peakHz = spectrumPanel.getPeakFrequencyHz();
+      textFieldPeakFrequency.setText(
+          Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
       textFieldDivisor.setText("");
       textFieldAudioFormat.setText("");
+      textFieldPeakFrequency.setText("n/a");
       mntmStart.setSelected(false);
+    }
+  }
+
+  private void exportMeasurementCsv() {
+    AudioBlock block = currentMeasurementBlock();
+    SpectrumSnapshot spectrum = spectrumPanel.getCurrentSpectrum();
+    if (block == null && spectrum == null) {
+      JOptionPane.showMessageDialog(
+          this,
+          "No measurement data available to export.",
+          "Export CSV",
+          JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    JFileChooser chooser = new JFileChooser();
+    chooser.setFileFilter(new FileNameExtensionFilter("CSV files", "csv"));
+    chooser.setSelectedFile(new java.io.File("measurement.csv"));
+    if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+
+    java.io.File file = ensureExtension(chooser.getSelectedFile(), ".csv");
+    try (PrintWriter writer =
+        new PrintWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))) {
+      writeMeasurementCsv(writer, block, spectrum);
+      JOptionPane.showMessageDialog(
+          this, "Measurement exported to " + file, "Export CSV", JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to export CSV", ex);
+      JOptionPane.showMessageDialog(
+          this, "Failed to export CSV: " + ex.getMessage(), ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void exportMeasurementPng() {
+    if (visualizationPanel.getWidth() <= 0 || visualizationPanel.getHeight() <= 0) {
+      JOptionPane.showMessageDialog(
+          this,
+          "Visualization is not ready to export.",
+          "Export PNG",
+          JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    JFileChooser chooser = new JFileChooser();
+    chooser.setFileFilter(new FileNameExtensionFilter("PNG images", "png"));
+    chooser.setSelectedFile(new java.io.File("measurement.png"));
+    if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+
+    java.io.File file = ensureExtension(chooser.getSelectedFile(), ".png");
+    BufferedImage image =
+        new BufferedImage(
+            visualizationPanel.getWidth(),
+            visualizationPanel.getHeight(),
+            BufferedImage.TYPE_INT_ARGB);
+    java.awt.Graphics2D graphics = image.createGraphics();
+    try {
+      visualizationPanel.paintAll(graphics);
+    } finally {
+      graphics.dispose();
+    }
+    try {
+      ImageIO.write(image, "png", file);
+      JOptionPane.showMessageDialog(
+          this, "Measurement exported to " + file, "Export PNG", JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to export PNG", ex);
+      JOptionPane.showMessageDialog(
+          this, "Failed to export PNG: " + ex.getMessage(), ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private AudioBlock currentMeasurementBlock() {
+    if (frozenBlock != null) {
+      return frozenBlock;
+    }
+    return audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
+  }
+
+  private void writeMeasurementCsv(
+      PrintWriter writer, AudioBlock block, SpectrumSnapshot spectrum) {
+    writer.println("section,key,value");
+    if (block != null) {
+      writer.printf(Locale.ROOT, "metadata,sampleRate,%.3f%n", block.format().sampleRate());
+      writer.printf(Locale.ROOT, "metadata,channels,%d%n", block.channels());
+      writer.printf(Locale.ROOT, "metadata,frames,%d%n", block.frames());
+      writer.printf(Locale.ROOT, "metadata,frameIndex,%d%n", block.frameIndex());
+      writer.println();
+      writer.print("sampleIndex");
+      for (int channel = 0; channel < block.channels(); channel++) {
+        writer.print(",channel");
+        writer.print(channel);
+      }
+      writer.println();
+      float[][] samples = block.samples();
+      for (int frame = 0; frame < block.frames(); frame++) {
+        writer.print(frame);
+        for (int channel = 0; channel < block.channels(); channel++) {
+          writer.printf(Locale.ROOT, ",%.9f", samples[channel][frame]);
+        }
+        writer.println();
+      }
+    }
+    if (spectrum != null) {
+      writer.println();
+      writer.println("bin,frequencyHz,magnitude");
+      for (int bin = 0; bin < spectrum.binCount(); bin++) {
+        writer.printf(
+            Locale.ROOT,
+            "%d,%.6f,%.9f%n",
+            bin,
+            spectrum.frequencyOfBin(bin),
+            spectrum.magnitude(bin));
+      }
+    }
+  }
+
+  private static AudioFormat defaultAudioFormat() {
+    return new AudioFormat(
+        DEFAULT_SAMPLE_RATE,
+        DEFAULT_SAMPLE_BITS,
+        DEFAULT_CHANNELS,
+        DEFAULT_SIGNED,
+        DEFAULT_BIG_ENDIAN);
+  }
+
+  private static java.io.File ensureExtension(java.io.File file, String extension) {
+    String name = file.getName().toLowerCase(Locale.ROOT);
+    if (name.endsWith(extension)) {
+      return file;
+    }
+    return new java.io.File(file.getParentFile(), file.getName() + extension);
+  }
+
+  private record AudioDeviceItem(Mixer.Info mixerInfo) {
+    @Override
+    public String toString() {
+      if (mixerInfo == null) {
+        return "System default input";
+      }
+      return mixerInfo.getName() + " — " + mixerInfo.getDescription();
     }
   }
 
   private class SwingAction extends AbstractAction {
     private static final long serialVersionUID = 1L;
 
-    public SwingAction() {
+    SwingAction() {
       putValue(NAME, "About");
       putValue(SHORT_DESCRIPTION, "Some short description");
     }

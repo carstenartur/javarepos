@@ -22,6 +22,8 @@ public final class WaveformPanel extends JPanel {
   private static final Logger LOGGER = Logger.getLogger(WaveformPanel.class.getName());
 
   private AudioCaptureService audioCaptureService;
+  private transient WaveformModel frozenModel;
+  private boolean frozen;
 
   /**
    * Create a new WaveformPanel.
@@ -62,11 +64,41 @@ public final class WaveformPanel extends JPanel {
    */
   public void setAudioCaptureService(AudioCaptureService service) {
     this.audioCaptureService = service;
+    this.frozenModel = null;
+    this.frozen = false;
     LOGGER.info("AudioCaptureService set: " + (service != null));
     if (service != null) {
       // Initial layout computation
       service.recomputeLayout(getWidth(), getHeight());
     }
+  }
+
+  /**
+   * Freeze or unfreeze the displayed waveform.
+   *
+   * @param frozen true to hold the current waveform snapshot
+   */
+  public void setFrozen(boolean frozen) {
+    if (frozen && !this.frozen) {
+      frozenModel = getCurrentModel();
+    } else if (!frozen) {
+      frozenModel = null;
+    }
+    this.frozen = frozen;
+    repaint();
+  }
+
+  /**
+   * @return current waveform model, respecting frozen display state
+   */
+  public WaveformModel getCurrentModel() {
+    if (frozen && frozenModel != null) {
+      return frozenModel;
+    }
+    if (audioCaptureService == null) {
+      return WaveformModel.EMPTY;
+    }
+    return audioCaptureService.getLatestModel();
   }
 
   @Override
@@ -85,7 +117,7 @@ public final class WaveformPanel extends JPanel {
     }
 
     // Get thread-safe snapshot of model
-    WaveformModel model = audioCaptureService.getLatestModel();
+    WaveformModel model = getCurrentModel();
 
     final int points = model.getNumberOfPoints();
     if (points == 0) {

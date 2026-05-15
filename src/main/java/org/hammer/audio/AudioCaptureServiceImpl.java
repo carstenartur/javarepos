@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 import org.hammer.audio.buffer.AudioRingBuffer;
 import org.hammer.audio.capture.SampleDecoder;
@@ -112,6 +113,35 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         bigEndian,
         divisor,
         new DefaultAudioLineProvider());
+  }
+
+  /**
+   * Create a new AudioCaptureServiceImpl using a selected JavaSound input mixer.
+   *
+   * @param sampleRate sample rate in Hz
+   * @param sampleSizeInBits sample size in bits
+   * @param channels number of channels
+   * @param signed true if samples are signed
+   * @param bigEndian true if samples are big-endian
+   * @param divisor initial divisor for buffer size calculation
+   * @param mixerInfo selected mixer, or {@code null} for the system default
+   */
+  public AudioCaptureServiceImpl(
+      float sampleRate,
+      int sampleSizeInBits,
+      int channels,
+      boolean signed,
+      boolean bigEndian,
+      int divisor,
+      Mixer.Info mixerInfo) {
+    this(
+        sampleRate,
+        sampleSizeInBits,
+        channels,
+        signed,
+        bigEndian,
+        divisor,
+        new DefaultAudioLineProvider(mixerInfo));
   }
 
   /** Package-private constructor for testing with custom AudioLineProvider. */

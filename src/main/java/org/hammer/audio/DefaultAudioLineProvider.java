@@ -4,6 +4,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 
 /**
@@ -15,9 +16,23 @@ import javax.sound.sampled.TargetDataLine;
  */
 class DefaultAudioLineProvider implements AudioLineProvider {
 
+  private final Mixer.Info mixerInfo;
+
+  DefaultAudioLineProvider() {
+    this(null);
+  }
+
+  DefaultAudioLineProvider(Mixer.Info mixerInfo) {
+    this.mixerInfo = mixerInfo;
+  }
+
   @Override
   public TargetDataLine acquireLine(AudioFormat format) {
     DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
+
+    if (mixerInfo != null) {
+      return acquireLineFromMixer(format, info);
+    }
 
     if (!AudioSystem.isLineSupported(info)) {
       throw new IllegalStateException("TargetDataLine not supported for format: " + format);
@@ -29,6 +44,24 @@ class DefaultAudioLineProvider implements AudioLineProvider {
       return line;
     } catch (LineUnavailableException ex) {
       throw new IllegalStateException("Unable to open TargetDataLine", ex);
+    }
+  }
+
+  @SuppressWarnings("PMD.CloseResource")
+  private TargetDataLine acquireLineFromMixer(AudioFormat format, DataLine.Info info) {
+    Mixer mixer = AudioSystem.getMixer(mixerInfo);
+    if (!mixer.isLineSupported(info)) {
+      throw new IllegalStateException(
+          "TargetDataLine not supported by " + mixerInfo.getName() + " for format: " + format);
+    }
+
+    try {
+      TargetDataLine line = (TargetDataLine) mixer.getLine(info);
+      line.open(format);
+      return line;
+    } catch (LineUnavailableException ex) {
+      throw new IllegalStateException(
+          "Unable to open TargetDataLine on " + mixerInfo.getName(), ex);
     }
   }
 }
