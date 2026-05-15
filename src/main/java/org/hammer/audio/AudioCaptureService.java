@@ -1,6 +1,9 @@
 package org.hammer.audio;
 
 import javax.sound.sampled.AudioFormat;
+import org.hammer.audio.buffer.AudioRingBuffer;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.core.AudioFormatDescriptor;
 
 /**
  * Service interface for audio capture and waveform data management.
@@ -86,4 +89,29 @@ public interface AudioCaptureService {
    * @param height the panel height in pixels
    */
   void recomputeLayout(int width, int height);
+
+  /**
+   * @return the audio-domain format descriptor, or {@code null} if the service has not been started
+   *     yet. Unlike {@link #getFormat()}, this is platform-internal and free of JavaSound types.
+   */
+  default AudioFormatDescriptor getDescriptor() {
+    return null;
+  }
+
+  /**
+   * @return the most recently captured {@link AudioBlock}, or {@code null} if no audio has been
+   *     captured yet. The returned block is immutable and safe to share.
+   */
+  default AudioBlock getLatestBlock() {
+    return null;
+  }
+
+  /**
+   * @return the producer/consumer ring buffer fed by the capture thread, or {@code null} if the
+   *     service has not been started yet. Downstream DSP and analysis modules consume blocks from
+   *     this buffer.
+   */
+  default AudioRingBuffer<AudioBlock> getRingBuffer() {
+    return null;
+  }
 }

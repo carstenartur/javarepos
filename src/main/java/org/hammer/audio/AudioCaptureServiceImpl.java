@@ -1,25 +1,43 @@
 package org.hammer.audio;
 
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.TargetDataLine;
+import org.hammer.audio.buffer.AudioRingBuffer;
+import org.hammer.audio.capture.SampleDecoder;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.core.AudioFormatDescriptor;
+import org.hammer.audio.snapshot.WaveformSnapshot;
+import org.hammer.audio.ui.WaveformRenderer;
 
 /**
- * Implementation of AudioCaptureService.
+ * Audio capture service implementation: the bridge between the JavaSound input device and the
+ * platform's audio-domain pipeline.
  *
- * <p>This class handles audio input capture, sample processing, and model generation. It runs a
- * background thread to continuously read audio data and update the waveform model.
+ * <p><strong>Architecture (post-refactor)</strong>:
  *
- * <p>Thread-safety: All public methods are thread-safe. Internal state is protected by locks and
- * atomic variables.
+ * <pre>{@code
+ * TargetDataLine
+ *   -> raw bytes
+ *   -> SampleDecoder (-> normalized float[][])
+ *   -> AudioBlock (immutable, with frame index + timestamp)
+ *   -> AudioRingBuffer<AudioBlock>  (lock-free SPSC; downstream DSP/analysis polls asynchronously)
+ *   -> latestBlock (volatile, for "give me the latest" UI consumers)
+ *   -> WaveformModel (legacy compatibility view, built via WaveformRenderer)
+ * }</pre>
+ *
+ * <p>The capture loop knows nothing about pixels, panel coordinates or Swing — pixel scaling has
+ * moved into {@link WaveformRenderer}. The legacy {@link WaveformModel} is still produced for
+ * existing UI consumers and tests; it is now derived from the same {@link AudioBlock} the rest of
+ * the platform sees.
+ *
+ * <p>Thread-safety: all public methods are thread-safe. The capture worker thread is the sole
+ * producer for the ring buffer; downstream DSP/analysis threads are the consumers.
  *
  * @author refactoring
  */
@@ -33,11 +51,13 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   /** Minimum buffer size in bytes to prevent overly small allocations. */
   private static final int MIN_BUFFER_SIZE = 256;
 
-  private final AtomicBoolean running = new AtomicBoolean(false);
-  private final Lock modelLock = new ReentrantLock();
+  /** Default ring-buffer capacity (in {@link AudioBlock}s). */
+  private static final int RING_BUFFER_CAPACITY = 64;
 
-  // Cached latest model (volatile for thread-safety, immutable so no defensive copy needed)
+  private final AtomicBoolean running = new AtomicBoolean(false);
+
   private volatile WaveformModel latestModel;
+  private volatile AudioBlock latestBlock;
 
   // Audio configuration
   private final float sampleRate;
@@ -45,6 +65,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private final int channels;
   private final boolean signed;
   private final boolean bigEndian;
+  private final AudioFormatDescriptor descriptor;
+  private final SampleDecoder decoder;
+  private final AudioRingBuffer<AudioBlock> ringBuffer;
 
   // Capture state
   private volatile int divisor;
@@ -55,20 +78,11 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   private AudioFormat format;
   private ExecutorService workerExecutor;
 
-  // Model data (protected by modelLock)
-  private byte[] datas;
-  private int[] xPoints;
-  private int[][] yPoints;
-  private int tickEveryNSample;
-  private int datasize;
-  private int numberOfPoints;
-
-  // Precomputed audio format fields (immutable after line is opened)
-  private int bytesPerSample;
-  private int frameSize;
-
-  // Reusable working buffer for capture loop (avoids per-iteration allocation)
-  private int[][] workingYPoints;
+  // Capture buffers (mostly worker-thread owned; volatile for visibility on reconfiguration)
+  private volatile byte[] datas;
+  private volatile int datasize;
+  private volatile int numberOfPoints;
+  private final int tickEveryNSample;
 
   // Audio line provider (for testability)
   private final AudioLineProvider lineProvider;
@@ -100,17 +114,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         new DefaultAudioLineProvider());
   }
 
-  /**
-   * Package-private constructor for testing with custom AudioLineProvider.
-   *
-   * @param sampleRate sample rate in Hz (e.g., 16000.0f)
-   * @param sampleSizeInBits sample size in bits (e.g., 8 or 16)
-   * @param channels number of audio channels (e.g., 1 for mono, 2 for stereo)
-   * @param signed true if samples are signed
-   * @param bigEndian true if samples are big-endian
-   * @param divisor initial divisor for buffer size calculation
-   * @param lineProvider provider for acquiring audio lines
-   */
+  /** Package-private constructor for testing with custom AudioLineProvider. */
   AudioCaptureServiceImpl(
       float sampleRate,
       int sampleSizeInBits,
@@ -121,7 +125,6 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       AudioLineProvider lineProvider) {
     this.sampleRate = sampleRate;
     this.sampleSizeInBits = sampleSizeInBits;
-    // Ensure at least 1 channel (mono) - invalid values are normalized
     this.channels = Math.max(1, channels);
     this.signed = signed;
     this.bigEndian = bigEndian;
@@ -130,6 +133,9 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     this.panelWidth = 640;
     this.panelHeight = 200;
     this.lineProvider = lineProvider;
+    this.descriptor = new AudioFormatDescriptor(sampleRate, this.channels, sampleSizeInBits);
+    this.decoder = new SampleDecoder(descriptor, signed, bigEndian);
+    this.ringBuffer = new AudioRingBuffer<>(RING_BUFFER_CAPACITY);
   }
 
   @Override
@@ -138,12 +144,10 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       LOGGER.warning("AudioCaptureService is already running");
       return;
     }
-
     try {
       initializeAudioLine();
       computeDataSize();
       running.set(true);
-
       workerExecutor =
           Executors.newSingleThreadExecutor(
               r -> {
@@ -152,7 +156,6 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
                 return t;
               });
       workerExecutor.submit(this::captureLoop);
-
       LOGGER.info("AudioCaptureService started successfully");
     } catch (Exception e) {
       running.set(false);
@@ -166,9 +169,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     if (!running.get()) {
       return;
     }
-
     running.set(false);
-
     if (workerExecutor != null) {
       workerExecutor.shutdownNow();
       try {
@@ -180,7 +181,6 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       }
       workerExecutor = null;
     }
-
     if (line != null) {
       try {
         line.stop();
@@ -191,7 +191,6 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       }
       line = null;
     }
-
     LOGGER.info("AudioCaptureService stopped");
   }
 
@@ -206,7 +205,6 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
     if (cached != null) {
       return cached;
     }
-    // Return empty model if no data captured yet
     return WaveformModel.EMPTY;
   }
 
@@ -216,12 +214,26 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   }
 
   @Override
+  public AudioFormatDescriptor getDescriptor() {
+    return descriptor;
+  }
+
+  @Override
+  public AudioBlock getLatestBlock() {
+    return latestBlock;
+  }
+
+  @Override
+  public AudioRingBuffer<AudioBlock> getRingBuffer() {
+    return ringBuffer;
+  }
+
+  @Override
   public void setDivisor(int divisor) {
     if (divisor < 1) {
       throw new IllegalArgumentException("Divisor must be >= 1");
     }
     this.divisor = divisor;
-
     if (line != null) {
       computeDataSize();
     }
@@ -236,62 +248,35 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
   public void recomputeLayout(int width, int height) {
     this.panelWidth = width;
     this.panelHeight = height;
-    recomputeXValues();
+    // Re-render the latest block under the new layout so resized panels see fresh pixel
+    // coordinates immediately, even before the next capture cycle.
+    AudioBlock cached = latestBlock;
+    if (cached != null) {
+      latestModel = buildLegacyModel(cached);
+    }
   }
 
   /** Initialize and open the audio line. */
   private void initializeAudioLine() {
     format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
     line = lineProvider.acquireLine(format);
-    // Precompute audio format constants to avoid recalculation in hot path
-    this.bytesPerSample = Math.max(1, sampleSizeInBits / 8);
-    this.frameSize = bytesPerSample * channels;
     LOGGER.info("Opened audio line with format: " + format);
   }
 
-  /** Compute buffer sizes and allocate arrays. */
+  /** Compute byte buffer size and number of frames per block. */
   private void computeDataSize() {
     if (line == null) {
       throw new IllegalStateException("Line must be opened before computing buffer sizes.");
     }
-
-    modelLock.lock();
-    try {
-      datasize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
-      numberOfPoints = datasize / Math.max(1, frameSize);
-      if (numberOfPoints <= 0) numberOfPoints = 1;
-
-      datas = new byte[datasize];
-      xPoints = new int[numberOfPoints];
-      yPoints = new int[channels][numberOfPoints];
-      // Allocate reusable working buffer to eliminate per-iteration allocation
-      workingYPoints = new int[channels][numberOfPoints];
-      recomputeXValues();
-
-      LOGGER.fine(String.format("Computed data size: %d, points: %d", datasize, numberOfPoints));
-    } finally {
-      modelLock.unlock();
+    datasize = Math.max(MIN_BUFFER_SIZE, line.getBufferSize() / Math.max(1, divisor));
+    int frameSize = decoder.frameSize();
+    int points = datasize / Math.max(1, frameSize);
+    if (points <= 0) {
+      points = 1;
     }
-  }
-
-  /** Recompute X coordinates for drawing based on panel width. */
-  private void recomputeXValues() {
-    modelLock.lock();
-    try {
-      if (xPoints == null || numberOfPoints <= 1) {
-        if (xPoints != null && xPoints.length > 0) xPoints[0] = 0;
-        return;
-      }
-
-      // Use integer arithmetic to avoid float conversions and rounding overhead
-      final int panelW = panelWidth - 1;
-      final int pointsM1 = numberOfPoints - 1;
-      for (int i = 0; i < numberOfPoints; i++) {
-        xPoints[i] = (int) ((long) panelW * i / pointsM1);
-      }
-    } finally {
-      modelLock.unlock();
-    }
+    numberOfPoints = points;
+    datas = new byte[datasize];
+    LOGGER.fine(String.format("Computed data size: %d, points: %d", datasize, points));
   }
 
   /** Main capture loop running in worker thread. */
@@ -300,60 +285,59 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       LOGGER.warning("TargetDataLine is null, aborting capture loop.");
       return;
     }
-
     line.start();
 
-    // Use precomputed format constants
-    final int bps = this.bytesPerSample;
-    final int fsize = this.frameSize;
+    long frameIndex = 0L;
+    int allocatedFrames = numberOfPoints;
+    float[][] decodeBuffer = new float[channels][allocatedFrames];
 
     while (running.get() && !Thread.currentThread().isInterrupted()) {
       try {
-        // Read audio data outside lock (IO should not be inside critical section)
-        final int numBytesRead = line.read(datas, 0, datas.length);
+        byte[] localData = datas;
+        final int numBytesRead = line.read(localData, 0, localData.length);
         if (numBytesRead <= 0) {
           continue;
         }
+        int currentPoints = numberOfPoints;
+        if (allocatedFrames < currentPoints) {
+          allocatedFrames = currentPoints;
+          decodeBuffer = new float[channels][allocatedFrames];
+        }
 
-        final int framesRead = numBytesRead / fsize;
-        final int points = Math.min(numberOfPoints, framesRead);
-
-        // Decode samples outside lock into reusable working buffer
-        for (int frame = 0; frame < points; frame++) {
-          final int frameOffset = frame * fsize;
-          for (int ch = 0; ch < channels; ch++) {
-            final int sampleOffset = frameOffset + ch * bps;
-            final int sample = readSample(sampleOffset, bps);
-            workingYPoints[ch][frame] = scaleToPixel(sample);
+        final int decodedFrames = Math.min(currentPoints, decoder.framesIn(numBytesRead));
+        if (decodedFrames <= 0) {
+          continue;
+        }
+        decoder.decode(localData, decodedFrames * decoder.frameSize(), decodeBuffer);
+        // Zero-pad the tail so block.frames() always equals the configured buffer size; this
+        // preserves the legacy semantics where the model's numberOfPoints reflects the configured
+        // buffer (driven by the divisor) rather than the partial bytes read in this iteration.
+        for (int c = 0; c < channels; c++) {
+          for (int i = decodedFrames; i < currentPoints; i++) {
+            decodeBuffer[c][i] = 0f;
           }
         }
 
-        // Clear tail region if needed (only the portion not written)
-        if (points < numberOfPoints) {
-          for (int ch = 0; ch < channels; ch++) {
-            Arrays.fill(workingYPoints[ch], points, numberOfPoints, 0);
-          }
+        // Build a fresh, exactly-sized float[channels][currentPoints] for the immutable block.
+        float[][] blockSamples = new float[channels][currentPoints];
+        for (int c = 0; c < channels; c++) {
+          System.arraycopy(decodeBuffer[c], 0, blockSamples[c], 0, currentPoints);
         }
+        AudioBlock block = AudioBlock.wrap(descriptor, blockSamples, frameIndex, System.nanoTime());
+        frameIndex += decodedFrames;
 
-        // Update model atomically - minimal critical section
-        modelLock.lock();
-        try {
-          if (yPoints == null
-              || yPoints.length != channels
-              || yPoints[0].length != numberOfPoints) {
-            yPoints = new int[channels][numberOfPoints];
-          }
+        // Publish to ring buffer (plain offer + drop-on-full). The capture thread is the sole
+        // producer; downstream DSP/analysis consumers may run on other threads, so we cannot
+        // safely use offerOverwrite here (see AudioRingBuffer.offerOverwrite Javadoc). The
+        // "latest wins" path is served by the volatile latestBlock pointer below, so dropping
+        // the new block on overflow is preferable to corrupting the consumer's view.
+        ringBuffer.offer(block);
 
-          // Copy working buffer to yPoints
-          for (int ch = 0; ch < channels; ch++) {
-            System.arraycopy(workingYPoints[ch], 0, yPoints[ch], 0, numberOfPoints);
-          }
+        // Cache "latest" view for cheap polling consumers (UI, REST).
+        latestBlock = block;
 
-          // Cache the latest model (WaveformModel is immutable, no defensive copy needed)
-          latestModel = new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);
-        } finally {
-          modelLock.unlock();
-        }
+        // Build the legacy WaveformModel for backwards-compatible Swing rendering.
+        latestModel = buildLegacyModel(block);
 
       } catch (Exception ex) {
         if (running.get()) {
@@ -361,58 +345,28 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         }
       }
     }
-
     LOGGER.fine("Capture loop ended");
   }
 
-  /** Read a sample from the data buffer. */
-  private int readSample(int offset, int bytesPerSample) {
-    int sample = 0;
-
-    // Fast paths for common formats (hoisted branching)
-    if (bytesPerSample == 1) {
-      final int b = datas[offset] & 0xFF;
-      if (signed) {
-        sample = (byte) b; // sign extend
-      } else {
-        sample = b;
-      }
-    } else if (bytesPerSample == 2) {
-      final int hi = datas[offset + (bigEndian ? 0 : 1)] & 0xFF;
-      final int lo = datas[offset + (bigEndian ? 1 : 0)] & 0xFF;
-      final int raw = (hi << 8) | lo;
-      if (signed) {
-        sample = (short) raw; // sign extend to int
-      } else {
-        sample = raw & 0xFFFF;
-      }
+  /** Build a legacy {@link WaveformModel} from a new {@link AudioBlock}. */
+  private WaveformModel buildLegacyModel(AudioBlock block) {
+    WaveformSnapshot snap =
+        WaveformSnapshot.wrap(
+            block.samples(),
+            block.format().sampleRate(),
+            block.frameIndex(),
+            block.timestampNanos());
+    int[] xPoints = WaveformRenderer.computeXPoints(snap.frames(), panelWidth);
+    // Swing panels can transiently report height==0 before they are laid out; in that case we
+    // emit empty per-channel arrays rather than asking WaveformRenderer to throw, since this is
+    // a legitimate "nothing to draw yet" state, not a programming error.
+    int h = panelHeight;
+    int[][] yPoints;
+    if (h <= 0) {
+      yPoints = new int[snap.channels()][0];
     } else {
-      // Support for other sample sizes (assumes big-endian byte order)
-      // This is a fallback for non-standard sample sizes
-      for (int b = 0; b < bytesPerSample; b++) {
-        sample = (sample << 8) | (datas[offset + b] & 0xFF);
-      }
+      yPoints = WaveformRenderer.computeYPointsAllChannels(snap, h);
     }
-
-    return sample;
-  }
-
-  /** Scale a sample value to pixel coordinates. */
-  private int scaleToPixel(int sample) {
-    int y = 0;
-
-    if (panelHeight > 0) {
-      if (signed) {
-        int maxAbs = (1 << (sampleSizeInBits - 1)) - 1;
-        float norm = (float) sample / (float) maxAbs; // -1..1
-        y = Math.round((panelHeight / 2f) - norm * (panelHeight / 2f));
-      } else {
-        int max = (1 << sampleSizeInBits) - 1;
-        float norm = (float) sample / (float) max; // 0..1
-        y = Math.round(panelHeight - norm * panelHeight);
-      }
-    }
-
-    return y;
+    return new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);
   }
 }
