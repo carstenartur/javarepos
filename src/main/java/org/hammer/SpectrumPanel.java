@@ -29,7 +29,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   public SpectrumPanel() {
     super(true);
     setPreferredSize(new Dimension(320, 180));
-    javax.swing.Timer timer = new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
+    javax.swing.Timer timer =
+        new javax.swing.Timer(UiConstants.REFRESH_INTERVAL_MS, e -> repaint());
     timer.start();
   }
 

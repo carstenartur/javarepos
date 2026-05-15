@@ -364,7 +364,8 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void setFrozen(boolean frozen) {
-    frozenBlock = frozen && audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
+    frozenBlock =
+        frozen && audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
     waveformPanel.setFrozen(frozen);
     spectrumPanel.setFrozen(frozen);
     mntmFreeze.setSelected(frozen);
@@ -384,7 +385,8 @@ public class AudioAnalyseFrame extends JFrame {
               ? audioCaptureService.getFormat().toString()
               : defaultAudioFormat().toString());
       double peakHz = spectrumPanel.getPeakFrequencyHz();
-      textFieldPeakFrequency.setText(Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
+      textFieldPeakFrequency.setText(
+          Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
@@ -400,7 +402,10 @@ public class AudioAnalyseFrame extends JFrame {
     SpectrumSnapshot spectrum = spectrumPanel.getCurrentSpectrum();
     if (block == null && spectrum == null) {
       JOptionPane.showMessageDialog(
-          this, "No measurement data available to export.", "Export CSV", JOptionPane.INFORMATION_MESSAGE);
+          this,
+          "No measurement data available to export.",
+          "Export CSV",
+          JOptionPane.INFORMATION_MESSAGE);
       return;
     }
 
@@ -415,17 +420,22 @@ public class AudioAnalyseFrame extends JFrame {
     try (PrintWriter writer =
         new PrintWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))) {
       writeMeasurementCsv(writer, block, spectrum);
-      JOptionPane.showMessageDialog(this, "Measurement exported to " + file, "Export CSV", JOptionPane.INFORMATION_MESSAGE);
+      JOptionPane.showMessageDialog(
+          this, "Measurement exported to " + file, "Export CSV", JOptionPane.INFORMATION_MESSAGE);
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Failed to export CSV", ex);
-      JOptionPane.showMessageDialog(this, "Failed to export CSV: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(
+          this, "Failed to export CSV: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
   }
 
   private void exportMeasurementPng() {
     if (visualizationPanel.getWidth() <= 0 || visualizationPanel.getHeight() <= 0) {
       JOptionPane.showMessageDialog(
-          this, "Visualization is not ready to export.", "Export PNG", JOptionPane.INFORMATION_MESSAGE);
+          this,
+          "Visualization is not ready to export.",
+          "Export PNG",
+          JOptionPane.INFORMATION_MESSAGE);
       return;
     }
 
@@ -439,7 +449,9 @@ public class AudioAnalyseFrame extends JFrame {
     java.io.File file = ensureExtension(chooser.getSelectedFile(), ".png");
     BufferedImage image =
         new BufferedImage(
-            visualizationPanel.getWidth(), visualizationPanel.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            visualizationPanel.getWidth(),
+            visualizationPanel.getHeight(),
+            BufferedImage.TYPE_INT_ARGB);
     java.awt.Graphics2D graphics = image.createGraphics();
     try {
       visualizationPanel.paintAll(graphics);
@@ -448,10 +460,12 @@ public class AudioAnalyseFrame extends JFrame {
     }
     try {
       ImageIO.write(image, "png", file);
-      JOptionPane.showMessageDialog(this, "Measurement exported to " + file, "Export PNG", JOptionPane.INFORMATION_MESSAGE);
+      JOptionPane.showMessageDialog(
+          this, "Measurement exported to " + file, "Export PNG", JOptionPane.INFORMATION_MESSAGE);
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Failed to export PNG", ex);
-      JOptionPane.showMessageDialog(this, "Failed to export PNG: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(
+          this, "Failed to export PNG: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
   }
 
@@ -462,7 +476,8 @@ public class AudioAnalyseFrame extends JFrame {
     return audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
   }
 
-  private void writeMeasurementCsv(PrintWriter writer, AudioBlock block, SpectrumSnapshot spectrum) {
+  private void writeMeasurementCsv(
+      PrintWriter writer, AudioBlock block, SpectrumSnapshot spectrum) {
     writer.println("section,key,value");
     if (block != null) {
       writer.printf(Locale.ROOT, "metadata,sampleRate,%.3f%n", block.format().sampleRate());
@@ -490,14 +505,22 @@ public class AudioAnalyseFrame extends JFrame {
       writer.println("bin,frequencyHz,magnitude");
       for (int bin = 0; bin < spectrum.binCount(); bin++) {
         writer.printf(
-            Locale.ROOT, "%d,%.6f,%.9f%n", bin, spectrum.frequencyOfBin(bin), spectrum.magnitude(bin));
+            Locale.ROOT,
+            "%d,%.6f,%.9f%n",
+            bin,
+            spectrum.frequencyOfBin(bin),
+            spectrum.magnitude(bin));
       }
     }
   }
 
   private static AudioFormat defaultAudioFormat() {
     return new AudioFormat(
-        DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_BITS, DEFAULT_CHANNELS, DEFAULT_SIGNED, DEFAULT_BIG_ENDIAN);
+        DEFAULT_SAMPLE_RATE,
+        DEFAULT_SAMPLE_BITS,
+        DEFAULT_CHANNELS,
+        DEFAULT_SIGNED,
+        DEFAULT_BIG_ENDIAN);
   }
 
   private static java.io.File ensureExtension(java.io.File file, String extension) {

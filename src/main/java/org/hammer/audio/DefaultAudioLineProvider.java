@@ -59,7 +59,8 @@ class DefaultAudioLineProvider implements AudioLineProvider {
       line.open(format);
       return line;
     } catch (LineUnavailableException ex) {
-      throw new IllegalStateException("Unable to open TargetDataLine on " + mixerInfo.getName(), ex);
+      throw new IllegalStateException(
+          "Unable to open TargetDataLine on " + mixerInfo.getName(), ex);
     }
   }
 }
