@@ -64,6 +64,10 @@ public class AudioAnalyseFrame extends JFrame {
   private static final long serialVersionUID = 1L;
   private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
   private static final String ERROR_TITLE = "Error";
+  private static final int CONTENT_PANE_HGAP = 5;
+  private static final int CONTENT_PANE_VGAP = 5;
+  private static final int DEFAULT_WINDOW_WIDTH = 900;
+  private static final int DEFAULT_WINDOW_HEIGHT = 680;
 
   // Keep the historic capture format so existing tests and supported-device checks stay aligned.
   private static final float DEFAULT_SAMPLE_RATE = 16000.0f;
@@ -111,7 +115,7 @@ public class AudioAnalyseFrame extends JFrame {
     setTitle("AudioAnalyzer");
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
-    contentPane = new JPanel(new BorderLayout(5, 5));
+    contentPane = new JPanel(new BorderLayout(CONTENT_PANE_HGAP, CONTENT_PANE_VGAP));
     contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
     setContentPane(contentPane);
 
@@ -147,7 +151,7 @@ public class AudioAnalyseFrame extends JFrame {
         });
 
     pack();
-    setSize(900, 680);
+    setSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
     setLocationRelativeTo(null);
     LOGGER.info("AudioAnalyseFrame initialized successfully");
   }

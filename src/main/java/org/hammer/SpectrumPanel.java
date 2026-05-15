@@ -81,7 +81,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (currentAnalyzer == null
         || currentAnalyzer.fftSize() != FFT_SIZE
         || latestSpectrum == null
-        || Float.compare(latestSpectrum.sampleRate(), block.format().sampleRate()) != 0) {
+        || latestSpectrum.sampleRate() != block.format().sampleRate()) {
       currentAnalyzer = new SpectrumAnalyzer(FFT_SIZE, 0, block.format().sampleRate());
       analyzer = currentAnalyzer;
     }
