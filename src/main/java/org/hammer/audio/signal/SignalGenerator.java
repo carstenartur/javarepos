@@ -6,8 +6,8 @@ import org.hammer.audio.core.AudioFormatDescriptor;
 /**
  * Deterministic synthetic signal source.
  *
- * <p>Signal generators produce a stream of {@link AudioBlock}s without any audio hardware. They
- * are intended for:
+ * <p>Signal generators produce a stream of {@link AudioBlock}s without any audio hardware. They are
+ * intended for:
  *
  * <ul>
  *   <li>Deterministic unit tests of the DSP and analysis modules
@@ -16,14 +16,16 @@ import org.hammer.audio.core.AudioFormatDescriptor;
  * </ul>
  *
  * <p>Generators are stateful — they advance a frame counter / phase across calls — but a single
- * generator may be advanced from a single thread. Calling {@link #reset()} returns the generator
- * to its initial state for reproducible test runs.
+ * generator may be advanced from a single thread. Calling {@link #reset()} returns the generator to
+ * its initial state for reproducible test runs.
  *
  * @author refactoring
  */
 public interface SignalGenerator {
 
-  /** @return the format descriptor of the produced blocks */
+  /**
+   * @return the format descriptor of the produced blocks
+   */
   AudioFormatDescriptor format();
 
   /**

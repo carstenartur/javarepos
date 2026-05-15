@@ -30,24 +30,26 @@ class DSPPipelineTest {
 
   @Test
   void stages_apply_in_order() {
-    DSPProcessor doubleIt = block -> {
-      float[] s = block.channelView(0);
-      float[] out = new float[s.length];
-      for (int i = 0; i < s.length; i++) {
-        out[i] = s[i] * 2f;
-      }
-      return AudioBlock.wrap(block.format(), new float[][] {out}, block.frameIndex(),
-          block.timestampNanos());
-    };
-    DSPProcessor addOne = block -> {
-      float[] s = block.channelView(0);
-      float[] out = new float[s.length];
-      for (int i = 0; i < s.length; i++) {
-        out[i] = s[i] + 1f;
-      }
-      return AudioBlock.wrap(block.format(), new float[][] {out}, block.frameIndex(),
-          block.timestampNanos());
-    };
+    DSPProcessor doubleIt =
+        block -> {
+          float[] s = block.channelView(0);
+          float[] out = new float[s.length];
+          for (int i = 0; i < s.length; i++) {
+            out[i] = s[i] * 2f;
+          }
+          return AudioBlock.wrap(
+              block.format(), new float[][] {out}, block.frameIndex(), block.timestampNanos());
+        };
+    DSPProcessor addOne =
+        block -> {
+          float[] s = block.channelView(0);
+          float[] out = new float[s.length];
+          for (int i = 0; i < s.length; i++) {
+            out[i] = s[i] + 1f;
+          }
+          return AudioBlock.wrap(
+              block.format(), new float[][] {out}, block.frameIndex(), block.timestampNanos());
+        };
 
     DSPPipeline pipeline = DSPPipeline.of(doubleIt, addOne);
     AudioBlock result = pipeline.process(blockOf(1f, 2f, 3f));

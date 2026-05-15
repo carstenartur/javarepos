@@ -109,32 +109,38 @@ class AudioRingBufferTest {
     final AtomicBoolean failed = new AtomicBoolean(false);
     final AtomicLong sumConsumed = new AtomicLong(0);
 
-    Thread producer = new Thread(() -> {
-      for (int i = 1; i <= totalItems; i++) {
-        // Spin if full — back-pressure
-        while (!rb.offer(i)) {
-          Thread.onSpinWait();
-        }
-      }
-    }, "producer");
+    Thread producer =
+        new Thread(
+            () -> {
+              for (int i = 1; i <= totalItems; i++) {
+                // Spin if full — back-pressure
+                while (!rb.offer(i)) {
+                  Thread.onSpinWait();
+                }
+              }
+            },
+            "producer");
 
-    Thread consumer = new Thread(() -> {
-      int received = 0;
-      int lastValue = 0;
-      while (received < totalItems) {
-        Integer v = rb.poll();
-        if (v == null) {
-          Thread.onSpinWait();
-          continue;
-        }
-        if (v <= lastValue) {
-          failed.set(true);
-        }
-        lastValue = v;
-        sumConsumed.addAndGet(v);
-        received++;
-      }
-    }, "consumer");
+    Thread consumer =
+        new Thread(
+            () -> {
+              int received = 0;
+              int lastValue = 0;
+              while (received < totalItems) {
+                Integer v = rb.poll();
+                if (v == null) {
+                  Thread.onSpinWait();
+                  continue;
+                }
+                if (v <= lastValue) {
+                  failed.set(true);
+                }
+                lastValue = v;
+                sumConsumed.addAndGet(v);
+                received++;
+              }
+            },
+            "consumer");
 
     consumer.start();
     producer.start();

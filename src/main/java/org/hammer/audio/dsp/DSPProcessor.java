@@ -11,8 +11,8 @@ import org.hammer.audio.core.AudioBlock;
  * <ul>
  *   <li>pass the block through unchanged ({@link #identity()})
  *   <li>transform the samples (e.g. high-pass filter, gain, normalization, downmix)
- *   <li>change the format (e.g. sample-rate conversion, mono mixdown) — the returned block's
- *       {@code format()} must reflect the post-processing format
+ *   <li>change the format (e.g. sample-rate conversion, mono mixdown) — the returned block's {@code
+ *       format()} must reflect the post-processing format
  * </ul>
  *
  * <p>Processors should treat their input as immutable (see {@link AudioBlock#channelView(int)}) and
@@ -35,7 +35,9 @@ public interface DSPProcessor {
    */
   AudioBlock process(AudioBlock block);
 
-  /** @return a no-op processor that returns its input unchanged */
+  /**
+   * @return a no-op processor that returns its input unchanged
+   */
   static DSPProcessor identity() {
     return block -> block;
   }

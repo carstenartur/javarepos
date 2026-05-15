@@ -26,8 +26,7 @@ class RmsPeakAnalyzerTest {
     AudioBlock block = gen.nextBlock(8192);
 
     RmsPeakSnapshot snap = new RmsPeakAnalyzer().analyze(block);
-    assertEquals(1f / Math.sqrt(2.0), snap.rms(0), 0.01,
-        "RMS of unit sine should be 1/sqrt(2)");
+    assertEquals(1f / Math.sqrt(2.0), snap.rms(0), 0.01, "RMS of unit sine should be 1/sqrt(2)");
     assertEquals(1f, snap.peak(0), 0.01, "peak of unit sine should be ~1");
   }
 

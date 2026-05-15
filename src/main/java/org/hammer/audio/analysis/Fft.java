@@ -8,8 +8,8 @@ package org.hammer.audio.analysis;
  * input as needed.
  *
  * <p><strong>Performance characteristics</strong>: O(N log N), O(N) extra memory (twiddle tables
- * and bit-reversed index table cached per instance for reuse across calls). The implementation
- * is single-threaded; create one {@code Fft} per thread or guard externally.
+ * and bit-reversed index table cached per instance for reuse across calls). The implementation is
+ * single-threaded; create one {@code Fft} per thread or guard externally.
  *
  * <p>The architecture is more important than absolute FFT performance here: callers wanting more
  * speed should plug in a different {@link AnalysisModule} backed by a native or vectorized FFT
@@ -54,7 +54,9 @@ public final class Fft {
     }
   }
 
-  /** @return the FFT size */
+  /**
+   * @return the FFT size
+   */
   public int size() {
     return size;
   }
@@ -71,7 +73,13 @@ public final class Fft {
   public void forward(float[] re, float[] im) {
     if (re.length != size || im.length != size) {
       throw new IllegalArgumentException(
-          "re/im length must equal FFT size " + size + " (got " + re.length + "/" + im.length + ")");
+          "re/im length must equal FFT size "
+              + size
+              + " (got "
+              + re.length
+              + "/"
+              + im.length
+              + ")");
     }
 
     // Bit-reverse permutation
@@ -125,8 +133,7 @@ public final class Fft {
   public void magnitudes(float[] re, float[] im, float[] magnitudes) {
     int n = magnitudes.length;
     if (n != size && n != size / 2 + 1) {
-      throw new IllegalArgumentException(
-          "magnitudes length must be size or size/2+1, was " + n);
+      throw new IllegalArgumentException("magnitudes length must be size or size/2+1, was " + n);
     }
     for (int i = 0; i < n; i++) {
       float r = re[i];

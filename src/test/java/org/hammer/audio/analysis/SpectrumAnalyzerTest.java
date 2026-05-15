@@ -32,7 +32,8 @@ class SpectrumAnalyzerTest {
     }
     float peakHz = snap.frequencyOfBin(peakBin);
     float binWidth = snap.binWidthHz();
-    assertTrue(Math.abs(peakHz - freq) <= binWidth,
+    assertTrue(
+        Math.abs(peakHz - freq) <= binWidth,
         "peak at " + peakHz + " Hz should be within one bin (" + binWidth + " Hz) of " + freq);
   }
 

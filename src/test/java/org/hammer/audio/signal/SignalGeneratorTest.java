@@ -68,7 +68,8 @@ class SignalGeneratorTest {
 
     // At 100 Hz over 0.1 s ≈ 10 cycles ≈ 20 zero crossings (roughly)
     // At ~1000 Hz over 0.1 s ≈ 100 cycles ≈ 200 zero crossings
-    assertTrue(lateCrossings > earlyCrossings * 4,
+    assertTrue(
+        lateCrossings > earlyCrossings * 4,
         "chirp should accelerate (early=" + earlyCrossings + ", late=" + lateCrossings + ")");
   }
 
@@ -76,8 +77,8 @@ class SignalGeneratorTest {
   void rejects_invalid_frequency() {
     assertThrows(IllegalArgumentException.class, () -> new SineGenerator(MONO, 0.0, 1f));
     assertThrows(IllegalArgumentException.class, () -> new SquareGenerator(MONO, -1.0, 1f));
-    assertThrows(IllegalArgumentException.class,
-        () -> new ChirpGenerator(MONO, 0.0, 1000.0, 1.0, 1f));
+    assertThrows(
+        IllegalArgumentException.class, () -> new ChirpGenerator(MONO, 0.0, 1000.0, 1.0, 1f));
   }
 
   private static int countZeroCrossings(float[] signal, int start, int end) {

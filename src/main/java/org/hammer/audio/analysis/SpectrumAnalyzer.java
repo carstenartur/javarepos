@@ -71,11 +71,13 @@ public final class SpectrumAnalyzer implements AnalysisModule<SpectrumSnapshot> 
     fft.forward(re, im);
     fft.magnitudes(re, im, magnitudes);
 
-    return new SpectrumSnapshot(block.frameIndex(), block.timestampNanos(), channel, sampleRate,
-        fftSize, magnitudes);
+    return new SpectrumSnapshot(
+        block.frameIndex(), block.timestampNanos(), channel, sampleRate, fftSize, magnitudes);
   }
 
-  /** @return the configured FFT size */
+  /**
+   * @return the configured FFT size
+   */
   public int fftSize() {
     return fftSize;
   }

@@ -45,8 +45,8 @@ public final class AudioBlock {
    * @param timestampNanos capture timestamp (nanoseconds, e.g. {@link System#nanoTime()})
    * @throws IllegalArgumentException if {@code samples} layout does not match {@code format}
    */
-  public AudioBlock(AudioFormatDescriptor format, float[][] samples, long frameIndex,
-      long timestampNanos) {
+  public AudioBlock(
+      AudioFormatDescriptor format, float[][] samples, long frameIndex, long timestampNanos) {
     this(format, samples, frameIndex, timestampNanos, true);
   }
 
@@ -54,8 +54,12 @@ public final class AudioBlock {
    * Internal constructor that may skip the defensive copy. Used by {@link #wrap} for hot-path
    * production code that has just allocated a fresh array and is willing to surrender ownership.
    */
-  private AudioBlock(AudioFormatDescriptor format, float[][] samples, long frameIndex,
-      long timestampNanos, boolean copy) {
+  private AudioBlock(
+      AudioFormatDescriptor format,
+      float[][] samples,
+      long frameIndex,
+      long timestampNanos,
+      boolean copy) {
     this.format = Objects.requireNonNull(format, "format");
     Objects.requireNonNull(samples, "samples");
     if (samples.length != format.channels()) {
@@ -103,12 +107,14 @@ public final class AudioBlock {
    * @param timestampNanos capture timestamp (nanoseconds)
    * @return a new immutable {@code AudioBlock} referencing the supplied array
    */
-  public static AudioBlock wrap(AudioFormatDescriptor format, float[][] samples, long frameIndex,
-      long timestampNanos) {
+  public static AudioBlock wrap(
+      AudioFormatDescriptor format, float[][] samples, long frameIndex, long timestampNanos) {
     return new AudioBlock(format, samples, frameIndex, timestampNanos, false);
   }
 
-  /** @return the audio format descriptor */
+  /**
+   * @return the audio format descriptor
+   */
   public AudioFormatDescriptor format() {
     return format;
   }
@@ -138,22 +144,30 @@ public final class AudioBlock {
     return samples[channel];
   }
 
-  /** @return number of audio frames in this block (samples per channel) */
+  /**
+   * @return number of audio frames in this block (samples per channel)
+   */
   public int frames() {
     return frames;
   }
 
-  /** @return number of channels (convenience alias of {@code format().channels()}) */
+  /**
+   * @return number of channels (convenience alias of {@code format().channels()})
+   */
   public int channels() {
     return format.channels();
   }
 
-  /** @return monotonically increasing frame counter from stream start */
+  /**
+   * @return monotonically increasing frame counter from stream start
+   */
   public long frameIndex() {
     return frameIndex;
   }
 
-  /** @return capture timestamp in nanoseconds (cf. {@link System#nanoTime()}) */
+  /**
+   * @return capture timestamp in nanoseconds (cf. {@link System#nanoTime()})
+   */
   public long timestampNanos() {
     return timestampNanos;
   }

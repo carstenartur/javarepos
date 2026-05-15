@@ -1,4 +1,3 @@
-
 /**
  * Deterministic synthetic signal generators.
  *

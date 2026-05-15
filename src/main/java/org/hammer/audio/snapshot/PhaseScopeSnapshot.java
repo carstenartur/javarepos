@@ -27,46 +27,59 @@ public final class PhaseScopeSnapshot {
    */
   public static PhaseScopeSnapshot fromBlock(AudioBlock block) {
     if (block.channels() < 2) {
-      return new PhaseScopeSnapshot(new float[0], new float[0], block.frameIndex(),
-          block.timestampNanos());
+      return new PhaseScopeSnapshot(
+          new float[0], new float[0], block.frameIndex(), block.timestampNanos());
     }
-    return new PhaseScopeSnapshot(block.channelView(0).clone(), block.channelView(1).clone(),
-        block.frameIndex(), block.timestampNanos());
+    return new PhaseScopeSnapshot(
+        block.channelView(0).clone(),
+        block.channelView(1).clone(),
+        block.frameIndex(),
+        block.timestampNanos());
   }
 
   /** Empty snapshot constant. */
-  public static final PhaseScopeSnapshot EMPTY = new PhaseScopeSnapshot(new float[0], new float[0],
-      0L, 0L);
+  public static final PhaseScopeSnapshot EMPTY =
+      new PhaseScopeSnapshot(new float[0], new float[0], 0L, 0L);
 
-  private PhaseScopeSnapshot(float[] left, float[] right, long sourceFrameIndex,
-      long sourceTimestampNanos) {
+  private PhaseScopeSnapshot(
+      float[] left, float[] right, long sourceFrameIndex, long sourceTimestampNanos) {
     this.left = left;
     this.right = right;
     this.sourceFrameIndex = sourceFrameIndex;
     this.sourceTimestampNanos = sourceTimestampNanos;
   }
 
-  /** @return number of frames in this snapshot */
+  /**
+   * @return number of frames in this snapshot
+   */
   public int frames() {
     return left.length;
   }
 
-  /** @return read-only view of the left channel samples (do not mutate) */
+  /**
+   * @return read-only view of the left channel samples (do not mutate)
+   */
   public float[] leftView() {
     return left;
   }
 
-  /** @return read-only view of the right channel samples (do not mutate) */
+  /**
+   * @return read-only view of the right channel samples (do not mutate)
+   */
   public float[] rightView() {
     return right;
   }
 
-  /** @return source block frame index */
+  /**
+   * @return source block frame index
+   */
   public long sourceFrameIndex() {
     return sourceFrameIndex;
   }
 
-  /** @return source block timestamp in nanos */
+  /**
+   * @return source block timestamp in nanos
+   */
   public long sourceTimestampNanos() {
     return sourceTimestampNanos;
   }

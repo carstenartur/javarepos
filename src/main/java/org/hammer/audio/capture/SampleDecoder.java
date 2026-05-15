@@ -50,17 +50,23 @@ public final class SampleDecoder {
     this.unsignedOffset = unsignedMax / 2;
   }
 
-  /** @return descriptor of the produced audio */
+  /**
+   * @return descriptor of the produced audio
+   */
   public AudioFormatDescriptor descriptor() {
     return descriptor;
   }
 
-  /** @return number of bytes per single-channel sample */
+  /**
+   * @return number of bytes per single-channel sample
+   */
   public int bytesPerSample() {
     return bytesPerSample;
   }
 
-  /** @return number of bytes per frame ({@code bytesPerSample * channels}) */
+  /**
+   * @return number of bytes per frame ({@code bytesPerSample * channels})
+   */
   public int frameSize() {
     return frameSize;
   }

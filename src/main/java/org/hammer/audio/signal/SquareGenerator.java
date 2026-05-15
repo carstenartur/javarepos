@@ -6,9 +6,8 @@ import org.hammer.audio.core.AudioFormatDescriptor;
 /**
  * Deterministic mono square-wave generator (broadcast to all channels of {@code format}).
  *
- * <p>Produces values of {@code +amplitude} for the first half of each period and {@code
- * -amplitude} for the second half. Useful as a known harmonics-rich test signal for spectrum
- * verification.
+ * <p>Produces values of {@code +amplitude} for the first half of each period and {@code -amplitude}
+ * for the second half. Useful as a known harmonics-rich test signal for spectrum verification.
  *
  * @author refactoring
  */
@@ -70,5 +69,12 @@ public final class SquareGenerator implements SignalGenerator {
   public void reset() {
     phase = 0.0;
     frameIndex = 0L;
+  }
+
+  /**
+   * @return frequency of the oscillator in Hz
+   */
+  public double frequencyHz() {
+    return frequencyHz;
   }
 }

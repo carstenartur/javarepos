@@ -1,4 +1,3 @@
-
 /**
  * Audio analysis layer.
  *
@@ -12,7 +11,6 @@
  *   <li>{@link Fft} — pure-Java radix-2 FFT used by the spectrum analyzer; also reusable directly
  * </ul>
  *
- * <p>Future additions (spectrogram, phase scope, loudness, ...) plug in via {@link
- * AnalysisModule}.
+ * <p>Future additions (spectrogram, phase scope, loudness, ...) plug in via {@link AnalysisModule}.
  */
 package org.hammer.audio.analysis;

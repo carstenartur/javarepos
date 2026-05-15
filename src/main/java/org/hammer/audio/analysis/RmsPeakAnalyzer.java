@@ -9,8 +9,8 @@ import org.hammer.audio.core.AudioBlock;
  *
  * <pre>{@code rms = sqrt( (1/N) * sum( x[i]^2 ) )}</pre>
  *
- * and the peak is {@code max(|x[i]|)}. Both are reported in the same normalized linear units as
- * the input samples ({@code [0, 1]} for a unit-amplitude signal).
+ * and the peak is {@code max(|x[i]|)}. Both are reported in the same normalized linear units as the
+ * input samples ({@code [0, 1]} for a unit-amplitude signal).
  *
  * <p>This analyzer is stateless and thread-safe: a single instance can be safely shared between
  * threads.

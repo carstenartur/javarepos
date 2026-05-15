@@ -92,7 +92,6 @@ class FftTest {
   @Test
   void rejects_mismatched_array_lengths_in_forward() {
     Fft fft = new Fft(8);
-    assertThrows(IllegalArgumentException.class,
-        () -> fft.forward(new float[7], new float[8]));
+    assertThrows(IllegalArgumentException.class, () -> fft.forward(new float[7], new float[8]));
   }
 }

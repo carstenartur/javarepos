@@ -1,4 +1,3 @@
-
 /**
  * UI-facing helpers that translate audio-domain snapshots into pixel-space data.
  *

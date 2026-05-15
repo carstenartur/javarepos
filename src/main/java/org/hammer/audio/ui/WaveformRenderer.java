@@ -6,9 +6,9 @@ import org.hammer.audio.snapshot.WaveformSnapshot;
  * Pure-function pixel scaling for waveform rendering.
  *
  * <p>This is the only place in the platform that knows about panel dimensions and pixel
- * coordinates. Audio capture, ring buffering, DSP and analysis all stay in normalized {@code
- * float} space; renderers in this package convert immutable {@link WaveformSnapshot}s into the
- * {@code (x, y)} integer arrays a Swing or JavaFX canvas can {@code drawPolyline}.
+ * coordinates. Audio capture, ring buffering, DSP and analysis all stay in normalized {@code float}
+ * space; renderers in this package convert immutable {@link WaveformSnapshot}s into the {@code (x,
+ * y)} integer arrays a Swing or JavaFX canvas can {@code drawPolyline}.
  *
  * <p>Renderers are stateless: the same instance can be invoked from any thread and reused across
  * snapshots. They allocate a fresh result on every call to keep the data immutable from the

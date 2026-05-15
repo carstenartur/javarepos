@@ -7,11 +7,11 @@ import org.hammer.audio.core.AudioFormatDescriptor;
  * Deterministic mono sine-wave generator.
  *
  * <p>Produces {@code amplitude * sin(2π * frequency * t)} samples, sampled at {@code
- * format.sampleRate()}. Phase is tracked across calls in double precision to avoid drift over
- * long runs.
+ * format.sampleRate()}. Phase is tracked across calls in double precision to avoid drift over long
+ * runs.
  *
- * <p>Although mono internally, the generator can be configured with a multi-channel format; in
- * that case the same signal is broadcast on every channel.
+ * <p>Although mono internally, the generator can be configured with a multi-channel format; in that
+ * case the same signal is broadcast on every channel.
  *
  * @author refactoring
  */
@@ -77,12 +77,16 @@ public final class SineGenerator implements SignalGenerator {
     frameIndex = 0L;
   }
 
-  /** @return frequency of the oscillator in Hz */
+  /**
+   * @return frequency of the oscillator in Hz
+   */
   public double frequencyHz() {
     return frequencyHz;
   }
 
-  /** @return peak amplitude */
+  /**
+   * @return peak amplitude
+   */
   public float amplitude() {
     return amplitude;
   }

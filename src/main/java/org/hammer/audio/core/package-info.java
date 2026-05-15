@@ -1,4 +1,3 @@
-
 /**
  * Audio-domain core: immutable models that flow through the platform.
  *

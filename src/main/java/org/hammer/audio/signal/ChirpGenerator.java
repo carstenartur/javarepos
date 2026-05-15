@@ -32,8 +32,12 @@ public final class ChirpGenerator implements SignalGenerator {
    * @param durationSeconds sweep duration in seconds; must be {@code > 0}
    * @param amplitude peak amplitude
    */
-  public ChirpGenerator(AudioFormatDescriptor format, double startHz, double endHz,
-      double durationSeconds, float amplitude) {
+  public ChirpGenerator(
+      AudioFormatDescriptor format,
+      double startHz,
+      double endHz,
+      double durationSeconds,
+      float amplitude) {
     if (!(startHz > 0.0)) {
       throw new IllegalArgumentException("startHz must be > 0");
     }

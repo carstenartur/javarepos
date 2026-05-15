@@ -1,4 +1,3 @@
-
 /**
  * Bounded ring buffer suitable for realtime audio workloads.
  *

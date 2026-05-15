@@ -7,8 +7,8 @@ import org.hammer.audio.core.AudioBlock;
  *
  * <p>Unlike the legacy {@link org.hammer.audio.WaveformModel}, which carried pre-computed pixel
  * coordinates and thus mixed audio and rendering concerns, a {@code WaveformSnapshot} holds only
- * normalized {@code float} samples plus the source metadata. Pixel scaling for any specific
- * canvas is performed by the rendering layer (e.g. {@link org.hammer.audio.ui.WaveformRenderer}).
+ * normalized {@code float} samples plus the source metadata. Pixel scaling for any specific canvas
+ * is performed by the rendering layer (e.g. {@link org.hammer.audio.ui.WaveformRenderer}).
  *
  * <p>Snapshots are cheap to consume by any UI toolkit (Swing, JavaFX, Web), and are
  * serializable-friendly for export and remote APIs.
@@ -33,8 +33,8 @@ public final class WaveformSnapshot {
    * @param sourceTimestampNanos timestamp of the source block (nanos)
    * @return a new immutable snapshot
    */
-  public static WaveformSnapshot wrap(float[][] samples, float sampleRate, long sourceFrameIndex,
-      long sourceTimestampNanos) {
+  public static WaveformSnapshot wrap(
+      float[][] samples, float sampleRate, long sourceFrameIndex, long sourceTimestampNanos) {
     return new WaveformSnapshot(samples, sampleRate, sourceFrameIndex, sourceTimestampNanos, false);
   }
 
@@ -45,16 +45,24 @@ public final class WaveformSnapshot {
    * arrays. Suitable for low-rate UI updates.
    */
   public static WaveformSnapshot fromBlock(AudioBlock block) {
-    return new WaveformSnapshot(block.samples(), block.format().sampleRate(), block.frameIndex(),
-        block.timestampNanos(), false);
+    return new WaveformSnapshot(
+        block.samples(),
+        block.format().sampleRate(),
+        block.frameIndex(),
+        block.timestampNanos(),
+        false);
   }
 
   /** Empty snapshot constant. */
-  public static final WaveformSnapshot EMPTY = new WaveformSnapshot(new float[0][], 0f, 0L, 0L,
-      false);
+  public static final WaveformSnapshot EMPTY =
+      new WaveformSnapshot(new float[0][], 0f, 0L, 0L, false);
 
-  private WaveformSnapshot(float[][] samples, float sampleRate, long sourceFrameIndex,
-      long sourceTimestampNanos, boolean copy) {
+  private WaveformSnapshot(
+      float[][] samples,
+      float sampleRate,
+      long sourceFrameIndex,
+      long sourceTimestampNanos,
+      boolean copy) {
     if (copy) {
       float[][] cp = new float[samples.length][];
       for (int c = 0; c < samples.length; c++) {
@@ -70,27 +78,37 @@ public final class WaveformSnapshot {
     this.sourceTimestampNanos = sourceTimestampNanos;
   }
 
-  /** @return number of channels */
+  /**
+   * @return number of channels
+   */
   public int channels() {
     return samples.length;
   }
 
-  /** @return number of frames per channel */
+  /**
+   * @return number of frames per channel
+   */
   public int frames() {
     return frames;
   }
 
-  /** @return source sample rate in Hz */
+  /**
+   * @return source sample rate in Hz
+   */
   public float sampleRate() {
     return sampleRate;
   }
 
-  /** @return source block frame index */
+  /**
+   * @return source block frame index
+   */
   public long sourceFrameIndex() {
     return sourceFrameIndex;
   }
 
-  /** @return source block timestamp in nanos */
+  /**
+   * @return source block timestamp in nanos
+   */
   public long sourceTimestampNanos() {
     return sourceTimestampNanos;
   }

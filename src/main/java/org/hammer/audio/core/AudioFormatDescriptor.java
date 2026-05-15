@@ -51,12 +51,16 @@ public final class AudioFormatDescriptor {
     this.sourceSampleSizeInBits = sourceSampleSizeInBits;
   }
 
-  /** @return the sample rate in Hz (e.g. {@code 44100.0f}) */
+  /**
+   * @return the sample rate in Hz (e.g. {@code 44100.0f})
+   */
   public float sampleRate() {
     return sampleRate;
   }
 
-  /** @return the number of channels (e.g. 1 for mono, 2 for stereo) */
+  /**
+   * @return the number of channels (e.g. 1 for mono, 2 for stereo)
+   */
   public int channels() {
     return channels;
   }
@@ -89,7 +93,12 @@ public final class AudioFormatDescriptor {
 
   @Override
   public String toString() {
-    return "AudioFormatDescriptor[sampleRate=" + sampleRate + "Hz, channels=" + channels
-        + ", sourceBits=" + sourceSampleSizeInBits + "]";
+    return "AudioFormatDescriptor[sampleRate="
+        + sampleRate
+        + "Hz, channels="
+        + channels
+        + ", sourceBits="
+        + sourceSampleSizeInBits
+        + "]";
   }
 }

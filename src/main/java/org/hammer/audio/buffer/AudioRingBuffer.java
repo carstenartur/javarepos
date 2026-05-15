@@ -65,7 +65,9 @@ public final class AudioRingBuffer<T> {
     this.elements = new Object[cap];
   }
 
-  /** @return the actual capacity (next power of two &ge; the requested value) */
+  /**
+   * @return the actual capacity (next power of two &ge; the requested value)
+   */
   public int capacity() {
     return capacity;
   }
@@ -86,12 +88,16 @@ public final class AudioRingBuffer<T> {
     return s > capacity ? capacity : (int) s;
   }
 
-  /** @return {@code true} if empty (snapshot, may be stale) */
+  /**
+   * @return {@code true} if empty (snapshot, may be stale)
+   */
   public boolean isEmpty() {
     return tail.get() == head.get();
   }
 
-  /** @return {@code true} if full (snapshot, may be stale) */
+  /**
+   * @return {@code true} if full (snapshot, may be stale)
+   */
   public boolean isFull() {
     return (tail.get() - head.get()) >= capacity;
   }
@@ -215,7 +221,9 @@ public final class AudioRingBuffer<T> {
     return drained;
   }
 
-  /** Reset the buffer to empty. Not safe to call concurrently with {@link #offer} or {@link #poll}. */
+  /**
+   * Reset the buffer to empty. Not safe to call concurrently with {@link #offer} or {@link #poll}.
+   */
   public void clear() {
     long h = head.get();
     long t = tail.get();

@@ -97,15 +97,32 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
    * @param bigEndian true if samples are big-endian
    * @param divisor initial divisor for buffer size calculation
    */
-  public AudioCaptureServiceImpl(float sampleRate, int sampleSizeInBits, int channels,
-      boolean signed, boolean bigEndian, int divisor) {
-    this(sampleRate, sampleSizeInBits, channels, signed, bigEndian, divisor,
+  public AudioCaptureServiceImpl(
+      float sampleRate,
+      int sampleSizeInBits,
+      int channels,
+      boolean signed,
+      boolean bigEndian,
+      int divisor) {
+    this(
+        sampleRate,
+        sampleSizeInBits,
+        channels,
+        signed,
+        bigEndian,
+        divisor,
         new DefaultAudioLineProvider());
   }
 
   /** Package-private constructor for testing with custom AudioLineProvider. */
-  AudioCaptureServiceImpl(float sampleRate, int sampleSizeInBits, int channels, boolean signed,
-      boolean bigEndian, int divisor, AudioLineProvider lineProvider) {
+  AudioCaptureServiceImpl(
+      float sampleRate,
+      int sampleSizeInBits,
+      int channels,
+      boolean signed,
+      boolean bigEndian,
+      int divisor,
+      AudioLineProvider lineProvider) {
     this.sampleRate = sampleRate;
     this.sampleSizeInBits = sampleSizeInBits;
     this.channels = Math.max(1, channels);
@@ -131,11 +148,13 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
       initializeAudioLine();
       computeDataSize();
       running.set(true);
-      workerExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "AudioCaptureWorker");
-        t.setDaemon(true);
-        return t;
-      });
+      workerExecutor =
+          Executors.newSingleThreadExecutor(
+              r -> {
+                Thread t = new Thread(r, "AudioCaptureWorker");
+                t.setDaemon(true);
+                return t;
+              });
       workerExecutor.submit(this::captureLoop);
       LOGGER.info("AudioCaptureService started successfully");
     } catch (Exception e) {
@@ -304,8 +323,7 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         for (int c = 0; c < channels; c++) {
           System.arraycopy(decodeBuffer[c], 0, blockSamples[c], 0, currentPoints);
         }
-        AudioBlock block = AudioBlock.wrap(descriptor, blockSamples, frameIndex,
-            System.nanoTime());
+        AudioBlock block = AudioBlock.wrap(descriptor, blockSamples, frameIndex, System.nanoTime());
         frameIndex += decodedFrames;
 
         // Publish to ring buffer (drop oldest on overflow — never stall the realtime path).
@@ -328,8 +346,12 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
 
   /** Build a legacy {@link WaveformModel} from a new {@link AudioBlock}. */
   private WaveformModel buildLegacyModel(AudioBlock block) {
-    WaveformSnapshot snap = WaveformSnapshot.wrap(block.samples(), block.format().sampleRate(),
-        block.frameIndex(), block.timestampNanos());
+    WaveformSnapshot snap =
+        WaveformSnapshot.wrap(
+            block.samples(),
+            block.format().sampleRate(),
+            block.frameIndex(),
+            block.timestampNanos());
     int[] xPoints = WaveformRenderer.computeXPoints(snap.frames(), panelWidth);
     int[][] yPoints = WaveformRenderer.computeYPointsAllChannels(snap, panelHeight);
     return new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);

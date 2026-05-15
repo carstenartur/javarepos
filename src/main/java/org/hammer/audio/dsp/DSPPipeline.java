@@ -62,7 +62,9 @@ public final class DSPPipeline implements DSPProcessor {
     return of(stages.toArray(new DSPProcessor[0]));
   }
 
-  /** @return an empty pipeline that returns its input unchanged */
+  /**
+   * @return an empty pipeline that returns its input unchanged
+   */
   public static DSPPipeline empty() {
     return new DSPPipeline(new DSPProcessor[0]);
   }
@@ -76,12 +78,16 @@ public final class DSPPipeline implements DSPProcessor {
     return current;
   }
 
-  /** @return number of stages in this pipeline */
+  /**
+   * @return number of stages in this pipeline
+   */
   public int size() {
     return stages.length;
   }
 
-  /** @return an unmodifiable view of the stages in declaration order */
+  /**
+   * @return an unmodifiable view of the stages in declaration order
+   */
   public List<DSPProcessor> stages() {
     return Collections.unmodifiableList(new ArrayList<>(Arrays.asList(stages)));
   }

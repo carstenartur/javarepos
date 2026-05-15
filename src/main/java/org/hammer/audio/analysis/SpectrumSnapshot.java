@@ -4,8 +4,7 @@ package org.hammer.audio.analysis;
  * Immutable spectrum-analysis snapshot produced by {@link SpectrumAnalyzer}.
  *
  * <p>Contains the one-sided magnitude spectrum (DC ... Nyquist) computed from one channel of an
- * audio block, the FFT size that produced it, and the sample rate (for bin → frequency
- * conversion).
+ * audio block, the FFT size that produced it, and the sample rate (for bin → frequency conversion).
  *
  * @author refactoring
  */
@@ -29,8 +28,13 @@ public final class SpectrumSnapshot implements AnalysisSnapshot {
    * @param magnitudes one-sided magnitude spectrum of length {@code fftSize/2 + 1}
    * @throws IllegalArgumentException if {@code magnitudes.length != fftSize/2 + 1}
    */
-  public SpectrumSnapshot(long sourceFrameIndex, long sourceTimestampNanos, int channel,
-      float sampleRate, int fftSize, float[] magnitudes) {
+  public SpectrumSnapshot(
+      long sourceFrameIndex,
+      long sourceTimestampNanos,
+      int channel,
+      float sampleRate,
+      int fftSize,
+      float[] magnitudes) {
     if (magnitudes.length != fftSize / 2 + 1) {
       throw new IllegalArgumentException(
           "magnitudes.length must be fftSize/2+1, was " + magnitudes.length);
@@ -53,22 +57,30 @@ public final class SpectrumSnapshot implements AnalysisSnapshot {
     return sourceTimestampNanos;
   }
 
-  /** @return analyzed channel index */
+  /**
+   * @return analyzed channel index
+   */
   public int channel() {
     return channel;
   }
 
-  /** @return sample rate of the source audio (Hz) */
+  /**
+   * @return sample rate of the source audio (Hz)
+   */
   public float sampleRate() {
     return sampleRate;
   }
 
-  /** @return the FFT size that produced the magnitudes */
+  /**
+   * @return the FFT size that produced the magnitudes
+   */
   public int fftSize() {
     return fftSize;
   }
 
-  /** @return frequency resolution per bin in Hz, i.e. {@code sampleRate / fftSize} */
+  /**
+   * @return frequency resolution per bin in Hz, i.e. {@code sampleRate / fftSize}
+   */
   public float binWidthHz() {
     return sampleRate / fftSize;
   }
@@ -81,12 +93,16 @@ public final class SpectrumSnapshot implements AnalysisSnapshot {
     return bin * binWidthHz();
   }
 
-  /** @return defensive copy of the one-sided magnitude spectrum */
+  /**
+   * @return defensive copy of the one-sided magnitude spectrum
+   */
   public float[] magnitudes() {
     return magnitudes.clone();
   }
 
-  /** @return number of frequency bins in the one-sided spectrum */
+  /**
+   * @return number of frequency bins in the one-sided spectrum
+   */
   public int binCount() {
     return magnitudes.length;
   }
