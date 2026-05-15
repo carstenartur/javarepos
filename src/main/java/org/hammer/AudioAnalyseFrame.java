@@ -308,15 +308,9 @@ public class AudioAnalyseFrame extends JFrame {
     }
   }
 
-  @SuppressWarnings({"PMD.CloseResource", "PMD.UseTryWithResources"})
   private boolean supportsTargetLine(Mixer.Info mixerInfo, DataLine.Info targetLineInfo) {
-    Mixer mixer = AudioSystem.getMixer(mixerInfo);
-    try {
+    try (Mixer mixer = AudioSystem.getMixer(mixerInfo)) {
       return mixer.isLineSupported(targetLineInfo);
-    } finally {
-      if (mixer.isOpen()) {
-        mixer.close();
-      }
     }
   }
 

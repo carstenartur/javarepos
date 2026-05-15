@@ -19,6 +19,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;
   private static final int BOTTOM_MARGIN = 28;
+  // Avoid rebuilding the analyzer for insignificant float-format differences.
   private static final float SAMPLE_RATE_TOLERANCE = 0.0001f;
 
   private AudioCaptureService audioCaptureService;
