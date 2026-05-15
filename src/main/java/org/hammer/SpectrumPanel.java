@@ -98,8 +98,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
       return Double.NaN;
     }
     int peakBin = 1;
-    float peakMagnitude = spectrum.magnitude(1);
-    for (int bin = 2; bin < spectrum.binCount(); bin++) {
+    float peakMagnitude = 0f;
+    for (int bin = 1; bin < spectrum.binCount(); bin++) {
       float magnitude = spectrum.magnitude(bin);
       if (magnitude > peakMagnitude) {
         peakMagnitude = magnitude;

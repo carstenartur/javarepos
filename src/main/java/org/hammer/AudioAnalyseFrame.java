@@ -219,7 +219,7 @@ public class AudioAnalyseFrame extends JFrame {
     contentPane.add(textfelder, BorderLayout.NORTH);
     textfelder.setLayout(new GridLayout(5, 2, 4, 2));
 
-    JLabel lblAudioDevice = new JLabel("audio device");
+    JLabel lblAudioDevice = new JLabel("Audio Device");
     textfelder.add(lblAudioDevice);
 
     populateAudioDeviceChoices();
@@ -251,7 +251,7 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldAudioFormat.setColumns(30);
     textfelder.add(textFieldAudioFormat);
 
-    JLabel lblPeakFrequency = new JLabel("peak frequency");
+    JLabel lblPeakFrequency = new JLabel("Peak Frequency");
     textfelder.add(lblPeakFrequency);
 
     textFieldPeakFrequency.setHorizontalAlignment(SwingConstants.CENTER);
