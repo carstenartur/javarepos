@@ -54,14 +54,25 @@ public final class WaveformRenderer {
    * maps {@code +1.0f → 0} (top) and {@code -1.0f → panelHeight} (bottom), so the centre of the
    * panel corresponds to silence.
    *
+   * <p>If the snapshot legitimately has zero frames an empty array is returned. Contract violations
+   * on the inputs throw eagerly so that misconfigured rendering code surfaces as a clear failure
+   * rather than silently drawing nothing.
+   *
    * @param snapshot waveform snapshot; never {@code null}
-   * @param channel channel index
-   * @param panelHeight target panel height in pixels (must be {@code > 0})
+   * @param channel channel index, in {@code [0, snapshot.channels())}
+   * @param panelHeight target panel height in pixels; must be {@code > 0}
    * @return integer Y-coordinates of length {@code snapshot.frames()}
+   * @throws IllegalArgumentException if {@code panelHeight <= 0}
+   * @throws IndexOutOfBoundsException if {@code channel} is outside {@code [0,
+   *     snapshot.channels())}
    */
   public static int[] computeYPoints(WaveformSnapshot snapshot, int channel, int panelHeight) {
-    if (panelHeight <= 0 || snapshot.channels() <= channel || channel < 0) {
-      return new int[0];
+    if (panelHeight <= 0) {
+      throw new IllegalArgumentException("panelHeight must be > 0, was " + panelHeight);
+    }
+    if (channel < 0 || channel >= snapshot.channels()) {
+      throw new IndexOutOfBoundsException(
+          "channel " + channel + " out of range [0, " + snapshot.channels() + ")");
     }
     float[] samples = snapshot.channelView(channel);
     int[] ys = new int[samples.length];
@@ -81,9 +92,15 @@ public final class WaveformRenderer {
   /**
    * Convert all channels at once.
    *
+   * <p>Returns an empty outer array when the snapshot has zero channels (e.g. {@link
+   * WaveformSnapshot#EMPTY}); otherwise delegates to {@link #computeYPoints} per channel and
+   * propagates any contract violation it raises.
+   *
    * @param snapshot waveform snapshot
-   * @param panelHeight target panel height in pixels
+   * @param panelHeight target panel height in pixels; must be {@code > 0}
    * @return integer Y-coordinate arrays, one per channel
+   * @throws IllegalArgumentException if {@code panelHeight <= 0} and the snapshot has at least one
+   *     channel
    */
   public static int[][] computeYPointsAllChannels(WaveformSnapshot snapshot, int panelHeight) {
     int[][] result = new int[snapshot.channels()][];

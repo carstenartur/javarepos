@@ -96,9 +96,13 @@ public final class AudioBlock {
   }
 
   /**
-   * Wrap an already-owned {@code float[channels][frames]} array as an {@code AudioBlock} without
-   * copying. The caller transfers ownership of {@code samples} and must not mutate it after the
-   * call.
+   * Wrap an already-owned {@code float[channels][frames]} array as an {@code AudioBlock}, skipping
+   * the per-channel deep copy. The caller transfers ownership of {@code samples} and must not
+   * mutate it after the call.
+   *
+   * <p>Layout validation (channel count, uniform per-channel length) is still performed; only the
+   * deep copy is skipped. This is the recommended factory for hot paths that have just allocated a
+   * fresh, exactly-sized array (e.g. capture loops, signal generators).
    *
    * @param format audio format descriptor; must not be {@code null}
    * @param samples non-interleaved per-channel buffer (ownership transferred); must not be {@code

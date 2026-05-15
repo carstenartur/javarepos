@@ -123,7 +123,51 @@ public final class Fft {
   }
 
   /**
-   * Compute magnitudes from complex output. Convenience method.
+   * Compute the one-sided magnitude spectrum (DC, ..., Nyquist).
+   *
+   * <p>Writes {@code size/2 + 1} bins. Bin {@code i} corresponds to frequency {@code i * sampleRate
+   * / size}. This is the form used by {@link SpectrumAnalyzer} and is what most UI / analysis code
+   * needs because the upper half of a real-input FFT is just the conjugate of the lower half and
+   * carries no extra information.
+   *
+   * @param re real part array of length {@link #size()}
+   * @param im imaginary part array of length {@link #size()}
+   * @param magnitudes output array; must have length {@code size/2 + 1}
+   * @throws IllegalArgumentException if {@code magnitudes.length != size/2 + 1}
+   */
+  public void magnitudesOneSided(float[] re, float[] im, float[] magnitudes) {
+    int expected = size / 2 + 1;
+    if (magnitudes.length != expected) {
+      throw new IllegalArgumentException(
+          "magnitudes.length must be size/2+1 (" + expected + "), was " + magnitudes.length);
+    }
+    fillMagnitudes(re, im, magnitudes, expected);
+  }
+
+  /**
+   * Compute the full two-sided magnitude spectrum (DC, ..., Nyquist, ..., just-below-DC).
+   *
+   * <p>Writes {@code size} bins. Useful when you need symmetric output (e.g. for direct convolution
+   * multiplication or for callers that handle both halves of the spectrum explicitly).
+   *
+   * @param re real part array of length {@link #size()}
+   * @param im imaginary part array of length {@link #size()}
+   * @param magnitudes output array; must have length {@code size}
+   * @throws IllegalArgumentException if {@code magnitudes.length != size}
+   */
+  public void magnitudesTwoSided(float[] re, float[] im, float[] magnitudes) {
+    if (magnitudes.length != size) {
+      throw new IllegalArgumentException(
+          "magnitudes.length must be size (" + size + "), was " + magnitudes.length);
+    }
+    fillMagnitudes(re, im, magnitudes, size);
+  }
+
+  /**
+   * Compute magnitudes from complex output. Length-driven dispatcher: if {@code magnitudes.length
+   * == size/2 + 1} this writes a one-sided spectrum, if it equals {@link #size()} a two-sided
+   * spectrum. Prefer the explicit {@link #magnitudesOneSided} / {@link #magnitudesTwoSided} methods
+   * for clarity.
    *
    * @param re real array of length {@link #size()}
    * @param im imaginary array of length {@link #size()}
@@ -135,6 +179,10 @@ public final class Fft {
     if (n != size && n != size / 2 + 1) {
       throw new IllegalArgumentException("magnitudes length must be size or size/2+1, was " + n);
     }
+    fillMagnitudes(re, im, magnitudes, n);
+  }
+
+  private static void fillMagnitudes(float[] re, float[] im, float[] magnitudes, int n) {
     for (int i = 0; i < n; i++) {
       float r = re[i];
       float ii = im[i];

@@ -130,8 +130,25 @@ public final class AudioRingBuffer<T> {
   /**
    * Offer an element to the buffer, dropping the oldest element if the buffer is full.
    *
-   * <p>Producer-only operation. This is a typical strategy for realtime UI feeds where the most
-   * recent data matters more than completeness. Returns the dropped element (or {@code null}).
+   * <p><strong>Concurrency restriction.</strong> This method writes to {@code head} from the
+   * producer thread (it advances {@code head} past the dropped element). The strict SPSC contract
+   * documented on this class — where {@code head} is consumer-write and {@code tail} is
+   * producer-write — therefore <em>does not</em> hold while {@code offerOverwrite} is in use:
+   *
+   * <ul>
+   *   <li><strong>Safe</strong>: single-threaded usage, or any topology where the consumer is
+   *       <em>not</em> concurrently calling {@link #poll()} / {@link #drainTo(Object[], int)} /
+   *       {@link #clear()}. Typical example: a producer that owns the buffer and drains it from the
+   *       same thread (capture loop publishing to a "latest-wins" cache it later reads).
+   *   <li><strong>Not safe</strong>: a separate consumer thread concurrently calling {@link
+   *       #poll()} or {@link #drainTo(Object[], int)}. Use {@link #offer(Object)} and let the
+   *       caller handle the {@code false} return instead.
+   * </ul>
+   *
+   * <p>If you need "drop oldest" semantics with a concurrent consumer, prefer publishing the latest
+   * element through a separate {@code volatile} reference (see {@link
+   * org.hammer.audio.AudioCaptureServiceImpl#getLatestBlock()}) while calling {@link
+   * #offer(Object)} on this buffer.
    *
    * @param element element to enqueue; must not be {@code null}
    * @return the element dropped because the buffer was full, or {@code null} if nothing was dropped
@@ -146,12 +163,6 @@ public final class AudioRingBuffer<T> {
     long h = head.get();
     T dropped = null;
     if (t - h >= capacity) {
-      // Advance head, dropping the oldest element. Producer-side adjustment of head is
-      // safe in SPSC only when the consumer does not also advance head concurrently in
-      // practice this is guarded by the contract that producers using offerOverwrite
-      // are typically used in a "latest-wins" topology, where an overflow indicates the
-      // consumer is too slow. We accept that head may be advanced by either side: the
-      // CAS below ensures we never advance past tail.
       long desiredHead = t - capacity + 1;
       // Best-effort advance: only move head forward.
       while (true) {

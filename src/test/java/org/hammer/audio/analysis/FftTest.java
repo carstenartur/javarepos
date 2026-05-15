@@ -90,6 +90,25 @@ class FftTest {
   }
 
   @Test
+  void magnitudesOneSided_and_TwoSided_enforce_explicit_lengths() {
+    Fft fft = new Fft(16);
+    float[] re = new float[16];
+    float[] im = new float[16];
+    // One-sided requires exactly size/2+1
+    fft.magnitudesOneSided(re, im, new float[9]);
+    assertThrows(
+        IllegalArgumentException.class, () -> fft.magnitudesOneSided(re, im, new float[16]));
+    assertThrows(
+        IllegalArgumentException.class, () -> fft.magnitudesOneSided(re, im, new float[10]));
+    // Two-sided requires exactly size
+    fft.magnitudesTwoSided(re, im, new float[16]);
+    assertThrows(
+        IllegalArgumentException.class, () -> fft.magnitudesTwoSided(re, im, new float[9]));
+    assertThrows(
+        IllegalArgumentException.class, () -> fft.magnitudesTwoSided(re, im, new float[10]));
+  }
+
+  @Test
   void rejects_mismatched_array_lengths_in_forward() {
     Fft fft = new Fft(8);
     assertThrows(IllegalArgumentException.class, () -> fft.forward(new float[7], new float[8]));

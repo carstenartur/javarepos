@@ -326,8 +326,12 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
         AudioBlock block = AudioBlock.wrap(descriptor, blockSamples, frameIndex, System.nanoTime());
         frameIndex += decodedFrames;
 
-        // Publish to ring buffer (drop oldest on overflow — never stall the realtime path).
-        ringBuffer.offerOverwrite(block);
+        // Publish to ring buffer (plain offer + drop-on-full). The capture thread is the sole
+        // producer; downstream DSP/analysis consumers may run on other threads, so we cannot
+        // safely use offerOverwrite here (see AudioRingBuffer.offerOverwrite Javadoc). The
+        // "latest wins" path is served by the volatile latestBlock pointer below, so dropping
+        // the new block on overflow is preferable to corrupting the consumer's view.
+        ringBuffer.offer(block);
 
         // Cache "latest" view for cheap polling consumers (UI, REST).
         latestBlock = block;
@@ -353,7 +357,16 @@ public class AudioCaptureServiceImpl implements AudioCaptureService {
             block.frameIndex(),
             block.timestampNanos());
     int[] xPoints = WaveformRenderer.computeXPoints(snap.frames(), panelWidth);
-    int[][] yPoints = WaveformRenderer.computeYPointsAllChannels(snap, panelHeight);
+    // Swing panels can transiently report height==0 before they are laid out; in that case we
+    // emit empty per-channel arrays rather than asking WaveformRenderer to throw, since this is
+    // a legitimate "nothing to draw yet" state, not a programming error.
+    int h = panelHeight;
+    int[][] yPoints;
+    if (h <= 0) {
+      yPoints = new int[snap.channels()][0];
+    } else {
+      yPoints = WaveformRenderer.computeYPointsAllChannels(snap, h);
+    }
     return new WaveformModel(xPoints, yPoints, tickEveryNSample, datasize);
   }
 }

@@ -58,10 +58,14 @@ class WaveformRendererTest {
   }
 
   @Test
-  void computeYPoints_returns_empty_for_invalid_channel() {
+  void computeYPoints_throws_for_invalid_channel_or_panel_height() {
     WaveformSnapshot snap = WaveformSnapshot.wrap(new float[][] {{0.5f}}, 48000f, 0L, 0L);
-    assertEquals(0, WaveformRenderer.computeYPoints(snap, -1, 100).length);
-    assertEquals(0, WaveformRenderer.computeYPoints(snap, 1, 100).length);
-    assertEquals(0, WaveformRenderer.computeYPoints(snap, 0, 0).length);
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> WaveformRenderer.computeYPoints(snap, -1, 100));
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> WaveformRenderer.computeYPoints(snap, 1, 100));
+    assertThrows(IllegalArgumentException.class, () -> WaveformRenderer.computeYPoints(snap, 0, 0));
+    assertThrows(
+        IllegalArgumentException.class, () -> WaveformRenderer.computeYPoints(snap, 0, -10));
   }
 }

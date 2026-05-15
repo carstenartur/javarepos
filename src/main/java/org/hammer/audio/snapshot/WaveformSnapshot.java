@@ -41,10 +41,13 @@ public final class WaveformSnapshot {
   /**
    * Convenience factory that builds a snapshot from the contents of an {@link AudioBlock}.
    *
-   * <p>Performs a defensive copy so that the snapshot is fully detached from the block's internal
-   * arrays. Suitable for low-rate UI updates.
+   * <p>Exactly one defensive deep copy of the per-channel sample arrays is performed: it comes from
+   * {@link AudioBlock#samples()}. The {@code copy=false} flag passed to the private constructor
+   * below means we do <em>not</em> copy a second time. Do not flip that flag to {@code true}
+   * without removing the {@code block.samples()} call, or every UI snapshot will allocate twice.
    */
   public static WaveformSnapshot fromBlock(AudioBlock block) {
+    // block.samples() already returns a fresh deep copy; ownership transfers to the snapshot.
     return new WaveformSnapshot(
         block.samples(),
         block.format().sampleRate(),
