@@ -24,6 +24,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private transient SpectrumAnalyzer analyzer;
   private transient SpectrumSnapshot latestSpectrum;
   private transient SpectrumSnapshot frozenSpectrum;
+  private long latestSpectrumFrameIndex = Long.MIN_VALUE;
+  private long latestSpectrumTimestampNanos = Long.MIN_VALUE;
   private boolean frozen;
 
   public SpectrumPanel() {
@@ -44,6 +46,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     this.analyzer = null;
     this.latestSpectrum = null;
     this.frozenSpectrum = null;
+    this.latestSpectrumFrameIndex = Long.MIN_VALUE;
+    this.latestSpectrumTimestampNanos = Long.MIN_VALUE;
     this.frozen = false;
   }
 
@@ -77,15 +81,22 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (block == null) {
       return latestSpectrum;
     }
+    if (latestSpectrum != null
+        && latestSpectrumFrameIndex == block.frameIndex()
+        && latestSpectrumTimestampNanos == block.timestampNanos()) {
+      return latestSpectrum;
+    }
     SpectrumAnalyzer currentAnalyzer = analyzer;
     if (currentAnalyzer == null
         || currentAnalyzer.fftSize() != FFT_SIZE
         || latestSpectrum == null
-        || latestSpectrum.sampleRate() != block.format().sampleRate()) {
+        || Math.abs(latestSpectrum.sampleRate() - block.format().sampleRate()) > 0.0001f) {
       currentAnalyzer = new SpectrumAnalyzer(FFT_SIZE, 0, block.format().sampleRate());
       analyzer = currentAnalyzer;
     }
     latestSpectrum = currentAnalyzer.analyze(block);
+    latestSpectrumFrameIndex = block.frameIndex();
+    latestSpectrumTimestampNanos = block.timestampNanos();
     return latestSpectrum;
   }
 

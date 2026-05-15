@@ -297,15 +297,25 @@ public class AudioAnalyseFrame extends JFrame {
     contentPane.add(slider, BorderLayout.SOUTH);
   }
 
-  @SuppressWarnings("PMD.CloseResource")
   private void populateAudioDeviceChoices() {
     comboBoxAudioDevice.addItem(new AudioDeviceItem(null));
     AudioFormat format = defaultAudioFormat();
     DataLine.Info targetLineInfo = new DataLine.Info(TargetDataLine.class, format);
     for (Mixer.Info mixerInfo : AudioSystem.getMixerInfo()) {
-      Mixer mixer = AudioSystem.getMixer(mixerInfo);
-      if (mixer.isLineSupported(targetLineInfo)) {
+      if (supportsTargetLine(mixerInfo, targetLineInfo)) {
         comboBoxAudioDevice.addItem(new AudioDeviceItem(mixerInfo));
+      }
+    }
+  }
+
+  @SuppressWarnings({"PMD.CloseResource", "PMD.UseTryWithResources"})
+  private boolean supportsTargetLine(Mixer.Info mixerInfo, DataLine.Info targetLineInfo) {
+    Mixer mixer = AudioSystem.getMixer(mixerInfo);
+    try {
+      return mixer.isLineSupported(targetLineInfo);
+    } finally {
+      if (mixer.isOpen()) {
+        mixer.close();
       }
     }
   }
