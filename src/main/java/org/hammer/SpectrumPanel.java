@@ -19,6 +19,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;
   private static final int BOTTOM_MARGIN = 28;
+  private static final float SAMPLE_RATE_TOLERANCE = 0.0001f;
 
   private AudioCaptureService audioCaptureService;
   private transient SpectrumAnalyzer analyzer;
@@ -90,7 +91,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (currentAnalyzer == null
         || currentAnalyzer.fftSize() != FFT_SIZE
         || latestSpectrum == null
-        || Math.abs(latestSpectrum.sampleRate() - block.format().sampleRate()) > 0.0001f) {
+        || Math.abs(latestSpectrum.sampleRate() - block.format().sampleRate())
+            > SAMPLE_RATE_TOLERANCE) {
       currentAnalyzer = new SpectrumAnalyzer(FFT_SIZE, 0, block.format().sampleRate());
       analyzer = currentAnalyzer;
     }
