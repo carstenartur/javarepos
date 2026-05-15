@@ -21,9 +21,9 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private static final int BOTTOM_MARGIN = 28;
 
   private AudioCaptureService audioCaptureService;
-  private SpectrumAnalyzer analyzer;
-  private SpectrumSnapshot latestSpectrum;
-  private SpectrumSnapshot frozenSpectrum;
+  private transient SpectrumAnalyzer analyzer;
+  private transient SpectrumSnapshot latestSpectrum;
+  private transient SpectrumSnapshot frozenSpectrum;
   private boolean frozen;
 
   public SpectrumPanel() {
@@ -146,7 +146,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     for (int i = 1; i < magnitudes.length; i++) {
       max = Math.max(max, magnitudes[i]);
     }
-    if (!(max > 0f)) {
+    if (max <= 0f) {
       max = 1f;
     }
 

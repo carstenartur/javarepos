@@ -59,9 +59,11 @@ import org.hammer.audio.core.AudioBlock;
  *
  * @author chammer
  */
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public class AudioAnalyseFrame extends JFrame {
   private static final long serialVersionUID = 1L;
   private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
+  private static final String ERROR_TITLE = "Error";
 
   private static final float DEFAULT_SAMPLE_RATE = 16000.0f;
   private static final int DEFAULT_SAMPLE_BITS = 8;
@@ -87,7 +89,7 @@ public class AudioAnalyseFrame extends JFrame {
 
   // Audio capture service
   private AudioCaptureService audioCaptureService;
-  private AudioBlock frozenBlock;
+  private transient AudioBlock frozenBlock;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(
@@ -290,6 +292,7 @@ public class AudioAnalyseFrame extends JFrame {
     contentPane.add(slider, BorderLayout.SOUTH);
   }
 
+  @SuppressWarnings("PMD.CloseResource")
   private void populateAudioDeviceChoices() {
     comboBoxAudioDevice.addItem(new AudioDeviceItem(null));
     AudioFormat format = defaultAudioFormat();
@@ -322,7 +325,7 @@ public class AudioAnalyseFrame extends JFrame {
         JOptionPane.showMessageDialog(
             this,
             "Failed to start selected audio device: " + ex.getMessage(),
-            "Error",
+            ERROR_TITLE,
             JOptionPane.ERROR_MESSAGE);
       }
     }
@@ -332,7 +335,7 @@ public class AudioAnalyseFrame extends JFrame {
     if (audioCaptureService == null) {
       LOGGER.warning("toggleAudioStartStop: audioCaptureService is null");
       JOptionPane.showMessageDialog(
-          this, "AudioCaptureService is not available.", "Error", JOptionPane.ERROR_MESSAGE);
+          this, "AudioCaptureService is not available.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
       return;
     }
 
@@ -350,7 +353,7 @@ public class AudioAnalyseFrame extends JFrame {
         JOptionPane.showMessageDialog(
             this,
             "Failed to start audio capture: " + ex.getMessage(),
-            "Error",
+            ERROR_TITLE,
             JOptionPane.ERROR_MESSAGE);
         mntmStart.setSelected(false);
       }
@@ -425,7 +428,7 @@ public class AudioAnalyseFrame extends JFrame {
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Failed to export CSV", ex);
       JOptionPane.showMessageDialog(
-          this, "Failed to export CSV: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+          this, "Failed to export CSV: " + ex.getMessage(), ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
     }
   }
 
@@ -465,7 +468,7 @@ public class AudioAnalyseFrame extends JFrame {
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Failed to export PNG", ex);
       JOptionPane.showMessageDialog(
-          this, "Failed to export PNG: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+          this, "Failed to export PNG: " + ex.getMessage(), ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
     }
   }
 
@@ -544,7 +547,7 @@ public class AudioAnalyseFrame extends JFrame {
   private class SwingAction extends AbstractAction {
     private static final long serialVersionUID = 1L;
 
-    public SwingAction() {
+    SwingAction() {
       putValue(NAME, "About");
       putValue(SHORT_DESCRIPTION, "Some short description");
     }

@@ -22,7 +22,7 @@ public final class WaveformPanel extends JPanel {
   private static final Logger LOGGER = Logger.getLogger(WaveformPanel.class.getName());
 
   private AudioCaptureService audioCaptureService;
-  private WaveformModel frozenModel;
+  private transient WaveformModel frozenModel;
   private boolean frozen;
 
   /**

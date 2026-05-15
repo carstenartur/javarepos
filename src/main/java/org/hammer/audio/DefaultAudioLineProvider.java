@@ -47,6 +47,7 @@ class DefaultAudioLineProvider implements AudioLineProvider {
     }
   }
 
+  @SuppressWarnings("PMD.CloseResource")
   private TargetDataLine acquireLineFromMixer(AudioFormat format, DataLine.Info info) {
     Mixer mixer = AudioSystem.getMixer(mixerInfo);
     if (!mixer.isLineSupported(info)) {
