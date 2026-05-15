@@ -24,7 +24,8 @@ audio input.
   immutable snapshots suitable for any UI or remote API.
 - **Deterministic synthetic signals** — `SineGenerator`, `SquareGenerator`, `ChirpGenerator` for
   tests, headless demos and DSP verification.
-- **Live Swing UI** — waveform and phase diagram of mono or stereo audio input.
+- **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
+  pause/freeze, peak-frequency readout, and CSV/PNG export for quick acoustic diagnostics.
 - **Headless-friendly tests** — 81 unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -48,6 +49,15 @@ java -jar target/audioin-0.0.1-SNAPSHOT.jar  # see exec-maven-plugin config
 ```
 
 On Windows use `mvnw.cmd` instead of `./mvnw`.
+
+## MVP workflow
+
+1. Select an audio input device from the **audio device** dropdown, or keep the system default.
+2. Use **File → Start/Stop** to begin live capture.
+3. Inspect the waveform and FFT spectrum; the dominant peak is shown as **peak frequency**.
+4. Use **File → Pause/Freeze** to hold the current measurement.
+5. Export the frozen or current measurement with **File → Export measurement CSV...** or
+   **File → Export measurement PNG...**.
 
 ## Documentation
 
