@@ -65,6 +65,7 @@ public class AudioAnalyseFrame extends JFrame {
   private static final Logger LOGGER = Logger.getLogger(AudioAnalyseFrame.class.getName());
   private static final String ERROR_TITLE = "Error";
 
+  // Keep the historic capture format so existing tests and supported-device checks stay aligned.
   private static final float DEFAULT_SAMPLE_RATE = 16000.0f;
   private static final int DEFAULT_SAMPLE_BITS = 8;
   private static final int DEFAULT_CHANNELS = 2;

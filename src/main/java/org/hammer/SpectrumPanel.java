@@ -97,7 +97,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (spectrum == null || spectrum.binCount() <= 1) {
       return Double.NaN;
     }
-    int peakBin = 1;
+    int peakBin = -1;
     float peakMagnitude = 0f;
     for (int bin = 1; bin < spectrum.binCount(); bin++) {
       float magnitude = spectrum.magnitude(bin);
@@ -105,6 +105,9 @@ public final class SpectrumPanel extends javax.swing.JPanel {
         peakMagnitude = magnitude;
         peakBin = bin;
       }
+    }
+    if (peakBin < 0) {
+      return Double.NaN;
     }
     return spectrum.frequencyOfBin(peakBin);
   }
