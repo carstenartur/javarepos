@@ -25,6 +25,7 @@
     <!-- Dependency versions -->
     <junit.version>6.0.3</junit.version>
     <mockito.version>5.23.0</mockito.version>
+    <flatlaf.version>3.6</flatlaf.version>
 
     <!-- Plugin versions -->
     <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
@@ -59,6 +60,11 @@
   </dependencyManagement>
 
   <dependencies>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
     <!-- JUnit 5 (Jupiter) API -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

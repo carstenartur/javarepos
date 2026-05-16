@@ -56,6 +56,7 @@ import org.hammer.audio.analysis.MeasurementCalculator;
 import org.hammer.audio.analysis.MeasurementSnapshot;
 import org.hammer.audio.analysis.SpectrumSnapshot;
 import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.ui.theme.UiTheme;
 
 /**
  * Main application frame for audio analysis and visualization.
@@ -121,6 +122,7 @@ public class AudioAnalyseFrame extends JFrame {
         () -> {
           try {
             LOGGER.info("Starting AudioAnalyseFrame application");
+            UiTheme.installDarkTheme();
             AudioAnalyseFrame frame = new AudioAnalyseFrame();
             frame.setVisible(true);
           } catch (Exception e) {
