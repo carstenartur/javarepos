@@ -83,6 +83,8 @@ public class AudioAnalyseFrame extends JFrame {
   private static final boolean DEFAULT_SIGNED = false;
   private static final boolean DEFAULT_BIG_ENDIAN = false;
   private static final int TOP_PANEL_HGAP = 8;
+  private static final MeasurementSnapshot NO_MEASUREMENT =
+      new MeasurementSnapshot(Double.NaN, Double.NaN, Double.NaN, Double.NaN, false, false);
 
   private final JPanel contentPane;
   private final JPanel visualizationPanel = new JPanel(new BorderLayout(4, 4));
@@ -190,8 +192,8 @@ public class AudioAnalyseFrame extends JFrame {
       audioCaptureService =
           new DemoAudioCaptureService(
               DEFAULT_SAMPLE_RATE,
-              DEFAULT_CHANNELS,
               DEFAULT_SAMPLE_BITS,
+              DEFAULT_CHANNELS,
               divisor,
               selectedDemoSignal());
     } else {
@@ -537,15 +539,14 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldDivisor.setText("");
       textFieldAudioFormat.setText("");
       textFieldPeakFrequency.setText("n/a");
-      updateMeasurementFields(
-          new MeasurementSnapshot(0.0, 0.0, Double.NaN, Double.NaN, false, false));
+      updateMeasurementFields(NO_MEASUREMENT);
       mntmStart.setSelected(false);
     }
   }
 
   private void updateMeasurementFields(MeasurementSnapshot measurements) {
-    textFieldRms.setText(String.format(Locale.ROOT, "%.4f", measurements.rms()));
-    textFieldPeakLevel.setText(String.format(Locale.ROOT, "%.4f", measurements.peakLevel()));
+    textFieldRms.setText(formatLevel(measurements.rms()));
+    textFieldPeakLevel.setText(formatLevel(measurements.peakLevel()));
     textFieldDominantFrequency.setText(
         Double.isNaN(measurements.dominantFrequencyHz())
             ? "n/a"
@@ -563,6 +564,10 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldClipping.setForeground(Color.BLACK);
       textFieldClipping.setBackground(new Color(225, 240, 225));
     }
+  }
+
+  private static String formatLevel(double value) {
+    return Double.isNaN(value) ? "n/a" : String.format(Locale.ROOT, "%.4f", value);
   }
 
   private void exportMeasurementCsv() {

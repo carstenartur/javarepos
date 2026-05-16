@@ -33,7 +33,7 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
   private final SignalGenerator signalGenerator;
   private final AudioRingBuffer<AudioBlock> ringBuffer =
       new AudioRingBuffer<>(RING_BUFFER_CAPACITY);
-  private final int tickEveryNSample;
+  private final int tickEveryNSamples;
   private final AudioFormat format;
 
   private volatile WaveformModel latestModel = WaveformModel.EMPTY;
@@ -46,15 +46,18 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
 
   public DemoAudioCaptureService(
       float sampleRate,
-      int channels,
       int sampleSizeInBits,
+      int channels,
       int divisor,
       DemoSignalType signalType) {
+    if (divisor < 1) {
+      throw new IllegalArgumentException("Divisor must be >= 1");
+    }
     this.descriptor =
         new AudioFormatDescriptor(sampleRate, Math.max(1, channels), sampleSizeInBits);
     this.signalGenerator = createSignalGenerator(descriptor, signalType);
-    this.divisor = Math.max(1, divisor);
-    this.tickEveryNSample = (int) (sampleRate * TICK_SECONDS);
+    this.divisor = divisor;
+    this.tickEveryNSamples = (int) (sampleRate * TICK_SECONDS);
     this.format = new AudioFormat(sampleRate, sampleSizeInBits, descriptor.channels(), true, false);
   }
 
@@ -180,7 +183,7 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
         snapshot.frames()
             * snapshot.channels()
             * Math.max(1, descriptor.sourceSampleSizeInBits() / 8);
-    return new WaveformModel(xPoints, yPoints, tickEveryNSample, dataSizeBytes);
+    return new WaveformModel(xPoints, yPoints, tickEveryNSamples, dataSizeBytes);
   }
 
   private static SignalGenerator createSignalGenerator(
