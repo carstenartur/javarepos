@@ -114,6 +114,11 @@ public final class RecordingTap {
     } catch (IOException ex) {
       LOGGER.log(Level.WARNING, "failed to write block to recording, stopping tap", ex);
       stopQuietly();
+    } catch (RuntimeException ex) {
+      // Format mismatch (capture service reconfigured mid-recording), writer already closed,
+      // etc. Stop the tap rather than letting the Swing Timer spam the EDT.
+      LOGGER.log(Level.WARNING, "runtime error while writing block, stopping tap", ex);
+      stopQuietly();
     }
   }
 

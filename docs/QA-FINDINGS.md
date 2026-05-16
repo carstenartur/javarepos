@@ -38,7 +38,10 @@ removed false claims and added contributor-facing guidance.
   where-new-code-belongs table, how-to-add-a-new-analyzer and how-to-add-a-DSP-experiment
   recipes, testing and coding expectations.
 
-No production code (Java sources, POMs, CI workflows) was modified by this pass.
+No production code (Java sources, POMs, CI workflows) was modified by the initial doc-only sub-pass.
+Subsequent commits in this PR series do add production code (waveform trigger, recording/replay,
+A/B comparison and the headless screenshot generator) — see the [feature documentation](features/README.md)
+and the PR description for details.
 
 ## Confirmed alignment between docs and code
 

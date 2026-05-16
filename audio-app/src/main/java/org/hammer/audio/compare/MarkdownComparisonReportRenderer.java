@@ -57,8 +57,8 @@ public final class MarkdownComparisonReportRenderer {
     MeasurementSnapshot a = report.a().measurement();
     MeasurementSnapshot b = report.b().measurement();
     sb.append("## Measurements\n\n");
-    sb.append("| Metric | A | B | |Δ| |\n");
-    sb.append("|--------|---|---|------|\n");
+    sb.append("| Metric | A | B | abs Δ |\n");
+    sb.append("|--------|---|---|-------|\n");
     appendDoubleRow(sb, "RMS", a.rms(), b.rms(), "%.4f");
     appendDoubleRow(sb, "Peak level", a.peakLevel(), b.peakLevel(), "%.4f");
     appendDoubleRow(
@@ -101,8 +101,8 @@ public final class MarkdownComparisonReportRenderer {
       sb.append("_One or both recordings produced no spectrum snapshot._\n");
       return;
     }
-    sb.append("| Metric | A | B | |Δ| |\n");
-    sb.append("|--------|---|---|------|\n");
+    sb.append("| Metric | A | B | abs Δ |\n");
+    sb.append("|--------|---|---|-------|\n");
     appendDoubleRow(
         sb, "FFT bin count", a.magnitudesView().length, b.magnitudesView().length, "%.0f");
     appendDoubleRow(sb, "Peak magnitude", peakMagnitude(a), peakMagnitude(b), "%.4f");

@@ -67,14 +67,17 @@ class AudioBlockRecordingRoundTripTest {
   }
 
   @Test
-  void emptyRecordingHasOnlyHeader(@TempDir Path dir) throws IOException {
-    Path file = dir.resolve("empty.aar");
+  void singleBlockRecordingHasExpectedSize(@TempDir Path dir) throws IOException {
+    Path file = dir.resolve("single-block.aar");
     AudioBlock b1 = new AudioBlock(STEREO_44K, new float[][] {{0f}, {0f}}, 0L, 0L);
     try (AudioBlockRecordingWriter w = AudioBlockRecordingWriter.open(file)) {
       w.write(b1);
     }
     long size = Files.size(file);
-    // Header (16 bytes) + 1 record: u32 + i64 + i64 + 2 ch * 1 frame * 4 bytes = 32 bytes.
+    // Header (16 bytes) + 1 record:
+    //   u32 frames + i64 frameIndex + i64 timestampNanos = 20 bytes header
+    //   + 2 ch * 1 frame * 4 bytes float = 8 bytes samples
+    //   => 28 bytes per record.
     assertEquals(AudioBlockRecordingFormat.HEADER_BYTES + 28L, size);
   }
 }

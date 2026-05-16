@@ -49,9 +49,12 @@ class RecordedAudioCaptureServiceTest {
     RecordedAudioCaptureService svc = new RecordedAudioCaptureService(blocks(), true);
     svc.start();
     assertTrue(svc.isRunning());
-    // Wait briefly to let the worker publish at least one block.
-    Thread.sleep(50);
-    assertNotNull(svc.getLatestBlock());
+    // Poll for a published block with a bounded timeout to avoid flakiness on slow CI.
+    long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+    while (svc.getLatestBlock() == null && System.nanoTime() < deadline) {
+      Thread.sleep(5);
+    }
+    assertNotNull(svc.getLatestBlock(), "no block published within 5 s");
     svc.stop();
     assertFalse(svc.isRunning());
   }

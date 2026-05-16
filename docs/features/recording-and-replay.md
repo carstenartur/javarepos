@@ -71,8 +71,9 @@ no UI dependency.
 - The format stores the *normalized* float samples that the capture service produced. It does not
   preserve the original mixer device name, the lossless source bits beyond the level information,
   or any DSP pipeline state.
-- Versioning is single-byte: a future incompatible change must bump `VERSION` and the reader will
-  refuse the older format. The format is stable from version 1.
+- Versioning is a 16-bit field in the header: a future incompatible change must bump `VERSION`,
+  and the reader refuses any file whose version does not match the supported one (not only older
+  versions). The format is stable from version 1.
 - Replay is from in-memory blocks — extremely long recordings may exceed available heap. Stream
   with `AudioBlockRecordingReader.next()` for those cases.
 

@@ -40,8 +40,8 @@ followed by three comparison sections:
 Example excerpt for a 440 Hz vs 880 Hz comparison:
 
 ```markdown
-| Metric | A | B | |Δ| |
-|--------|---|---|------|
+| Metric | A | B | abs Δ |
+|--------|---|---|-------|
 | RMS | 0.3536 | 0.3536 | 0.0000 |
 | Peak level | 0.6000 | 0.6000 | 0.0000 |
 | Dominant freq (Hz) | 430.7 | 861.3 | 430.6 |

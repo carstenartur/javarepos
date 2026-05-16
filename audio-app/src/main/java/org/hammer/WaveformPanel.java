@@ -33,6 +33,8 @@ public final class WaveformPanel extends JPanel {
   private final transient WaveformTrigger trigger = new WaveformTrigger();
   private transient WaveformTrigger.TriggeredView lastTriggeredView;
   private transient long lastTriggeredBlockFrameIndex = Long.MIN_VALUE;
+  private transient int[] triggerXs = new int[0];
+  private transient int[] triggerYs = new int[0];
   private boolean triggerEnabled;
 
   /**
@@ -259,8 +261,12 @@ public final class WaveformPanel extends JPanel {
     int centerY = plotBounds.y + height / 2;
     int amplitude = Math.max(1, height / 2 - 4);
 
-    int[] xs = new int[n];
-    int[] ys = new int[n];
+    if (triggerXs.length != n) {
+      triggerXs = new int[n];
+      triggerYs = new int[n];
+    }
+    int[] xs = triggerXs;
+    int[] ys = triggerYs;
     for (int i = 0; i < n; i++) {
       xs[i] = plotBounds.x + (int) ((long) i * (width - 1) / Math.max(1, n - 1));
       float clamped = Math.max(-1f, Math.min(1f, samples[i]));

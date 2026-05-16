@@ -1077,6 +1077,17 @@ public class AudioAnalyseFrame extends JFrame {
     }
   }
 
+  private void stopActiveRecordingTapQuietly() {
+    if (recordingTap == null || recordingTap.isClosed()) {
+      return;
+    }
+    try {
+      recordingTap.stop();
+    } catch (IOException ex) {
+      LOGGER.log(Level.WARNING, "Failed to stop recording tap before switching source", ex);
+    }
+  }
+
   private void openRecording() {
     JFileChooser chooser = new JFileChooser();
     chooser.setFileFilter(new FileNameExtensionFilter("AudioAnalyzer recording (*.aar)", "aar"));
@@ -1087,6 +1098,9 @@ public class AudioAnalyseFrame extends JFrame {
     try {
       org.hammer.audio.RecordedAudioCaptureService replay =
           org.hammer.audio.RecordedAudioCaptureService.open(file.toPath(), false);
+      // Stop any in-progress recording before swapping the capture service so the tap doesn't
+      // keep polling the previous source and silently corrupt the recording.
+      stopActiveRecordingTapQuietly();
       stopAudioIfRunning();
       audioCaptureService = replay;
       waveformPanel.setAudioCaptureService(replay);
