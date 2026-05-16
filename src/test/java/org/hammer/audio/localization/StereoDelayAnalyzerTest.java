@@ -41,15 +41,38 @@ class StereoDelayAnalyzerTest {
 
   @Test
   void marks_impossible_delay_invalid() {
-    AudioBlock block = delayedStereoBlock(2_048, 80);
+    AudioBlock block = delayedImpulseStereoBlock(2_048, 80);
     StereoDelayAnalyzer analyzer = new StereoDelayAnalyzer(0.10, 343.0, 0.25);
 
     StereoDelaySnapshot snapshot = analyzer.analyze(block);
 
     assertFalse(snapshot.valid());
-    assertEquals(StereoDelayStatus.DELAY_OUTSIDE_PHYSICAL_RANGE, snapshot.status());
-    assertEquals(80, snapshot.delaySamples(), 1);
+    assertEquals(StereoDelayStatus.LOW_CORRELATION, snapshot.status());
     assertTrue(Double.isNaN(snapshot.angleDegrees()));
+  }
+
+  @Test
+  void rejects_non_finite_constructor_parameters() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new StereoDelayAnalyzer(Double.POSITIVE_INFINITY, 343.0, 0.25));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new StereoDelayAnalyzer(0.20, Double.NEGATIVE_INFINITY, 0.25));
+    assertThrows(
+        IllegalArgumentException.class, () -> new StereoDelayAnalyzer(0.20, 343.0, Double.NaN));
+  }
+
+  @Test
+  void correlation_window_is_limited_to_physical_delay_range() {
+    AudioBlock block = delayedStereoBlock(2_048, 12);
+    StereoDelayAnalyzer analyzer = new StereoDelayAnalyzer(0.10, 343.0, 0.25);
+
+    StereoDelaySnapshot snapshot = analyzer.analyze(block);
+
+    int maxPhysicalLag = (int) Math.ceil(0.10 / 343.0 * SAMPLE_RATE);
+    assertEquals(-maxPhysicalLag, snapshot.minCorrelationLagSamples());
+    assertEquals(maxPhysicalLag * 2 + 1, snapshot.correlationByLag().length);
   }
 
   @Test
@@ -101,6 +124,17 @@ class StereoDelayAnalyzerTest {
     for (int i = 0; i < frames; i++) {
       samples[0][i] = source[leftOffset + i];
       samples[1][i] = source[rightOffset + i];
+    }
+    return AudioBlock.wrap(STEREO_FORMAT, samples, 0L, 0L);
+  }
+
+  private static AudioBlock delayedImpulseStereoBlock(int frames, int rightDelaySamples) {
+    float[][] samples = new float[2][frames];
+    int leftImpulse = frames / 3;
+    int rightImpulse = leftImpulse + rightDelaySamples;
+    samples[0][leftImpulse] = 1.0f;
+    if (rightImpulse >= 0 && rightImpulse < frames) {
+      samples[1][rightImpulse] = 1.0f;
     }
     return AudioBlock.wrap(STEREO_FORMAT, samples, 0L, 0L);
   }

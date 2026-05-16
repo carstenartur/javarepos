@@ -26,16 +26,16 @@ public final class StereoDelayAnalyzer implements AnalysisModule<StereoDelaySnap
       double microphoneSpacingMeters,
       double speedOfSoundMetersPerSecond,
       double minimumConfidence) {
-    if (!(microphoneSpacingMeters > 0.0) || Double.isNaN(microphoneSpacingMeters)) {
+    if (!(microphoneSpacingMeters > 0.0) || !Double.isFinite(microphoneSpacingMeters)) {
       throw new IllegalArgumentException(
-          "microphoneSpacingMeters must be > 0, was " + microphoneSpacingMeters);
+          "microphoneSpacingMeters must be finite and > 0, was " + microphoneSpacingMeters);
     }
-    if (!(speedOfSoundMetersPerSecond > 0.0) || Double.isNaN(speedOfSoundMetersPerSecond)) {
+    if (!(speedOfSoundMetersPerSecond > 0.0) || !Double.isFinite(speedOfSoundMetersPerSecond)) {
       throw new IllegalArgumentException(
-          "speedOfSoundMetersPerSecond must be > 0, was " + speedOfSoundMetersPerSecond);
+          "speedOfSoundMetersPerSecond must be finite and > 0, was " + speedOfSoundMetersPerSecond);
     }
-    if (minimumConfidence < 0.0 || minimumConfidence > 1.0 || Double.isNaN(minimumConfidence)) {
-      throw new IllegalArgumentException("minimumConfidence must be in [0,1]");
+    if (minimumConfidence < 0.0 || minimumConfidence > 1.0 || !Double.isFinite(minimumConfidence)) {
+      throw new IllegalArgumentException("minimumConfidence must be finite and in [0,1]");
     }
     this.microphoneSpacingMeters = microphoneSpacingMeters;
     this.speedOfSoundMetersPerSecond = speedOfSoundMetersPerSecond;
@@ -57,7 +57,7 @@ public final class StereoDelayAnalyzer implements AnalysisModule<StereoDelaySnap
       return invalid(block, StereoDelayStatus.SILENCE, 0, 0.0, new float[0], 0);
     }
 
-    int maxLag = Math.max(1, frames / 2);
+    int maxLag = physicallyPossibleLagSamples(block.format().sampleRate(), frames);
     int minLag = -maxLag;
     float[] correlations = new float[maxLag - minLag + 1];
     int bestLag = 0;
@@ -140,6 +140,12 @@ public final class StereoDelayAnalyzer implements AnalysisModule<StereoDelaySnap
       sumSquares += samples[i] * samples[i];
     }
     return Math.sqrt(sumSquares / Math.max(1, frames));
+  }
+
+  private int physicallyPossibleLagSamples(float sampleRate, int frames) {
+    double maxDelaySeconds = microphoneSpacingMeters / speedOfSoundMetersPerSecond;
+    int physicalLag = (int) Math.ceil(maxDelaySeconds * sampleRate);
+    return Math.max(0, Math.min(frames - 1, physicalLag));
   }
 
   private static double normalizedCorrelation(float[] left, float[] right, int frames, int lag) {

@@ -123,6 +123,8 @@ public class AudioAnalyseFrame extends JFrame {
   private AudioCaptureService audioCaptureService;
   private transient AudioBlock frozenBlock;
   private transient InputMode inputMode = InputMode.LIVE;
+  private transient StereoDelayAnalyzer stereoDelayAnalyzer;
+  private double stereoDelayAnalyzerSpacingMeters = Double.NaN;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(
@@ -614,12 +616,7 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldStereoConfidence.setText("n/a");
       return;
     }
-    StereoDelayAnalyzer analyzer =
-        new StereoDelayAnalyzer(
-            microphoneSpacingMeters(),
-            StereoDelayAnalyzer.DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND,
-            0.35);
-    StereoDelaySnapshot delay = analyzer.analyze(block);
+    StereoDelaySnapshot delay = stereoDelayAnalyzer().analyze(block);
     textFieldStereoConfidence.setText(String.format(Locale.ROOT, "%.2f", delay.confidence()));
     if (delay.valid()) {
       textFieldStereoDelay.setText(
@@ -641,6 +638,18 @@ public class AudioAnalyseFrame extends JFrame {
       LOGGER.fine(() -> "Invalid microphone spacing: " + textFieldMicrophoneSpacing.getText());
     }
     return StereoDelayAnalyzer.DEFAULT_MICROPHONE_SPACING_METERS;
+  }
+
+  private StereoDelayAnalyzer stereoDelayAnalyzer() {
+    double spacingMeters = microphoneSpacingMeters();
+    if (stereoDelayAnalyzer == null
+        || Double.compare(stereoDelayAnalyzerSpacingMeters, spacingMeters) != 0) {
+      stereoDelayAnalyzer =
+          new StereoDelayAnalyzer(
+              spacingMeters, StereoDelayAnalyzer.DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND, 0.35);
+      stereoDelayAnalyzerSpacingMeters = spacingMeters;
+    }
+    return stereoDelayAnalyzer;
   }
 
   private static String delayStatusLabel(StereoDelayStatus status) {
