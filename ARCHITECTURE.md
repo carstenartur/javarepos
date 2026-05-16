@@ -103,26 +103,26 @@ Boundary rules:
 
 ## Packages
 
-|                 Package                  |           Module            |                                       Responsibility                                       |
-|------------------------------------------|-----------------------------|--------------------------------------------------------------------------------------------|
-| `org.hammer.audio.core`                  | `audio-core`                | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                       |
-| `org.hammer.audio.buffer`                | `audio-core`                | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                  |
-| `org.hammer.audio.snapshot`              | `audio-core`                | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`                  |
-| `org.hammer.audio.geometry`              | `audio-geometry`            | Reusable 2D positions, rays and localization constraints                                   |
-| `org.hammer.audio.acquisition`           | `audio-acquisition`         | API-neutral synchronized multichannel source, microphone metadata and sample clock APIs    |
-| `org.hammer.audio.capture`               | `audio-dsp`                 | Sample decoding utilities (`SampleDecoder`)                                                |
-| `org.hammer.audio.dsp`                   | `audio-dsp`                 | `DSPProcessor` extension point + `DSPPipeline` composition                                 |
-| `org.hammer.audio.analysis`              | `audio-dsp`                 | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements    |
-| `org.hammer.audio.localization`          | `audio-dsp`                 | Stereo delay estimation: `StereoDelayAnalyzer`, `StereoDelaySnapshot`, `StereoDelayStatus` |
-| `org.hammer.audio.signal`                | `audio-dsp`                 | Deterministic generators, including `DemoPresetGenerator` demo scenarios                   |
-| `org.hammer.audio.diagnosis`             | `audio-dsp`                 | Reusable acoustic diagnostic analyzers and immutable findings                              |
-| `org.hammer.audio.spectrogram`           | `audio-dsp`                 | Spectrogram analyzer, frames and history                                                   |
-| `org.hammer.audio.experimental.acoustic` | `audio-experimental-acoustic` | Isolated research plugin for wingbeat tracking, TDOA, beamforming and simulation           |
-| `org.hammer.audio.ui`                    | `audio-app`                 | Render helpers and theme classes for pixel-aware UI code                                   |
-| `org.hammer.audio.export`                | `audio-app`                 | CSV/PNG evidence export from app-facing snapshots and images                               |
-| `org.hammer.audio`                       | `audio-app` / `audio-dsp`   | Capture service API, JavaSound/demo capture implementations, legacy `WaveformModel`; `DemoSignalType` remains here for package stability |
-| `org.hammer`                             | `audio-app`                 | Swing application frame and panels                                                         |
-| `org.hammer.audio.benchmark`             | `audio-dsp` JMH profile     | JMH benchmarks (ring buffer, FFT, signal generators)                                       |
+|                 Package                  |            Module             |                                                              Responsibility                                                              |
+|------------------------------------------|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `org.hammer.audio.core`                  | `audio-core`                  | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                                                                     |
+| `org.hammer.audio.buffer`                | `audio-core`                  | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                                                                |
+| `org.hammer.audio.snapshot`              | `audio-core`                  | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`                                                                |
+| `org.hammer.audio.geometry`              | `audio-geometry`              | Reusable 2D positions, rays and localization constraints                                                                                 |
+| `org.hammer.audio.acquisition`           | `audio-acquisition`           | API-neutral synchronized multichannel source, microphone metadata and sample clock APIs                                                  |
+| `org.hammer.audio.capture`               | `audio-dsp`                   | Sample decoding utilities (`SampleDecoder`)                                                                                              |
+| `org.hammer.audio.dsp`                   | `audio-dsp`                   | `DSPProcessor` extension point + `DSPPipeline` composition                                                                               |
+| `org.hammer.audio.analysis`              | `audio-dsp`                   | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements                                                  |
+| `org.hammer.audio.localization`          | `audio-dsp`                   | Stereo delay estimation: `StereoDelayAnalyzer`, `StereoDelaySnapshot`, `StereoDelayStatus`                                               |
+| `org.hammer.audio.signal`                | `audio-dsp`                   | Deterministic generators, including `DemoPresetGenerator` demo scenarios                                                                 |
+| `org.hammer.audio.diagnosis`             | `audio-dsp`                   | Reusable acoustic diagnostic analyzers and immutable findings                                                                            |
+| `org.hammer.audio.spectrogram`           | `audio-dsp`                   | Spectrogram analyzer, frames and history                                                                                                 |
+| `org.hammer.audio.experimental.acoustic` | `audio-experimental-acoustic` | Isolated research plugin for wingbeat tracking, TDOA, beamforming and simulation                                                         |
+| `org.hammer.audio.ui`                    | `audio-app`                   | Render helpers and theme classes for pixel-aware UI code                                                                                 |
+| `org.hammer.audio.export`                | `audio-app`                   | CSV/PNG evidence export from app-facing snapshots and images                                                                             |
+| `org.hammer.audio`                       | `audio-app` / `audio-dsp`     | Capture service API, JavaSound/demo capture implementations, legacy `WaveformModel`; `DemoSignalType` remains here for package stability |
+| `org.hammer`                             | `audio-app`                   | Swing application frame and panels                                                                                                       |
+| `org.hammer.audio.benchmark`             | `audio-dsp` JMH profile       | JMH benchmarks (ring buffer, FFT, signal generators)                                                                                     |
 
 ## Key design choices
 

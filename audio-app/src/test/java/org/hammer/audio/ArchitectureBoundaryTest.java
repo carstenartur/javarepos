@@ -105,8 +105,7 @@ class ArchitectureBoundaryTest {
       } else if (inDependency
           && trimmed.startsWith("<artifactId>")
           && trimmed.endsWith("</artifactId>")) {
-        artifactIds.add(
-            trimmed.replace("<artifactId>", "").replace("</artifactId>", ""));
+        artifactIds.add(trimmed.replace("<artifactId>", "").replace("</artifactId>", ""));
       }
     }
     return artifactIds;

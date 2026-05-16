@@ -10,6 +10,14 @@
   <name>Audio Analyzer Parent</name>
   <description>Real-time Java audio analysis laboratory with enforced Maven module boundaries.</description>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>audio-core</module>
     <module>audio-geometry</module>
@@ -18,14 +26,6 @@
     <module>audio-experimental-acoustic</module>
     <module>audio-app</module>
   </modules>
-
-  <licenses>
-    <license>
-      <name>MIT License</name>
-      <url>https://opensource.org/license/mit/</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
 
   <properties>
     <java.version>21</java.version>
