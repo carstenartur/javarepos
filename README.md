@@ -52,43 +52,34 @@ java -jar target/audioin-0.0.1-SNAPSHOT.jar  # see exec-maven-plugin config
 
 On Windows use `mvnw.cmd` instead of `./mvnw`.
 
-## MVP workflow
-
-![Audio Analyzer screenshot](docs/images/audio-analyzer-demo.png)
-
-## UI screenshot (modern dashboard)
+## Hero screenshot
 
 ![Audio Analyzer modern dashboard screenshot](docs/images/screenshot.png)
 
-`docs/images/screenshot.png` is the reserved path for the current dashboard screenshot.
-If the file is missing in your checkout, regenerate it with:
+## Use case: Detecting the dominant frequency of a signal
 
-1. Run the app (`java -jar target/audioin-0.0.1-SNAPSHOT.jar`) in either demo mode or live microphone mode.
-2. Start capture via **File → Start/Stop**, then pause with **File → Pause/Freeze**.
-3. Export a PNG via **File → Export measurement PNG...**.
-4. Save/copy the exported image as `docs/images/screenshot.png`.
+The screenshot shows a practical measurement workflow:
 
-### Demo workflow (without microphone)
+- **Waveform** panel: time-domain shape of the current signal.
+- **FFT spectrum** panel: frequency-domain energy distribution.
+- **Peak / dominant frequency** readout: strongest spectral component.
+- **RMS / Peak level** readouts: average and maximum signal level.
+- **Clipping** indicator: warns when samples reach clipping threshold.
+- **Demo / Live input mode** controls: switch between synthetic test input and microphone capture.
 
-1. In **Settings**, switch input mode to **Demo mode**.
-2. Select one of the built-in test signals (**Sine**, **Square**, or **Chirp**).
-3. Use **File → Start/Stop** to start playback from the selected signal source.
-4. Verify the live panels update together: waveform, phase diagram, FFT spectrum and peak
-   frequency.
-5. Watch the **Measurements** panel:
-   - **RMS** and **Peak level** (linear normalized level),
-   - **Dominant frequency** (strongest FFT bin),
-   - **Stereo correlation** (n/a for mono or silence),
-   - **Clipping** (highlighted when |sample| reaches clipping threshold).
-6. Use **File → Pause/Freeze** to hold the current measurement.
-7. Export the frozen or current measurement with **File → Export measurement CSV...** or
-   **File → Export measurement PNG...**.
+### Why this is useful
 
-### Live microphone workflow
+This helps with quick acoustic diagnostics, validating test signals, inspecting microphone input, and exporting CSV/PNG evidence for reports or bug tickets.
 
-1. Switch input mode back to **Live microphone** and select an **audio device** (or keep system
-   default).
-2. Use **File → Start/Stop** to begin live capture.
+### Reproducible demo scenario
+
+Use this scenario to reproduce a screenshot similar to `docs/images/screenshot.png`:
+
+1. Open **Settings** and switch input mode to **Demo mode**.
+2. Select **Sine** or **Chirp** as the demo signal.
+3. Start capture with **File → Start/Stop**.
+4. Freeze the current view with **File → Pause/Freeze**.
+5. Export the result via **File → Export measurement PNG...**.
 
 ## Documentation
 
