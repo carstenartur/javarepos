@@ -80,6 +80,8 @@ DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swin
 |             Package             |                                       Responsibility                                       |
 |---------------------------------|--------------------------------------------------------------------------------------------|
 | `org.hammer.audio.core`         | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                       |
+| `org.hammer.audio.acquisition`  | API-neutral synchronized multichannel source, microphone metadata and sample clock APIs     |
+| `org.hammer.audio.geometry`     | Reusable 2D positions, rays and localization constraints                                    |
 | `org.hammer.audio.capture`      | Sample decoding utilities (`SampleDecoder`)                                                |
 | `org.hammer.audio.buffer`       | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                  |
 | `org.hammer.audio.dsp`          | `DSPProcessor` extension point + `DSPPipeline` composition                                 |
@@ -91,6 +93,7 @@ DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swin
 | `org.hammer.audio`              | Capture service API, JavaSound/demo capture implementations, legacy `WaveformModel`        |
 | `org.hammer`                    | Swing application frame and panels                                                         |
 | `org.hammer.audio.benchmark`    | JMH benchmarks (ring buffer, FFT, signal generators)                                       |
+| `org.hammer.audio.experimental.acoustic` | Isolated research plugin for wingbeat tracking, TDOA, beamforming and simulation    |
 
 ## Key design choices
 
@@ -195,6 +198,18 @@ New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 | Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                     |
 | Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`                   |
 | Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                                |
+
+
+## Experimental acoustic localization plugin
+
+The acoustic localization work is intentionally isolated under
+`org.hammer.audio.experimental.acoustic`. Stable packages provide only reusable acquisition and
+geometry abstractions; mosquito-specific frequency tracking, room simulation, GCC-PHAT/TDOA
+experiments and beamforming stay in the plugin. Core code must not import `org.hammer.audio.experimental.*`.
+
+See [`docs/architecture/experimental-acoustic-localization.md`](docs/architecture/experimental-acoustic-localization.md)
+and [`docs/plugins/acoustic-localization/README.md`](docs/plugins/acoustic-localization/README.md) for the
+architecture review, coupling analysis, module-boundary rationale and current limitations.
 
 ## Concurrency model
 
