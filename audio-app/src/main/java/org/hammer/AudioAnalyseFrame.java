@@ -131,6 +131,7 @@ public class AudioAnalyseFrame extends JFrame {
   private transient InputMode inputMode = InputMode.LIVE;
   private transient StereoDelayAnalyzer stereoDelayAnalyzer;
   private double stereoDelayAnalyzerSpacingMeters = Double.NaN;
+  private transient org.hammer.audio.RecordingTap recordingTap;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(
@@ -197,6 +198,13 @@ public class AudioAnalyseFrame extends JFrame {
         new WindowAdapter() {
           @Override
           public void windowClosing(WindowEvent e) {
+            if (recordingTap != null && !recordingTap.isClosed()) {
+              try {
+                recordingTap.stop();
+              } catch (IOException ioe) {
+                LOGGER.log(Level.WARNING, "Failed to close recording on window close", ioe);
+              }
+            }
             stopAudioIfRunning();
             if (refreshTimer != null && refreshTimer.isRunning()) {
               refreshTimer.stop();
@@ -288,6 +296,79 @@ public class AudioAnalyseFrame extends JFrame {
     JMenuItem mntmResetPeak = new JMenuItem("Spectrum: reset peak hold");
     mntmResetPeak.addActionListener(e -> spectrumPanel.resetPeakHold());
     mnFile.add(mntmResetPeak);
+
+    mnFile.addSeparator();
+
+    JCheckBoxMenuItem mntmTrigger = new JCheckBoxMenuItem("Waveform: trigger (oscilloscope)");
+    mntmTrigger.setToolTipText(
+        "Align the waveform display so each refresh starts on a rising zero crossing"
+            + " (channel 0).");
+    mntmTrigger.addActionListener(e -> waveformPanel.setTriggerEnabled(mntmTrigger.isSelected()));
+    mnFile.add(mntmTrigger);
+
+    JMenu mnTriggerSlope = new JMenu("Waveform: trigger slope");
+    ButtonGroup slopeGroup = new ButtonGroup();
+    JRadioButton mntmTriggerRising = new JRadioButton("Rising ↑", true);
+    JRadioButton mntmTriggerFalling = new JRadioButton("Falling ↓");
+    slopeGroup.add(mntmTriggerRising);
+    slopeGroup.add(mntmTriggerFalling);
+    mntmTriggerRising.addActionListener(
+        e ->
+            waveformPanel
+                .getTrigger()
+                .setSlope(org.hammer.audio.analysis.WaveformTrigger.Slope.RISING));
+    mntmTriggerFalling.addActionListener(
+        e ->
+            waveformPanel
+                .getTrigger()
+                .setSlope(org.hammer.audio.analysis.WaveformTrigger.Slope.FALLING));
+    mnTriggerSlope.add(mntmTriggerRising);
+    mnTriggerSlope.add(mntmTriggerFalling);
+    mnFile.add(mnTriggerSlope);
+
+    JMenu mnTriggerMode = new JMenu("Waveform: trigger mode");
+    ButtonGroup modeGroup = new ButtonGroup();
+    JRadioButton mntmTriggerAuto = new JRadioButton("Auto (fall back if silent)", true);
+    JRadioButton mntmTriggerNormal = new JRadioButton("Normal (only on event)");
+    modeGroup.add(mntmTriggerAuto);
+    modeGroup.add(mntmTriggerNormal);
+    mntmTriggerAuto.addActionListener(
+        e ->
+            waveformPanel
+                .getTrigger()
+                .setMode(org.hammer.audio.analysis.WaveformTrigger.Mode.AUTO));
+    mntmTriggerNormal.addActionListener(
+        e ->
+            waveformPanel
+                .getTrigger()
+                .setMode(org.hammer.audio.analysis.WaveformTrigger.Mode.NORMAL));
+    mnTriggerMode.add(mntmTriggerAuto);
+    mnTriggerMode.add(mntmTriggerNormal);
+    mnFile.add(mnTriggerMode);
+
+    mnFile.addSeparator();
+
+    JMenuItem mntmStartRecording = new JMenuItem("Start recording...");
+    mntmStartRecording.setToolTipText(
+        "Capture every produced AudioBlock into an .aar file for later replay or A/B compare.");
+    mntmStartRecording.addActionListener(e -> startRecording());
+    mnFile.add(mntmStartRecording);
+
+    JMenuItem mntmStopRecording = new JMenuItem("Stop recording");
+    mntmStopRecording.addActionListener(e -> stopRecording());
+    mnFile.add(mntmStopRecording);
+
+    JMenuItem mntmOpenRecording = new JMenuItem("Open recording...");
+    mntmOpenRecording.setToolTipText("Replay a previously captured .aar file as the audio source.");
+    mntmOpenRecording.addActionListener(e -> openRecording());
+    mnFile.add(mntmOpenRecording);
+
+    JMenuItem mntmCompare = new JMenuItem("Compare two recordings...");
+    mntmCompare.setToolTipText(
+        "Compare measurement, spectrum and diagnosis of two .aar recordings and render a"
+            + " Markdown A/B report.");
+    mntmCompare.addActionListener(e -> compareRecordings());
+    mnFile.add(mntmCompare);
 
     menuBar.add(Box.createGlue());
 
@@ -931,6 +1012,155 @@ public class AudioAnalyseFrame extends JFrame {
       return file;
     }
     return new java.io.File(file.getParentFile(), file.getName() + extension);
+  }
+
+  private void startRecording() {
+    if (recordingTap != null && !recordingTap.isClosed()) {
+      JOptionPane.showMessageDialog(
+          this,
+          "A recording is already in progress (" + recordingTap.file() + ").",
+          "Recording",
+          JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+    if (audioCaptureService == null) {
+      return;
+    }
+    JFileChooser chooser = new JFileChooser();
+    chooser.setFileFilter(new FileNameExtensionFilter("AudioAnalyzer recording (*.aar)", "aar"));
+    chooser.setSelectedFile(new java.io.File("recording.aar"));
+    if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+    java.io.File file = ensureExtension(chooser.getSelectedFile(), ".aar");
+    try {
+      recordingTap =
+          org.hammer.audio.RecordingTap.start(
+              audioCaptureService, file.toPath(), UiConstants.REFRESH_INTERVAL_MS);
+      JOptionPane.showMessageDialog(
+          this,
+          "Recording to " + file + " (Stop recording when done).",
+          "Recording",
+          JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to start recording", ex);
+      JOptionPane.showMessageDialog(
+          this,
+          "Failed to start recording: " + ex.getMessage(),
+          ERROR_TITLE,
+          JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void stopRecording() {
+    if (recordingTap == null || recordingTap.isClosed()) {
+      JOptionPane.showMessageDialog(
+          this, "No recording is in progress.", "Recording", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+    try {
+      long blocks = recordingTap.blocksWritten();
+      java.nio.file.Path file = recordingTap.file();
+      recordingTap.stop();
+      JOptionPane.showMessageDialog(
+          this,
+          "Recording stopped (" + blocks + " blocks written to " + file + ").",
+          "Recording",
+          JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to close recording", ex);
+      JOptionPane.showMessageDialog(
+          this,
+          "Failed to close recording: " + ex.getMessage(),
+          ERROR_TITLE,
+          JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void openRecording() {
+    JFileChooser chooser = new JFileChooser();
+    chooser.setFileFilter(new FileNameExtensionFilter("AudioAnalyzer recording (*.aar)", "aar"));
+    if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+    java.io.File file = chooser.getSelectedFile();
+    try {
+      org.hammer.audio.RecordedAudioCaptureService replay =
+          org.hammer.audio.RecordedAudioCaptureService.open(file.toPath(), false);
+      stopAudioIfRunning();
+      audioCaptureService = replay;
+      waveformPanel.setAudioCaptureService(replay);
+      phaseDiagramPanel.setAudioCaptureService(replay);
+      spectrumPanel.setAudioCaptureService(replay);
+      spectrogramPanel.setAudioCaptureService(replay);
+      setFrozen(false);
+      replay.start();
+      mntmStart.setSelected(true);
+      JOptionPane.showMessageDialog(
+          this,
+          "Replaying " + file + " (" + replay.blockCount() + " blocks).",
+          "Recording",
+          JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to open recording", ex);
+      JOptionPane.showMessageDialog(
+          this,
+          "Failed to open recording: " + ex.getMessage(),
+          ERROR_TITLE,
+          JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void compareRecordings() {
+    JFileChooser chooserA = new JFileChooser();
+    chooserA.setDialogTitle("Select recording A");
+    chooserA.setFileFilter(new FileNameExtensionFilter("AudioAnalyzer recording (*.aar)", "aar"));
+    if (chooserA.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+    JFileChooser chooserB = new JFileChooser();
+    chooserB.setDialogTitle("Select recording B");
+    chooserB.setFileFilter(new FileNameExtensionFilter("AudioAnalyzer recording (*.aar)", "aar"));
+    if (chooserB.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+    java.io.File fileA = chooserA.getSelectedFile();
+    java.io.File fileB = chooserB.getSelectedFile();
+    try {
+      org.hammer.audio.compare.ComparisonReport report =
+          new org.hammer.audio.compare.RecordingComparator()
+              .compareFiles(fileA.toPath(), fileB.toPath(), fileA.getName(), fileB.getName());
+      String markdown =
+          new org.hammer.audio.compare.MarkdownComparisonReportRenderer().render(report);
+
+      JFileChooser save = new JFileChooser();
+      save.setDialogTitle("Save A/B comparison report");
+      save.setFileFilter(new FileNameExtensionFilter("Markdown (*.md)", "md"));
+      save.setSelectedFile(new java.io.File("ab-report.md"));
+      if (save.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+        java.io.File out = ensureExtension(save.getSelectedFile(), ".md");
+        Files.writeString(out.toPath(), markdown, StandardCharsets.UTF_8);
+        JOptionPane.showMessageDialog(
+            this, "Report saved to " + out, "A/B comparison", JOptionPane.INFORMATION_MESSAGE);
+      } else {
+        // Preview in a dialog if the user does not save.
+        javax.swing.JTextArea area = new javax.swing.JTextArea(markdown, 24, 80);
+        area.setEditable(false);
+        area.setCaretPosition(0);
+        JOptionPane.showMessageDialog(
+            this,
+            new javax.swing.JScrollPane(area),
+            "A/B comparison report",
+            JOptionPane.INFORMATION_MESSAGE);
+      }
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to compare recordings", ex);
+      JOptionPane.showMessageDialog(
+          this,
+          "Failed to compare recordings: " + ex.getMessage(),
+          ERROR_TITLE,
+          JOptionPane.ERROR_MESSAGE);
+    }
   }
 
   private record AudioDeviceItem(Mixer.Info mixerInfo) {

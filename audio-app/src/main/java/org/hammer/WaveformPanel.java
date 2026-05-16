@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.WaveformModel;
+import org.hammer.audio.analysis.WaveformTrigger;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.ui.theme.PlotRenderTheme;
 
@@ -28,6 +29,11 @@ public final class WaveformPanel extends JPanel {
   private transient WaveformModel frozenModel;
   private transient AudioBlock frozenBlock;
   private boolean frozen;
+
+  private final transient WaveformTrigger trigger = new WaveformTrigger();
+  private transient WaveformTrigger.TriggeredView lastTriggeredView;
+  private transient long lastTriggeredBlockFrameIndex = Long.MIN_VALUE;
+  private boolean triggerEnabled;
 
   /**
    * Create a new WaveformPanel.
@@ -76,6 +82,37 @@ public final class WaveformPanel extends JPanel {
       // Initial layout computation
       service.recomputeLayout(getWidth(), getHeight());
     }
+  }
+
+  /**
+   * Enable or disable oscilloscope-style triggering. When enabled, the panel uses the configured
+   * {@link WaveformTrigger} to align each refresh to a stable trigger event (e.g. rising
+   * zero-crossing).
+   *
+   * @param enabled true to enable triggering, false to display raw blocks
+   */
+  public void setTriggerEnabled(boolean enabled) {
+    this.triggerEnabled = enabled;
+    if (!enabled) {
+      lastTriggeredView = null;
+      trigger.reset();
+    }
+    repaint();
+  }
+
+  /**
+   * @return true if oscilloscope-style triggering is currently enabled
+   */
+  public boolean isTriggerEnabled() {
+    return triggerEnabled;
+  }
+
+  /**
+   * @return the underlying {@link WaveformTrigger}; safe to reconfigure from the EDT
+   */
+  @SuppressWarnings("PMD.AvoidProtectedFieldInFinalClass")
+  public WaveformTrigger getTrigger() {
+    return trigger;
   }
 
   /**
@@ -137,12 +174,20 @@ public final class WaveformPanel extends JPanel {
     Rectangle plotBounds = new Rectangle(0, 0, Math.max(1, getWidth()), Math.max(1, getHeight()));
     PlotRenderTheme.drawPlotBackground(g2, getWidth(), getHeight(), plotBounds);
     PlotRenderTheme.drawGrid(g2, plotBounds, 10, 8);
-    PlotRenderTheme.drawTitle(g2, 10, 16, "Waveform");
+    PlotRenderTheme.drawTitle(g2, 10, 16, triggerEnabled ? "Waveform (triggered)" : "Waveform");
 
     if (audioCaptureService == null) {
       LOGGER.warning("paintComponent: audioCaptureService is null");
       PlotRenderTheme.drawEmptyState(g2, plotBounds, "No audio service connected");
       return;
+    }
+
+    if (triggerEnabled) {
+      if (paintTriggeredWaveform(g2, plotBounds)) {
+        drawLevelOverlay(g2, plotBounds);
+        return;
+      }
+      // Fall through to free-running mode if trigger cannot produce a view yet.
     }
 
     WaveformModel model = getCurrentModel();
@@ -187,6 +232,67 @@ public final class WaveformPanel extends JPanel {
     }
 
     drawLevelOverlay(g2, plotBounds);
+  }
+
+  /**
+   * Render the latest triggered view. Returns {@code true} if a view was drawn (so the caller can
+   * skip the free-running model path).
+   */
+  private boolean paintTriggeredWaveform(Graphics2D g2, Rectangle plotBounds) {
+    AudioBlock block = getCurrentBlock();
+    if (block != null
+        && block.channels() > 0
+        && block.frames() > 0
+        && block.frameIndex() != lastTriggeredBlockFrameIndex) {
+      trigger.process(block, 0).ifPresent(v -> lastTriggeredView = v);
+      lastTriggeredBlockFrameIndex = block.frameIndex();
+    }
+    WaveformTrigger.TriggeredView view = lastTriggeredView;
+    if (view == null || view.samplesView().length == 0) {
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "Waiting for trigger...");
+      return true;
+    }
+    float[] samples = view.samplesView();
+    int n = samples.length;
+    int width = Math.max(1, plotBounds.width);
+    int height = Math.max(1, plotBounds.height);
+    int centerY = plotBounds.y + height / 2;
+    int amplitude = Math.max(1, height / 2 - 4);
+
+    int[] xs = new int[n];
+    int[] ys = new int[n];
+    for (int i = 0; i < n; i++) {
+      xs[i] = plotBounds.x + (int) ((long) i * (width - 1) / Math.max(1, n - 1));
+      float clamped = Math.max(-1f, Math.min(1f, samples[i]));
+      ys[i] = centerY - (int) (clamped * amplitude);
+    }
+
+    // Trigger level indicator.
+    int levelY = centerY - (int) (Math.max(-1f, Math.min(1f, view.level())) * amplitude);
+    g2.setColor(PlotRenderTheme.CENTER_LINE);
+    g2.setStroke(PlotRenderTheme.AXIS_STROKE);
+    g2.drawLine(plotBounds.x, levelY, plotBounds.x + width - 1, levelY);
+
+    // Center line.
+    g2.drawLine(plotBounds.x, centerY, plotBounds.x + width - 1, centerY);
+
+    // Trace.
+    g2.setColor(PlotRenderTheme.WAVEFORM_LEFT);
+    g2.setStroke(PlotRenderTheme.TRACE_STROKE);
+    g2.drawPolyline(xs, ys, n);
+
+    // Status text.
+    String status =
+        String.format(
+            "Trig: %s  Slope: %s  Level: %+.2f  %s",
+            view.triggered() ? "FIRED" : "AUTO",
+            view.slope() == WaveformTrigger.Slope.RISING ? "↑" : "↓",
+            view.level(),
+            view.triggered() ? "" : "(timeout)");
+    g2.setFont(PlotRenderTheme.LABEL_FONT);
+    g2.setColor(PlotRenderTheme.TEXT_MUTED);
+    g2.drawString(status, plotBounds.x + 10, plotBounds.y + 32);
+    return true;
   }
 
   private void drawLevelOverlay(Graphics2D g2, Rectangle plotBounds) {
