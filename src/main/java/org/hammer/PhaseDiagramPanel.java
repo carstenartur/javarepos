@@ -2,7 +2,7 @@ package org.hammer;
 
 import java.awt.BorderLayout;
 import java.util.logging.Logger;
-import javax.swing.JLabel;
+import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 
@@ -23,9 +23,7 @@ public class PhaseDiagramPanel extends JPanel {
     super();
     LOGGER.info("PhaseDiagramPanel created");
     setLayout(new BorderLayout(0, 0));
-
-    JLabel lblNewLabel = new JLabel("Phase diagram");
-    add(lblNewLabel, BorderLayout.NORTH);
+    setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
     canvas = new PhaseDiagramCanvas();
     add(canvas, BorderLayout.CENTER);

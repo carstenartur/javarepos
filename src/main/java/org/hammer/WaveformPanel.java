@@ -1,13 +1,16 @@
 package org.hammer;
 
-import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.WaveformModel;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.ui.theme.PlotRenderTheme;
 
 /**
  * Panel for displaying audio waveform visualization.
@@ -23,6 +26,7 @@ public final class WaveformPanel extends JPanel {
 
   private AudioCaptureService audioCaptureService;
   private transient WaveformModel frozenModel;
+  private transient AudioBlock frozenBlock;
   private boolean frozen;
 
   /**
@@ -65,6 +69,7 @@ public final class WaveformPanel extends JPanel {
   public void setAudioCaptureService(AudioCaptureService service) {
     this.audioCaptureService = service;
     this.frozenModel = null;
+    this.frozenBlock = null;
     this.frozen = false;
     LOGGER.info("AudioCaptureService set: " + (service != null));
     if (service != null) {
@@ -81,8 +86,10 @@ public final class WaveformPanel extends JPanel {
   public void setFrozen(boolean frozen) {
     if (frozen && !this.frozen) {
       frozenModel = getCurrentModel();
+      frozenBlock = getCurrentBlock();
     } else if (!frozen) {
       frozenModel = null;
+      frozenBlock = null;
     }
     this.frozen = frozen;
     repaint();
@@ -101,53 +108,114 @@ public final class WaveformPanel extends JPanel {
     return audioCaptureService.getLatestModel();
   }
 
+  private AudioBlock getCurrentBlock() {
+    if (frozen && frozenBlock != null) {
+      return frozenBlock;
+    }
+    if (audioCaptureService == null) {
+      return null;
+    }
+    return audioCaptureService.getLatestBlock();
+  }
+
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      PlotRenderTheme.applyQualityRendering(g2);
+      paintWaveform(g2);
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  private void paintWaveform(Graphics2D g2) {
     if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
       LOGGER.fine("paintComponent called");
     }
-    g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
+    Rectangle plotBounds = new Rectangle(0, 0, Math.max(1, getWidth()), Math.max(1, getHeight()));
+    PlotRenderTheme.drawPlotBackground(g2, getWidth(), getHeight(), plotBounds);
+    PlotRenderTheme.drawGrid(g2, plotBounds, 10, 8);
+    PlotRenderTheme.drawTitle(g2, 10, 16, "Waveform");
 
     if (audioCaptureService == null) {
       LOGGER.warning("paintComponent: audioCaptureService is null");
-      // Draw placeholder message
-      g.drawString("No audio service connected", 10, getHeight() / 2);
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "No audio service connected");
       return;
     }
 
-    // Get thread-safe snapshot of model
     WaveformModel model = getCurrentModel();
-
     final int points = model.getNumberOfPoints();
     if (points == 0) {
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "Waiting for waveform data...");
       return;
     }
 
     int[] xPoints = model.getXPoints();
     int[][] yPoints = model.getYPoints();
+    int channel0Points = yPoints.length > 0 ? Math.min(points, yPoints[0].length) : 0;
+    int channel1Points = yPoints.length > 1 ? Math.min(points, yPoints[1].length) : 0;
+    int xCount = xPoints.length;
+    int leftRenderPoints = Math.min(xCount, channel0Points);
+    int rightRenderPoints = Math.min(xCount, channel1Points);
 
-    // Draw channel 0 (yellow)
-    if (yPoints.length > 0) {
-      g.setColor(Color.yellow);
-      g.drawPolyline(xPoints, yPoints[0], points);
+    if (channel0Points > 1 && xCount > 1) {
+      g2.setColor(PlotRenderTheme.WAVEFORM_LEFT);
+      g2.setStroke(PlotRenderTheme.TRACE_STROKE);
+      g2.drawPolyline(xPoints, yPoints[0], leftRenderPoints);
     }
 
-    // Draw channel 1 (cyan)
-    if (yPoints.length > 1) {
-      g.setColor(Color.cyan);
-      g.drawPolyline(xPoints, yPoints[1], points);
+    if (channel1Points > 1 && xCount > 1) {
+      g2.setColor(PlotRenderTheme.WAVEFORM_RIGHT);
+      g2.setStroke(PlotRenderTheme.THIN_TRACE_STROKE);
+      g2.drawPolyline(xPoints, yPoints[1], rightRenderPoints);
     }
 
-    // Draw center line and tick marks
-    g.setColor(Color.red);
-    g.drawLine(0, getHeight() / 2, getWidth() - 1, getHeight() / 2);
+    int centerY = getHeight() / 2;
+    g2.setColor(PlotRenderTheme.CENTER_LINE);
+    g2.setStroke(PlotRenderTheme.AXIS_STROKE);
+    g2.drawLine(0, centerY, getWidth() - 1, centerY);
 
     int tickEveryNSample = model.getTickEveryNSample();
     if (tickEveryNSample > 0) {
       for (int i = 0; i < points; i += tickEveryNSample) {
-        g.drawLine(xPoints[i], getHeight() / 2, xPoints[i], getHeight() / 2 + 6);
+        if (i < xCount) {
+          g2.drawLine(xPoints[i], centerY - 3, xPoints[i], centerY + 3);
+        }
       }
     }
+
+    drawLevelOverlay(g2, plotBounds);
+  }
+
+  private void drawLevelOverlay(Graphics2D g2, Rectangle plotBounds) {
+    AudioBlock block = getCurrentBlock();
+    if (block == null || block.frames() == 0) {
+      return;
+    }
+    double sumSquares = 0.0d;
+    double peak = 0.0d;
+    long sampleCount = 0L;
+    for (int channel = 0; channel < block.channels(); channel++) {
+      float[] samples = block.channelView(channel);
+      for (float sample : samples) {
+        double abs = Math.abs(sample);
+        peak = Math.max(peak, abs);
+        sumSquares += sample * sample;
+        sampleCount++;
+      }
+    }
+    if (sampleCount == 0L) {
+      return;
+    }
+    double rms = Math.sqrt(sumSquares / sampleCount);
+    String overlay = String.format("RMS %.3f  Peak %.3f", rms, peak);
+    int textWidth = g2.getFontMetrics(PlotRenderTheme.LABEL_FONT).stringWidth(overlay);
+    int x = plotBounds.x + Math.max(8, plotBounds.width - textWidth - 12);
+    int y = plotBounds.y + 18;
+    g2.setFont(PlotRenderTheme.LABEL_FONT);
+    g2.setColor(PlotRenderTheme.TEXT_MUTED);
+    g2.drawString(overlay, x, y);
   }
 }
