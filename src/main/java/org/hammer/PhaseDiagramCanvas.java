@@ -1,12 +1,14 @@
 package org.hammer;
 
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.logging.Logger;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
-import org.hammer.audio.WaveformModel;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.snapshot.PhaseScopeSnapshot;
+import org.hammer.audio.ui.theme.PlotRenderTheme;
 
 /**
  * Canvas for displaying phase diagram (X-Y plot of two channels).
@@ -43,40 +45,82 @@ public class PhaseDiagramCanvas extends JPanel {
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
-    if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
-      LOGGER.fine("paintComponent called");
-    }
-    g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
-
-    if (audioCaptureService == null) {
-      LOGGER.warning("paintComponent: audioCaptureService is null");
-      g.drawString("No audio service", 10, getHeight() / 2);
-      return;
-    }
-
-    // Get thread-safe snapshot of model
-    WaveformModel model = audioCaptureService.getLatestModel();
-
-    final int points = model.getNumberOfPoints();
-    if (model.getChannelCount() < 2 || points == 0) {
-      return;
-    }
-
-    int[][] yPoints = model.getYPoints();
-
-    // Draw phase diagram (channel 0 vs channel 1)
-    // Fix: Use Graphics2D copy to avoid transform leak
     Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.setColor(Color.yellow);
-
-      // Translate to center the diagram based on first point
-      if (yPoints[0].length > 0 && yPoints[1].length > 0) {
-        g2.translate(-yPoints[0][0], -yPoints[1][0]);
-        g2.drawPolyline(yPoints[0], yPoints[1], model.getNumberOfPoints());
-      }
+      PlotRenderTheme.applyQualityRendering(g2);
+      paintPhaseScope(g2);
     } finally {
       g2.dispose();
     }
+  }
+
+  private void paintPhaseScope(Graphics2D g2) {
+    if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+      LOGGER.fine("paintComponent called");
+    }
+    Rectangle plotBounds = new Rectangle(0, 0, Math.max(1, getWidth()), Math.max(1, getHeight()));
+    PlotRenderTheme.drawPlotBackground(g2, getWidth(), getHeight(), plotBounds);
+    PlotRenderTheme.drawGrid(g2, plotBounds, 6, 6);
+    drawReferenceGrid(g2, plotBounds);
+    PlotRenderTheme.drawTitle(g2, 10, 16, "Phase Scope");
+
+    if (audioCaptureService == null) {
+      LOGGER.warning("paintComponent: audioCaptureService is null");
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "No audio service connected");
+      return;
+    }
+
+    AudioBlock latestBlock = audioCaptureService.getLatestBlock();
+    if (latestBlock == null) {
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "Waiting for stereo samples...");
+      return;
+    }
+    PhaseScopeSnapshot snapshot = PhaseScopeSnapshot.fromBlock(latestBlock);
+    if (snapshot.frames() == 0) {
+      PlotRenderTheme.drawEmptyState(g2, plotBounds, "Stereo data unavailable");
+      return;
+    }
+    drawPhaseTrace(g2, plotBounds, snapshot);
+  }
+
+  private void drawReferenceGrid(Graphics2D g2, Rectangle plotBounds) {
+    int centerX = plotBounds.x + plotBounds.width / 2;
+    int centerY = plotBounds.y + plotBounds.height / 2;
+    int radius = Math.max(4, Math.min(plotBounds.width, plotBounds.height) / 2 - 12);
+    g2.setColor(PlotRenderTheme.AXIS_COLOR);
+    g2.setStroke(PlotRenderTheme.AXIS_STROKE);
+    g2.drawLine(plotBounds.x + 6, centerY, plotBounds.x + plotBounds.width - 6, centerY);
+    g2.drawLine(centerX, plotBounds.y + 6, centerX, plotBounds.y + plotBounds.height - 6);
+    g2.setStroke(PlotRenderTheme.GRID_STROKE);
+    for (int step = 1; step <= 4; step++) {
+      int currentRadius = radius * step / 4;
+      g2.setColor(step == 4 ? PlotRenderTheme.GRID_MAJOR : PlotRenderTheme.GRID_MINOR);
+      g2.drawOval(centerX - currentRadius, centerY - currentRadius, 2 * currentRadius, 2 * currentRadius);
+    }
+  }
+
+  private void drawPhaseTrace(Graphics2D g2, Rectangle plotBounds, PhaseScopeSnapshot snapshot) {
+    float[] left = snapshot.leftView();
+    float[] right = snapshot.rightView();
+    int pointCount = Math.min(left.length, right.length);
+    if (pointCount < 2) {
+      return;
+    }
+
+    int centerX = plotBounds.x + plotBounds.width / 2;
+    int centerY = plotBounds.y + plotBounds.height / 2;
+    int radius = Math.max(4, Math.min(plotBounds.width, plotBounds.height) / 2 - 12);
+    int[] xPoints = new int[pointCount];
+    int[] yPoints = new int[pointCount];
+    for (int i = 0; i < pointCount; i++) {
+      double xNorm = Math.max(-1d, Math.min(1d, left[i]));
+      double yNorm = Math.max(-1d, Math.min(1d, right[i]));
+      xPoints[i] = centerX + (int) Math.round(xNorm * radius);
+      yPoints[i] = centerY - (int) Math.round(yNorm * radius);
+    }
+
+    g2.setColor(PlotRenderTheme.PHASE_TRACE);
+    g2.setStroke(PlotRenderTheme.THIN_TRACE_STROKE);
+    g2.drawPolyline(xPoints, yPoints, pointCount);
   }
 }

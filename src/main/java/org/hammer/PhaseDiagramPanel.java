@@ -2,9 +2,11 @@ package org.hammer;
 
 import java.awt.BorderLayout;
 import java.util.logging.Logger;
+import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import org.hammer.audio.AudioCaptureService;
+import org.hammer.audio.ui.theme.PlotRenderTheme;
 
 /**
  * Panel containing the phase diagram visualization.
@@ -23,8 +25,11 @@ public class PhaseDiagramPanel extends JPanel {
     super();
     LOGGER.info("PhaseDiagramPanel created");
     setLayout(new BorderLayout(0, 0));
+    setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-    JLabel lblNewLabel = new JLabel("Phase diagram");
+    JLabel lblNewLabel = new JLabel("Phase scope");
+    lblNewLabel.setForeground(PlotRenderTheme.TEXT_MUTED);
+    lblNewLabel.setBorder(BorderFactory.createEmptyBorder(0, 6, 2, 0));
     add(lblNewLabel, BorderLayout.NORTH);
 
     canvas = new PhaseDiagramCanvas();

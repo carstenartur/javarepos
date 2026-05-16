@@ -4,11 +4,14 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.Polygon;
+import java.awt.Rectangle;
+import java.awt.geom.Path2D;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.analysis.SpectrumAnalyzer;
 import org.hammer.audio.analysis.SpectrumSnapshot;
 import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.ui.theme.PlotRenderTheme;
 
 /** Panel for displaying the current FFT magnitude spectrum. */
 public final class SpectrumPanel extends javax.swing.JPanel {
@@ -131,7 +134,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     super.paintComponent(g);
     Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      PlotRenderTheme.applyQualityRendering(g2);
       paintSpectrum(g2);
     } finally {
       g2.dispose();
@@ -141,50 +144,96 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private void paintSpectrum(Graphics2D g) {
     int width = getWidth();
     int height = getHeight();
-    g.setColor(Color.BLACK);
-    g.fillRect(0, 0, width, height);
-
-    g.setColor(Color.DARK_GRAY);
     int plotX = LEFT_MARGIN;
     int plotY = TOP_MARGIN;
     int plotWidth = Math.max(1, width - LEFT_MARGIN - RIGHT_MARGIN);
     int plotHeight = Math.max(1, height - TOP_MARGIN - BOTTOM_MARGIN);
-    g.drawRect(plotX, plotY, plotWidth, plotHeight);
+    Rectangle plotBounds = new Rectangle(plotX, plotY, plotWidth, plotHeight);
+    PlotRenderTheme.drawPlotBackground(g, width, height, plotBounds);
+    PlotRenderTheme.drawGrid(g, plotBounds, 8, 6);
+    PlotRenderTheme.drawTitle(g, plotBounds.x, 14, "Spectrum");
+    drawSpectrumAxes(g, plotBounds);
 
     SpectrumSnapshot spectrum = getCurrentSpectrum();
     if (spectrum == null) {
-      g.setColor(Color.LIGHT_GRAY);
-      g.drawString("No spectrum data", plotX + 8, plotY + plotHeight / 2);
+      PlotRenderTheme.drawEmptyState(g, plotBounds, "No spectrum data");
       return;
     }
 
     float[] magnitudes = spectrum.magnitudes();
-    float max = 0f;
-    for (int i = 1; i < magnitudes.length; i++) {
-      max = Math.max(max, magnitudes[i]);
+    if (magnitudes.length <= 1) {
+      PlotRenderTheme.drawEmptyState(g, plotBounds, "Insufficient FFT bins");
+      return;
     }
-    if (max <= 0f) {
-      max = 1f;
+    drawSpectrumShape(g, plotBounds, magnitudes);
+
+    int peakBin = findPeakBin(magnitudes);
+    if (peakBin > 0) {
+      double peakHz = spectrum.frequencyOfBin(peakBin);
+      int peakX = xForBin(plotBounds, peakBin, magnitudes.length);
+      double peakNorm = PlotRenderTheme.normalizedDb(PlotRenderTheme.magnitudeToDb(magnitudes[peakBin]));
+      int peakY = yForNormalized(plotBounds, peakNorm);
+      g.setColor(PlotRenderTheme.HIGHLIGHT);
+      g.setStroke(PlotRenderTheme.PEAK_STROKE);
+      g.drawLine(peakX, plotBounds.y, peakX, plotBounds.y + plotBounds.height - 1);
+      g.fillOval(peakX - 3, peakY - 3, 6, 6);
+      PlotRenderTheme.drawLabel(g, Math.min(plotBounds.x + plotBounds.width - 120, peakX + 6), plotBounds.y + 14, String.format("Peak %.1f Hz", peakHz));
     }
 
-    g.setColor(new Color(80, 220, 120));
-    int bins = Math.max(1, magnitudes.length - 1);
+    PlotRenderTheme.drawLabel(g, plotBounds.x, height - 8, "0 Hz");
+    PlotRenderTheme.drawLabel(g, width - 84, height - 8, String.format("%.0f Hz", spectrum.sampleRate() / 2.0));
+  }
+
+  private void drawSpectrumAxes(Graphics2D g, Rectangle plotBounds) {
+    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 4, "0 dB");
+    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height / 2 + 4, "-40 dB");
+    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "-80 dB");
+  }
+
+  private void drawSpectrumShape(Graphics2D g, Rectangle plotBounds, float[] magnitudes) {
+    int bins = magnitudes.length;
+    Path2D.Double linePath = new Path2D.Double();
+    Polygon areaPolygon = new Polygon();
+    areaPolygon.addPoint(plotBounds.x, plotBounds.y + plotBounds.height - 1);
+    for (int bin = 1; bin < bins; bin++) {
+      int x = xForBin(plotBounds, bin, bins);
+      double db = PlotRenderTheme.magnitudeToDb(magnitudes[bin]);
+      int y = yForNormalized(plotBounds, PlotRenderTheme.normalizedDb(db));
+      if (bin == 1) {
+        linePath.moveTo(x, y);
+      } else {
+        linePath.lineTo(x, y);
+      }
+      areaPolygon.addPoint(x, y);
+    }
+    areaPolygon.addPoint(plotBounds.x + plotBounds.width - 1, plotBounds.y + plotBounds.height - 1);
+    g.setColor(PlotRenderTheme.SPECTRUM_FILL);
+    g.fillPolygon(areaPolygon);
+    g.setColor(PlotRenderTheme.SPECTRUM_LINE);
+    g.setStroke(PlotRenderTheme.TRACE_STROKE);
+    g.draw(linePath);
+  }
+
+  private static int findPeakBin(float[] magnitudes) {
+    int peakBin = -1;
+    float peakMagnitude = Float.NEGATIVE_INFINITY;
     for (int bin = 1; bin < magnitudes.length; bin++) {
-      int x = plotX + (int) Math.round((bin - 1) * (plotWidth - 1.0) / bins);
-      int nextX = plotX + (int) Math.round(bin * (plotWidth - 1.0) / bins);
-      int barWidth = Math.max(1, nextX - x);
-      int barHeight = Math.round((magnitudes[bin] / max) * plotHeight);
-      g.fillRect(x, plotY + plotHeight - barHeight, barWidth, barHeight);
+      float magnitude = magnitudes[bin];
+      if (magnitude > peakMagnitude) {
+        peakMagnitude = magnitude;
+        peakBin = bin;
+      }
     }
+    return peakBin;
+  }
 
-    double peakHz = getPeakFrequencyHz();
-    g.setColor(Color.WHITE);
-    g.drawString("FFT spectrum", plotX, 14);
-    g.drawString("0 Hz", plotX, height - 8);
-    g.drawString(String.format("%.0f Hz", spectrum.sampleRate() / 2.0), width - 74, height - 8);
-    if (!Double.isNaN(peakHz)) {
-      g.setColor(Color.ORANGE);
-      g.drawString(String.format("Peak: %.1f Hz", peakHz), plotX + 100, 14);
-    }
+  private static int xForBin(Rectangle plotBounds, int bin, int bins) {
+    int denominator = Math.max(1, bins - 2);
+    double ratio = (bin - 1.0) / denominator;
+    return plotBounds.x + (int) Math.round(ratio * (plotBounds.width - 1));
+  }
+
+  private static int yForNormalized(Rectangle plotBounds, double normalized) {
+    return plotBounds.y + plotBounds.height - 1 - (int) Math.round(normalized * (plotBounds.height - 1));
   }
 }

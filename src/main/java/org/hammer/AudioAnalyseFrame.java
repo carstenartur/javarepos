@@ -3,7 +3,7 @@ package org.hammer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
-import java.awt.GridLayout;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
@@ -36,15 +36,14 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -138,7 +137,7 @@ public class AudioAnalyseFrame extends JFrame {
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
     contentPane = new JPanel(new BorderLayout(CONTENT_PANE_HGAP, CONTENT_PANE_VGAP));
-    contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+    contentPane.setBorder(new EmptyBorder(8, 8, 8, 8));
     setContentPane(contentPane);
 
     // Initialize fields before calling init methods
@@ -252,28 +251,21 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void initTopSettingsPanel() {
-    JPanel topContainer = new JPanel(new GridLayout(1, 2, TOP_PANEL_HGAP, 0));
+    JPanel topContainer = new JPanel(new BorderLayout(TOP_PANEL_HGAP, 0));
+    topContainer.setBorder(new EmptyBorder(0, 0, 4, 0));
     contentPane.add(topContainer, BorderLayout.NORTH);
     topContainer.add(createSettingsPanel());
-    topContainer.add(createMeasurementPanel());
+    topContainer.add(createMeasurementPanel(), BorderLayout.EAST);
     updateModeControls();
     updateUIFromModel();
   }
 
   private JPanel createSettingsPanel() {
-    JPanel settingsPanel = new JPanel();
-    settingsPanel.setBorder(
-        new TitledBorder(
-            new EtchedBorder(EtchedBorder.LOWERED, null, null),
-            "Settings",
-            TitledBorder.LEADING,
-            TitledBorder.TOP,
-            null,
-            null));
-    settingsPanel.setLayout(new GridLayout(7, 2, 4, 2));
+    JPanel settingsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+    settingsPanel.setBorder(UiTheme.createPanelBorder());
 
-    settingsPanel.add(new JLabel("Input mode"));
-    JPanel modePanel = new JPanel(new GridLayout(1, 2, 4, 0));
+    settingsPanel.add(new JLabel("Input"));
+    JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
     ButtonGroup buttonGroup = new ButtonGroup();
     buttonGroup.add(radioLiveMicrophone);
     buttonGroup.add(radioDemoMode);
@@ -283,7 +275,8 @@ public class AudioAnalyseFrame extends JFrame {
     modePanel.add(radioDemoMode);
     settingsPanel.add(modePanel);
 
-    settingsPanel.add(new JLabel("Demo signal"));
+    settingsPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    settingsPanel.add(new JLabel("Demo"));
     comboBoxDemoSignal.addItemListener(
         event -> {
           if (event.getStateChange() == ItemEvent.SELECTED && inputMode == InputMode.DEMO) {
@@ -292,63 +285,56 @@ public class AudioAnalyseFrame extends JFrame {
         });
     settingsPanel.add(comboBoxDemoSignal);
 
-    settingsPanel.add(new JLabel("Audio device"));
+    settingsPanel.add(new JLabel("Device"));
     populateAudioDeviceChoices();
     comboBoxAudioDevice.addItemListener(this::audioDeviceSelectionChanged);
     settingsPanel.add(comboBoxAudioDevice);
 
-    settingsPanel.add(new JLabel("datasize"));
-    configureReadOnlyField(textFieldDataSize, 10);
+    settingsPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    settingsPanel.add(new JLabel("Size"));
+    configureReadOnlyField(textFieldDataSize, 6);
     settingsPanel.add(textFieldDataSize);
 
-    settingsPanel.add(new JLabel("divisor"));
-    configureReadOnlyField(textFieldDivisor, 10);
+    settingsPanel.add(new JLabel("Div"));
+    configureReadOnlyField(textFieldDivisor, 4);
     settingsPanel.add(textFieldDivisor);
 
-    settingsPanel.add(new JLabel("audioformat"));
+    settingsPanel.add(new JLabel("Format"));
     textFieldAudioFormat.setHorizontalAlignment(SwingConstants.CENTER);
-    configureReadOnlyField(textFieldAudioFormat, 30);
+    configureReadOnlyField(textFieldAudioFormat, 18);
     settingsPanel.add(textFieldAudioFormat);
 
-    settingsPanel.add(new JLabel("Peak Frequency"));
+    settingsPanel.add(new JLabel("Peak"));
     textFieldPeakFrequency.setHorizontalAlignment(SwingConstants.CENTER);
-    configureReadOnlyField(textFieldPeakFrequency, 12);
+    configureReadOnlyField(textFieldPeakFrequency, 10);
     settingsPanel.add(textFieldPeakFrequency);
     return settingsPanel;
   }
 
   private JPanel createMeasurementPanel() {
-    JPanel measurementPanel = new JPanel();
-    measurementPanel.setBorder(
-        new TitledBorder(
-            new EtchedBorder(EtchedBorder.LOWERED, null, null),
-            "Measurements",
-            TitledBorder.LEADING,
-            TitledBorder.TOP,
-            null,
-            null));
-    measurementPanel.setLayout(new GridLayout(5, 2, 4, 2));
+    JPanel measurementPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    measurementPanel.setBorder(UiTheme.createPanelBorder());
 
     measurementPanel.add(new JLabel("RMS"));
-    configureReadOnlyField(textFieldRms, 10);
+    configureReadOnlyField(textFieldRms, 7);
     measurementPanel.add(textFieldRms);
 
     measurementPanel.add(new JLabel("Peak level"));
-    configureReadOnlyField(textFieldPeakLevel, 10);
+    configureReadOnlyField(textFieldPeakLevel, 7);
     measurementPanel.add(textFieldPeakLevel);
 
-    measurementPanel.add(new JLabel("Dominant frequency"));
-    configureReadOnlyField(textFieldDominantFrequency, 12);
+    measurementPanel.add(new JLabel("Dominant"));
+    configureReadOnlyField(textFieldDominantFrequency, 9);
     measurementPanel.add(textFieldDominantFrequency);
 
-    measurementPanel.add(new JLabel("Stereo correlation"));
-    configureReadOnlyField(textFieldStereoCorrelation, 10);
+    measurementPanel.add(new JLabel("Correlation"));
+    configureReadOnlyField(textFieldStereoCorrelation, 7);
     measurementPanel.add(textFieldStereoCorrelation);
 
     measurementPanel.add(new JLabel("Clipping"));
     textFieldClipping.setHorizontalAlignment(SwingConstants.CENTER);
     textFieldClipping.setOpaque(true);
-    configureReadOnlyField(textFieldClipping, 10);
+    configureReadOnlyField(textFieldClipping, 5);
     textFieldClipping.setEnabled(true);
     measurementPanel.add(textFieldClipping);
     return measurementPanel;
@@ -361,11 +347,21 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void initCenterAndEast() {
-    JScrollPane scrollPane = new JScrollPane();
-    scrollPane.setViewportView(waveformPanel);
-    visualizationPanel.add(scrollPane, BorderLayout.CENTER);
-    visualizationPanel.add(phaseDiagramPanel, BorderLayout.EAST);
-    visualizationPanel.add(spectrumPanel, BorderLayout.SOUTH);
+    waveformPanel.setBorder(UiTheme.createPanelBorder());
+    phaseDiagramPanel.setBorder(UiTheme.createPanelBorder());
+    spectrumPanel.setBorder(UiTheme.createPanelBorder());
+
+    JPanel lowerPanel = new JPanel(new java.awt.GridLayout(1, 2, 8, 0));
+    lowerPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
+    lowerPanel.add(spectrumPanel);
+    lowerPanel.add(phaseDiagramPanel);
+
+    JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, waveformPanel, lowerPanel);
+    splitPane.setResizeWeight(0.64);
+    splitPane.setDividerSize(7);
+    splitPane.setBorder(null);
+    splitPane.setContinuousLayout(true);
+    visualizationPanel.add(splitPane, BorderLayout.CENTER);
     contentPane.add(visualizationPanel, BorderLayout.CENTER);
   }
 
