@@ -30,9 +30,13 @@ public final class PlotRenderTheme {
 
   public static final BasicStroke GRID_STROKE = new BasicStroke(1f);
   public static final BasicStroke AXIS_STROKE = new BasicStroke(1.2f);
-  public static final BasicStroke TRACE_STROKE = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-  public static final BasicStroke THIN_TRACE_STROKE = new BasicStroke(1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-  public static final BasicStroke PEAK_STROKE = new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[] {4f, 4f}, 0f);
+  public static final BasicStroke TRACE_STROKE =
+      new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+  public static final BasicStroke THIN_TRACE_STROKE =
+      new BasicStroke(1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+  public static final BasicStroke PEAK_STROKE =
+      new BasicStroke(
+          1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[] {4f, 4f}, 0f);
 
   private static final double DB_FLOOR = -80.0d;
   private static final double MAG_EPSILON = 1.0e-7d;
@@ -42,15 +46,19 @@ public final class PlotRenderTheme {
   /** Enables high quality 2D rendering hints. */
   public static void applyQualityRendering(Graphics2D g2) {
     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    g2.setRenderingHint(
+        RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-    g2.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-    g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+    g2.setRenderingHint(
+        RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+    g2.setRenderingHint(
+        RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
     g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
   }
 
   /** Draws panel and plot backgrounds. */
-  public static void drawPlotBackground(Graphics2D g2, int width, int height, Rectangle plotBounds) {
+  public static void drawPlotBackground(
+      Graphics2D g2, int width, int height, Rectangle plotBounds) {
     g2.setColor(PANEL_BACKGROUND);
     g2.fillRect(0, 0, width, height);
     g2.setColor(PLOT_BACKGROUND);
@@ -58,7 +66,8 @@ public final class PlotRenderTheme {
   }
 
   /** Draws evenly spaced major/minor grid lines and a border around plot bounds. */
-  public static void drawGrid(Graphics2D g2, Rectangle plotBounds, int verticalSteps, int horizontalSteps) {
+  public static void drawGrid(
+      Graphics2D g2, Rectangle plotBounds, int verticalSteps, int horizontalSteps) {
     if (plotBounds.width <= 1 || plotBounds.height <= 1) {
       return;
     }

@@ -55,6 +55,18 @@ On Windows use `mvnw.cmd` instead of `./mvnw`.
 
 ![Audio Analyzer screenshot](docs/images/audio-analyzer-demo.png)
 
+## UI screenshot (modern dashboard)
+
+![Audio Analyzer modern dashboard screenshot](docs/images/screenshot.png)
+
+`docs/images/screenshot.png` is the reserved path for the current dashboard screenshot.
+If the file is missing in your checkout, regenerate it with:
+
+1. Run the app (`java -jar target/audioin-0.0.1-SNAPSHOT.jar`) and switch to demo mode.
+2. Start capture via **File → Start/Stop**, then pause with **File → Pause/Freeze**.
+3. Export a PNG via **File → Export measurement PNG...**.
+4. Save/copy the exported image as `docs/images/screenshot.png`.
+
 ### Demo workflow (without microphone)
 
 1. In **Settings**, switch input mode to **Demo mode**.

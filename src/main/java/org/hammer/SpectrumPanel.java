@@ -1,6 +1,5 @@
 package org.hammer;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -171,17 +170,23 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (peakBin > 0) {
       double peakHz = spectrum.frequencyOfBin(peakBin);
       int peakX = xForBin(plotBounds, peakBin, magnitudes.length);
-      double peakNorm = PlotRenderTheme.normalizedDb(PlotRenderTheme.magnitudeToDb(magnitudes[peakBin]));
+      double peakNorm =
+          PlotRenderTheme.normalizedDb(PlotRenderTheme.magnitudeToDb(magnitudes[peakBin]));
       int peakY = yForNormalized(plotBounds, peakNorm);
       g.setColor(PlotRenderTheme.HIGHLIGHT);
       g.setStroke(PlotRenderTheme.PEAK_STROKE);
       g.drawLine(peakX, plotBounds.y, peakX, plotBounds.y + plotBounds.height - 1);
       g.fillOval(peakX - 3, peakY - 3, 6, 6);
-      PlotRenderTheme.drawLabel(g, Math.min(plotBounds.x + plotBounds.width - 120, peakX + 6), plotBounds.y + 14, String.format("Peak %.1f Hz", peakHz));
+      PlotRenderTheme.drawLabel(
+          g,
+          Math.min(plotBounds.x + plotBounds.width - 120, peakX + 6),
+          plotBounds.y + 14,
+          String.format("Peak %.1f Hz", peakHz));
     }
 
     PlotRenderTheme.drawLabel(g, plotBounds.x, height - 8, "0 Hz");
-    PlotRenderTheme.drawLabel(g, width - 84, height - 8, String.format("%.0f Hz", spectrum.sampleRate() / 2.0));
+    PlotRenderTheme.drawLabel(
+        g, width - 84, height - 8, String.format("%.0f Hz", spectrum.sampleRate() / 2.0));
   }
 
   private void drawSpectrumAxes(Graphics2D g, Rectangle plotBounds) {
@@ -234,6 +239,9 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   }
 
   private static int yForNormalized(Rectangle plotBounds, double normalized) {
-    return plotBounds.y + plotBounds.height - 1 - (int) Math.round(normalized * (plotBounds.height - 1));
+    return plotBounds.y
+        + plotBounds.height
+        - 1
+        - (int) Math.round(normalized * (plotBounds.height - 1));
   }
 }

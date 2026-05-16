@@ -95,7 +95,8 @@ public class PhaseDiagramCanvas extends JPanel {
     for (int step = 1; step <= 4; step++) {
       int currentRadius = radius * step / 4;
       g2.setColor(step == 4 ? PlotRenderTheme.GRID_MAJOR : PlotRenderTheme.GRID_MINOR);
-      g2.drawOval(centerX - currentRadius, centerY - currentRadius, 2 * currentRadius, 2 * currentRadius);
+      g2.drawOval(
+          centerX - currentRadius, centerY - currentRadius, 2 * currentRadius, 2 * currentRadius);
     }
   }
 

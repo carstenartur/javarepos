@@ -29,7 +29,8 @@ public final class UiTheme {
   }
 
   /** Applies compact, consistent padding to controls. */
-  public static void applyCompactPadding(JComponent component, int top, int left, int bottom, int right) {
+  public static void applyCompactPadding(
+      JComponent component, int top, int left, int bottom, int right) {
     Border current = component.getBorder();
     EmptyBorder padding = new EmptyBorder(top, left, bottom, right);
     if (current == null) {
