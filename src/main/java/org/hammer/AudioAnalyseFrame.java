@@ -528,7 +528,8 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldPeakFrequency.setText(
           Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
       MeasurementSnapshot measurements =
-          measurementCalculator.calculate(currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
+          measurementCalculator.calculate(
+              currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
       updateMeasurementFields(measurements);
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {

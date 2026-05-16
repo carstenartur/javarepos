@@ -31,7 +31,8 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AudioFormatDescriptor descriptor;
   private final SignalGenerator signalGenerator;
-  private final AudioRingBuffer<AudioBlock> ringBuffer = new AudioRingBuffer<>(RING_BUFFER_CAPACITY);
+  private final AudioRingBuffer<AudioBlock> ringBuffer =
+      new AudioRingBuffer<>(RING_BUFFER_CAPACITY);
   private final int tickEveryNSample;
   private final AudioFormat format;
 
@@ -44,8 +45,13 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
   private ExecutorService workerExecutor;
 
   public DemoAudioCaptureService(
-      float sampleRate, int channels, int sampleSizeInBits, int divisor, DemoSignalType signalType) {
-    this.descriptor = new AudioFormatDescriptor(sampleRate, Math.max(1, channels), sampleSizeInBits);
+      float sampleRate,
+      int channels,
+      int sampleSizeInBits,
+      int divisor,
+      DemoSignalType signalType) {
+    this.descriptor =
+        new AudioFormatDescriptor(sampleRate, Math.max(1, channels), sampleSizeInBits);
     this.signalGenerator = createSignalGenerator(descriptor, signalType);
     this.divisor = Math.max(1, divisor);
     this.tickEveryNSample = (int) (sampleRate * TICK_SECONDS);
@@ -171,7 +177,9 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
       yPoints = WaveformRenderer.computeYPointsAllChannels(snapshot, panelHeight);
     }
     int dataSizeBytes =
-        snapshot.frames() * snapshot.channels() * Math.max(1, descriptor.sourceSampleSizeInBits() / 8);
+        snapshot.frames()
+            * snapshot.channels()
+            * Math.max(1, descriptor.sourceSampleSizeInBits() / 8);
     return new WaveformModel(xPoints, yPoints, tickEveryNSample, dataSizeBytes);
   }
 
@@ -182,7 +190,8 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
       case SINE -> new SineGenerator(format, 440.0, DEMO_AMPLITUDE);
       case SQUARE -> new SquareGenerator(format, 440.0, DEMO_AMPLITUDE);
       case CHIRP -> {
-        ChirpGenerator chirpGenerator = new ChirpGenerator(format, 120.0, 2800.0, 2.5, DEMO_AMPLITUDE);
+        ChirpGenerator chirpGenerator =
+            new ChirpGenerator(format, 120.0, 2800.0, 2.5, DEMO_AMPLITUDE);
         chirpGenerator.setLooping(true);
         yield chirpGenerator;
       }
