@@ -17,6 +17,8 @@ public final class PeakHoldSpectrum {
   /** Default per-update multiplicative decay factor (no decay). */
   public static final float DEFAULT_DECAY_FACTOR = 1.0f;
 
+  private static final float[] EMPTY = new float[0];
+
   private float[] peaks;
   private float decayFactor;
   private int updates;
@@ -73,7 +75,7 @@ public final class PeakHoldSpectrum {
    * @return defensive copy of the held peak magnitudes, or an empty array if no updates yet
    */
   public float[] peaks() {
-    return peaks == null ? new float[0] : peaks.clone();
+    return peaks == null ? EMPTY : peaks.clone();
   }
 
   /**
@@ -83,7 +85,7 @@ public final class PeakHoldSpectrum {
    * @return the internal peak magnitudes array (do not mutate), or an empty array if no updates yet
    */
   public float[] peaksView() {
-    return peaks == null ? new float[0] : peaks;
+    return peaks == null ? EMPTY : peaks;
   }
 
   /**

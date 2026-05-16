@@ -16,6 +16,8 @@ public final class SpectrumAverager {
   /** Default smoothing factor (moderate). */
   public static final float DEFAULT_ALPHA = 0.3f;
 
+  private static final float[] EMPTY = new float[0];
+
   private float[] average;
   private float alpha;
   private int updates;
@@ -71,7 +73,7 @@ public final class SpectrumAverager {
    * @return defensive copy of the current averaged spectrum, or an empty array if no updates yet
    */
   public float[] average() {
-    return average == null ? new float[0] : average.clone();
+    return average == null ? EMPTY : average.clone();
   }
 
   /**
@@ -81,7 +83,7 @@ public final class SpectrumAverager {
    * @return the internal averaged spectrum (do not mutate), or an empty array if no updates yet
    */
   public float[] averageView() {
-    return average == null ? new float[0] : average;
+    return average == null ? EMPTY : average;
   }
 
   /**

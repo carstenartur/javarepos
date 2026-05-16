@@ -82,11 +82,11 @@ public final class SpectrogramFrame implements AnalysisSnapshot {
     this.magnitudes = new float[fftSize / 2 + 1];
   }
 
-  private void adoptMagnitudes(float[] adopted) {
-    // Copy elements rather than reseating final field; this still avoids the double clone path
-    // that occurred when SpectrogramAnalyzer cloned via SpectrumSnapshot.magnitudes() and then
-    // again via the public constructor.
-    System.arraycopy(adopted, 0, this.magnitudes, 0, this.magnitudes.length);
+  private void adoptMagnitudes(float[] source) {
+    // The constructor has already allocated the backing array; a single arraycopy here avoids
+    // the second full-array allocation that the public constructor's defensive clone would do
+    // on top of the clone SpectrumSnapshot already performed.
+    System.arraycopy(source, 0, this.magnitudes, 0, this.magnitudes.length);
   }
 
   /**
