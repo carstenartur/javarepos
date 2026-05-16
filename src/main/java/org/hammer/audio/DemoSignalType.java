@@ -4,7 +4,12 @@ package org.hammer.audio;
 public enum DemoSignalType {
   SINE("Sine"),
   SQUARE("Square"),
-  CHIRP("Chirp");
+  CHIRP("Chirp"),
+  MOSQUITO_BURST("Mosquito-like high-frequency burst"),
+  MOVING_CHIRP("Moving chirp source"),
+  HUM_HARMONICS("50 Hz hum + harmonics"),
+  CLIPPING_TEST("Clipping test"),
+  STEREO_DELAY_TEST("Stereo delay test");
 
   private final String label;
 

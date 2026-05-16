@@ -9,6 +9,7 @@ import org.hammer.audio.buffer.AudioRingBuffer;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.core.AudioFormatDescriptor;
 import org.hammer.audio.signal.ChirpGenerator;
+import org.hammer.audio.signal.DemoPresetGenerator;
 import org.hammer.audio.signal.SignalGenerator;
 import org.hammer.audio.signal.SineGenerator;
 import org.hammer.audio.signal.SquareGenerator;
@@ -198,6 +199,8 @@ public final class DemoAudioCaptureService implements AudioCaptureService {
         chirpGenerator.setLooping(true);
         yield chirpGenerator;
       }
+      case MOSQUITO_BURST, MOVING_CHIRP, HUM_HARMONICS, CLIPPING_TEST, STEREO_DELAY_TEST ->
+          new DemoPresetGenerator(format, selected);
     };
   }
 }

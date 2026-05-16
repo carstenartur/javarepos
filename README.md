@@ -4,11 +4,11 @@
 [![codecov](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
 [![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
 
-**Audio Analyzer** is a modular real-time audio processing platform built around a Java/Swing
-demo. It provides a layered architecture for audio acquisition, ring-buffering, DSP, analysis
-(RMS/peak, FFT spectrum) and visualization, with deterministic synthetic signal generators and
-JMH benchmarks. The bundled Swing UI renders a live waveform and phase diagram of the system
-audio input.
+**Audio Analyzer** is a modular real-time audio analysis laboratory built around a Java/Swing
+measurement dashboard. It provides a layered architecture for audio acquisition, ring-buffering,
+DSP, analysis (RMS/peak, FFT spectrum, stereo delay/localization) and visualization, with
+deterministic synthetic signal generators and JMH benchmarks. The bundled Swing UI renders live
+waveform, spectrum, phase and stereo-delay readouts for microphone input or reproducible demos.
 
 > The Maven artifact is named `audioin` for historical reasons; the application is **Audio Analyzer**.
 
@@ -20,13 +20,14 @@ audio input.
   `float[channels][frames]` samples, frame indices and timestamps; no UI types.
 - **Lock-free SPSC ring buffer** for realtime workloads, with `offer` and `offerOverwrite`.
 - **DSP extension points** — implement `DSPProcessor` and chain stages with `DSPPipeline`.
-- **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT) producing
-  immutable snapshots suitable for any UI or remote API.
-- **Deterministic synthetic signals** — `SineGenerator`, `SquareGenerator`, `ChirpGenerator` for
-  tests, headless demos and DSP verification.
+- **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT) and
+  `StereoDelayAnalyzer` producing immutable snapshots suitable for any UI or remote API.
+- **Deterministic synthetic signals** — sine, square, chirp, hum/harmonics, clipping,
+  stereo-delay, moving-chirp and mosquito-like high-frequency burst presets for tests, headless
+  demos and DSP verification.
 - **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
-  demo mode (sine/square/chirp), pause/freeze, peak-frequency + measurement readouts, and CSV/PNG
-  export for quick acoustic diagnostics.
+  demo mode, pause/freeze, peak-frequency + measurement readouts, stereo-delay / direction
+  estimate, and CSV/PNG export for quick acoustic diagnostics.
 - **Headless-friendly tests** — 81 unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -52,43 +53,45 @@ java -jar target/audioin-0.0.1-SNAPSHOT.jar  # see exec-maven-plugin config
 
 On Windows use `mvnw.cmd` instead of `./mvnw`.
 
-## MVP workflow
-
-![Audio Analyzer screenshot](docs/images/audio-analyzer-demo.png)
-
-## UI screenshot (modern dashboard)
+## Real-time acoustic use cases
 
 ![Audio Analyzer modern dashboard screenshot](docs/images/screenshot.png)
 
-`docs/images/screenshot.png` is the reserved path for the current dashboard screenshot.
-If the file is missing in your checkout, regenerate it with:
+_Staged demo: Demo mode is running a frozen 440 Hz sine signal, with the waveform, FFT peak,
+dominant frequency, RMS/peak level and clipping status visible in one view._
 
-1. Run the app (`java -jar target/audioin-0.0.1-SNAPSHOT.jar`) in either demo mode or live microphone mode.
-2. Start capture via **File → Start/Stop**, then pause with **File → Pause/Freeze**.
-3. Export a PNG via **File → Export measurement PNG...**.
-4. Save/copy the exported image as `docs/images/screenshot.png`.
+### What you can see
 
-### Demo workflow (without microphone)
+- **Demo mode** selected with the **Sine** signal.
+- A visible **waveform** for the generated signal.
+- An **FFT spectrum** with a marked peak at **440.0 Hz**.
+- **Peak Frequency** and **Dominant frequency** readouts showing **440.0 Hz**.
+- **RMS**, **Peak level** and **Clipping** readouts.
+- **Stereo delay**, confidence and approximate direction readouts when a stereo signal is present.
+- A **Paused / Frozen demo** state for repeatable inspection.
 
-1. In **Settings**, switch input mode to **Demo mode**.
-2. Select one of the built-in test signals (**Sine**, **Square**, or **Chirp**).
-3. Use **File → Start/Stop** to start playback from the selected signal source.
-4. Verify the live panels update together: waveform, phase diagram, FFT spectrum and peak
-   frequency.
-5. Watch the **Measurements** panel:
-   - **RMS** and **Peak level** (linear normalized level),
-   - **Dominant frequency** (strongest FFT bin),
-   - **Stereo correlation** (n/a for mono or silence),
-   - **Clipping** (highlighted when |sample| reaches clipping threshold).
-6. Use **File → Pause/Freeze** to hold the current measurement.
-7. Export the frozen or current measurement with **File → Export measurement CSV...** or
+### Try it yourself
+
+1. Build and run the app.
+2. Open **Settings** and switch input mode to **Demo mode**.
+3. Select **Sine**, **Chirp**, **Stereo delay test**, **Mosquito-like high-frequency burst**,
+   **Moving chirp source**, **50 Hz hum + harmonics** or **Clipping test** as the demo signal.
+4. Start capture with **File → Start/Stop**.
+5. Freeze the current view with **File → Pause/Freeze**.
+6. Export evidence via **File → Export measurement CSV...** or
    **File → Export measurement PNG...**.
 
-### Live microphone workflow
+### Use cases
 
-1. Switch input mode back to **Live microphone** and select an **audio device** (or keep system
-   default).
-2. Use **File → Start/Stop** to begin live capture.
+- **Detect dominant frequency** by finding the strongest FFT peak.
+- **Find hum/noise/resonance problems** with the 50 Hz hum + harmonics demo and spectrum readouts.
+- **Estimate stereo delay / sound direction** from inter-channel cross-correlation and microphone
+  spacing. See [Stereo localization](docs/use-cases/stereo-localization.md).
+- **Inspect high-frequency intermittent sounds** with the mosquito-like burst scenario, framed as a
+  localized high-frequency intermittent sound source rather than species detection.
+- **Validate generated test signals** by comparing the selected demo signal with the measured
+  dominant frequency and level.
+- **Export evidence** as CSV or PNG for reports, diagnostics or bug tickets.
 
 ## Documentation
 
@@ -102,6 +105,8 @@ If the file is missing in your checkout, regenerate it with:
   contributing.
 - [Quality gates & coverage](docs/quality.md) — current gates, hardening roadmap, coverage
   targets.
+- [Stereo localization](docs/use-cases/stereo-localization.md) — what stereo time-delay analysis
+  can and cannot infer, microphone spacing, cross-correlation and demo usage.
 - [Roadmap](ROADMAP.md) — planned features and next issues.
 
 ## License
