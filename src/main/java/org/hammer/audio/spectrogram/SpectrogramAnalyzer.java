@@ -48,13 +48,15 @@ public final class SpectrogramAnalyzer implements AnalysisModule<SpectrogramFram
   @Override
   public SpectrogramFrame analyze(AudioBlock block) {
     SpectrumSnapshot snapshot = spectrumAnalyzer.analyze(block);
+    // Use the non-copying view + adopting factory to avoid an extra defensive clone in the
+    // per-block hot path (the SpectrogramFrame still ends up with its own backing array).
     SpectrogramFrame frame =
-        new SpectrogramFrame(
+        SpectrogramFrame.adopting(
             snapshot.sourceFrameIndex(),
             snapshot.sourceTimestampNanos(),
             snapshot.sampleRate(),
             snapshot.fftSize(),
-            snapshot.magnitudes());
+            snapshot.magnitudesView());
     history.append(frame);
     lastSpectrum = snapshot;
     return frame;

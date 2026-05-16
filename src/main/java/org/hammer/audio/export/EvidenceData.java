@@ -73,7 +73,8 @@ public final class EvidenceData {
   }
 
   /**
-   * @return true if any artifact payload is present
+   * @return true if any artifact payload is present (a non-empty spectrogram and a non-empty
+   *     diagnosis count; an empty diagnosis snapshot alone does not qualify)
    */
   public boolean hasAnything() {
     return screenshot != null
@@ -81,7 +82,7 @@ public final class EvidenceData {
         || spectrum != null
         || (spectrogram != null && !spectrogram.isEmpty())
         || stereoDelay != null
-        || diagnosis != null;
+        || (diagnosis != null && !diagnosis.isEmpty());
   }
 
   /** Builder for {@link EvidenceData}. */

@@ -12,8 +12,8 @@ import java.util.Objects;
  * <p>Internally backed by a fixed-size ring buffer. Once {@link #capacity()} frames are stored,
  * appending a new frame evicts the oldest. The history rejects frames whose {@link
  * SpectrogramFrame#binCount()} differs from the established bin count and starts fresh after a
- * {@link #clear()} or a {@link #reset()} (the latter is also called automatically if the FFT size
- * or sample rate changes).
+ * {@link #clear()} (a clear is also performed automatically when the FFT size or sample rate of an
+ * appended frame changes).
  *
  * <p>Instances are <strong>not thread-safe</strong>; callers must externally synchronize if shared.
  */

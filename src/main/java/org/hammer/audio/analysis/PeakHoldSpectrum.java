@@ -77,6 +77,16 @@ public final class PeakHoldSpectrum {
   }
 
   /**
+   * Read-only access to the internal peak magnitudes array. Callers must not mutate the returned
+   * array. Intended for hot rendering paths that need to avoid per-frame allocations.
+   *
+   * @return the internal peak magnitudes array (do not mutate), or an empty array if no updates yet
+   */
+  public float[] peaksView() {
+    return peaks == null ? new float[0] : peaks;
+  }
+
+  /**
    * Update the peak-hold trace from a new magnitude spectrum. If the bin count changes (e.g. FFT
    * size changed), the existing peaks are reset.
    *

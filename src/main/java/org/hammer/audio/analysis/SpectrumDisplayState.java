@@ -111,7 +111,7 @@ public final class SpectrumDisplayState {
       return;
     }
     this.latest = snapshot;
-    float[] magnitudes = snapshot.magnitudes();
+    float[] magnitudes = snapshot.magnitudesView();
     if (averagingEnabled) {
       averager.update(magnitudes);
     }

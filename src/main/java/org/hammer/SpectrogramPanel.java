@@ -36,7 +36,6 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
 
   private AudioCaptureService audioCaptureService;
   private transient SpectrogramAnalyzer analyzer;
-  private transient SpectrogramHistory snapshotHistory;
   private long lastAnalyzedFrameIndex = Long.MIN_VALUE;
   private long lastAnalyzedTimestampNanos = Long.MIN_VALUE;
   private float analyzerSampleRate = -1f;
@@ -60,7 +59,6 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
   public void setAudioCaptureService(AudioCaptureService service) {
     this.audioCaptureService = service;
     this.analyzer = null;
-    this.snapshotHistory = null;
     this.analyzerSampleRate = -1f;
     this.lastAnalyzedFrameIndex = Long.MIN_VALUE;
     this.lastAnalyzedTimestampNanos = Long.MIN_VALUE;

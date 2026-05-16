@@ -8,8 +8,9 @@ import org.hammer.audio.analysis.AnalysisSnapshot;
  * a specific {@link #sourceTimestampNanos()} / {@link #sourceFrameIndex()}, together with the
  * sample-rate and FFT size required to interpret it.
  *
- * <p>The magnitude array is defensively copied on construction and on access so frames can be
- * shared freely between producers, consumers and rendering threads.
+ * <p>The magnitude array is defensively copied on construction. {@link #magnitudes()} returns a
+ * defensive copy; {@link #magnitudesView()} returns the internal array directly for hot rendering
+ * paths and must not be mutated.
  */
 public final class SpectrogramFrame implements AnalysisSnapshot {
 
@@ -53,6 +54,39 @@ public final class SpectrogramFrame implements AnalysisSnapshot {
     this.sampleRate = sampleRate;
     this.fftSize = fftSize;
     this.magnitudes = magnitudes.clone();
+  }
+
+  /**
+   * Internal constructor used by {@link org.hammer.audio.spectrogram.SpectrogramAnalyzer} to adopt
+   * an already-validated magnitudes array without copying. The supplied array becomes the frame's
+   * backing buffer and must not be mutated by the caller after the call.
+   */
+  static SpectrogramFrame adopting(
+      long sourceFrameIndex,
+      long sourceTimestampNanos,
+      float sampleRate,
+      int fftSize,
+      float[] magnitudes) {
+    SpectrogramFrame frame =
+        new SpectrogramFrame(sourceFrameIndex, sourceTimestampNanos, sampleRate, fftSize);
+    frame.adoptMagnitudes(magnitudes);
+    return frame;
+  }
+
+  private SpectrogramFrame(
+      long sourceFrameIndex, long sourceTimestampNanos, float sampleRate, int fftSize) {
+    this.sourceFrameIndex = sourceFrameIndex;
+    this.sourceTimestampNanos = sourceTimestampNanos;
+    this.sampleRate = sampleRate;
+    this.fftSize = fftSize;
+    this.magnitudes = new float[fftSize / 2 + 1];
+  }
+
+  private void adoptMagnitudes(float[] adopted) {
+    // Copy elements rather than reseating final field; this still avoids the double clone path
+    // that occurred when SpectrogramAnalyzer cloned via SpectrumSnapshot.magnitudes() and then
+    // again via the public constructor.
+    System.arraycopy(adopted, 0, this.magnitudes, 0, this.magnitudes.length);
   }
 
   /**

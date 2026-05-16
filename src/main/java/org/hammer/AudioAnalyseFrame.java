@@ -610,12 +610,16 @@ public class AudioAnalyseFrame extends JFrame {
       double peakHz = spectrumPanel.getPeakFrequencyHz();
       textFieldPeakFrequency.setText(
           Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
+      AudioBlock measurementBlock = currentMeasurementBlock();
+      StereoDelaySnapshot delaySnapshot =
+          measurementBlock != null && measurementBlock.channels() >= 2
+              ? stereoDelayAnalyzer().analyze(measurementBlock)
+              : null;
       MeasurementSnapshot measurements =
-          measurementCalculator.calculate(
-              currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
+          measurementCalculator.calculate(measurementBlock, spectrumPanel.getCurrentSpectrum());
       updateMeasurementFields(measurements);
-      updateStereoDelayFields(currentMeasurementBlock());
-      updateDiagnosis(currentMeasurementBlock());
+      updateStereoDelayFields(delaySnapshot);
+      updateDiagnosis(measurementBlock, delaySnapshot);
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
@@ -624,18 +628,14 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldPeakFrequency.setText("n/a");
       updateMeasurementFields(NO_MEASUREMENT);
       updateStereoDelayFields(null);
-      updateDiagnosis(null);
+      updateDiagnosis(null, null);
       mntmStart.setSelected(false);
     }
   }
 
-  private void updateDiagnosis(AudioBlock block) {
+  private void updateDiagnosis(AudioBlock block, StereoDelaySnapshot delay) {
     SpectrumSnapshot spectrum = spectrumPanel.getCurrentSpectrum();
     org.hammer.audio.spectrogram.SpectrogramHistory history = spectrogramPanel.getHistory();
-    StereoDelaySnapshot delay = null;
-    if (block != null && block.channels() >= 2) {
-      delay = stereoDelayAnalyzer().analyze(block);
-    }
     lastDiagnosis = diagnosisAnalyzer.analyze(block, spectrum, history, delay);
     diagnosisPanel.setFindings(lastDiagnosis);
   }
@@ -666,14 +666,13 @@ public class AudioAnalyseFrame extends JFrame {
     return Double.isNaN(value) ? "n/a" : String.format(Locale.ROOT, "%.4f", value);
   }
 
-  private void updateStereoDelayFields(AudioBlock block) {
-    if (block == null) {
+  private void updateStereoDelayFields(StereoDelaySnapshot delay) {
+    if (delay == null) {
       textFieldStereoDelay.setText("n/a");
       textFieldStereoAngle.setText("n/a");
       textFieldStereoConfidence.setText("n/a");
       return;
     }
-    StereoDelaySnapshot delay = stereoDelayAnalyzer().analyze(block);
     textFieldStereoConfidence.setText(String.format(Locale.ROOT, "%.2f", delay.confidence()));
     if (delay.valid()) {
       textFieldStereoDelay.setText(

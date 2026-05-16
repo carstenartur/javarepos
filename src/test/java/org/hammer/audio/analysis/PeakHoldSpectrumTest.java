@@ -64,4 +64,15 @@ class PeakHoldSpectrumTest {
     a.update(new float[] {0.6f, 0.8f});
     assertArrayEquals(new float[] {0.6f, 0.8f}, a.average(), 1e-6f);
   }
+
+  @Test
+  void averager_resetReseedsAverageOnNextUpdate() {
+    SpectrumAverager a = new SpectrumAverager(0.5f);
+    a.update(new float[] {0.4f, 0.4f});
+    a.update(new float[] {0.4f, 0.4f});
+    a.reset();
+    a.update(new float[] {0.8f, 0.8f});
+    // After reset, the first update should seed directly to the new magnitudes (no 0.5 * x).
+    assertArrayEquals(new float[] {0.8f, 0.8f}, a.average(), 1e-6f);
+  }
 }

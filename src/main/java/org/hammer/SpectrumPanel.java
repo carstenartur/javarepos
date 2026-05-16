@@ -207,35 +207,29 @@ public final class SpectrumPanel extends javax.swing.JPanel {
       return;
     }
 
-    float[] magnitudes = spectrum.magnitudes();
+    float[] magnitudes = spectrum.magnitudesView();
     if (magnitudes.length <= 1) {
       PlotRenderTheme.drawEmptyState(g, plotBounds, "Insufficient FFT bins");
       return;
     }
+    float[] peaks = displayState.isPeakHoldEnabled() ? displayState.peakHold().peaksView() : null;
+    float[] averaged =
+        displayState.isAveragingEnabled() ? displayState.averager().averageView() : null;
     float referenceMagnitude = findReferenceMagnitude(magnitudes);
-    if (displayState.isPeakHoldEnabled()) {
-      float[] peaks = displayState.peakHold().peaks();
-      if (peaks.length == magnitudes.length) {
-        for (float p : peaks) {
-          if (p > referenceMagnitude) {
-            referenceMagnitude = p;
-          }
+    if (peaks != null && peaks.length == magnitudes.length) {
+      for (float p : peaks) {
+        if (p > referenceMagnitude) {
+          referenceMagnitude = p;
         }
       }
     }
     drawSpectrumShape(g, plotBounds, magnitudes, referenceMagnitude);
 
-    if (displayState.isAveragingEnabled()) {
-      float[] avg = displayState.averager().average();
-      if (avg.length == magnitudes.length) {
-        drawTrace(g, plotBounds, avg, referenceMagnitude, PlotRenderTheme.WAVEFORM_RIGHT);
-      }
+    if (averaged != null && averaged.length == magnitudes.length) {
+      drawTrace(g, plotBounds, averaged, referenceMagnitude, PlotRenderTheme.WAVEFORM_RIGHT);
     }
-    if (displayState.isPeakHoldEnabled()) {
-      float[] peaks = displayState.peakHold().peaks();
-      if (peaks.length == magnitudes.length) {
-        drawTrace(g, plotBounds, peaks, referenceMagnitude, PlotRenderTheme.HIGHLIGHT);
-      }
+    if (peaks != null && peaks.length == magnitudes.length) {
+      drawTrace(g, plotBounds, peaks, referenceMagnitude, PlotRenderTheme.HIGHLIGHT);
     }
 
     int peakBin = findPeakBin(magnitudes);

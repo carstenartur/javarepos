@@ -1,6 +1,5 @@
 package org.hammer.audio.analysis;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -76,6 +75,16 @@ public final class SpectrumAverager {
   }
 
   /**
+   * Read-only access to the internal averaged spectrum. Callers must not mutate the returned array.
+   * Intended for hot rendering paths that need to avoid per-frame allocations.
+   *
+   * @return the internal averaged spectrum (do not mutate), or an empty array if no updates yet
+   */
+  public float[] averageView() {
+    return average == null ? new float[0] : average;
+  }
+
+  /**
    * Update the averaged spectrum with a new measurement. The first measurement initializes the
    * state. If the bin count changes (e.g. FFT size changed), the state is reset.
    *
@@ -95,11 +104,12 @@ public final class SpectrumAverager {
     updates++;
   }
 
-  /** Reset the averaged spectrum, discarding all accumulated state. */
+  /**
+   * Reset the averaged spectrum, discarding all accumulated state. The next {@link
+   * #update(float[])} call will re-seed the average from the new measurement.
+   */
   public void reset() {
-    if (average != null) {
-      Arrays.fill(average, 0f);
-    }
+    average = null;
     updates = 0;
   }
 }

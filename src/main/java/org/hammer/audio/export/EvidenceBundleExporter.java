@@ -79,9 +79,15 @@ public final class EvidenceBundleExporter {
     }
     Files.createDirectories(parentDirectory);
     Instant now = data.timestamp() != null ? data.timestamp() : Instant.now();
-    String name = "measurement-" + LocalDateTime.ofInstant(now, zoneId).format(DIR_TIMESTAMP);
-    Path bundleDir = parentDirectory.resolve(name);
-    Files.createDirectories(bundleDir);
+    String baseName = "measurement-" + LocalDateTime.ofInstant(now, zoneId).format(DIR_TIMESTAMP);
+    Path bundleDir = parentDirectory.resolve(baseName);
+    int suffix = 1;
+    while (Files.exists(bundleDir)) {
+      bundleDir = parentDirectory.resolve(baseName + "-" + suffix);
+      suffix++;
+    }
+    Files.createDirectory(bundleDir);
+    String name = bundleDir.getFileName().toString();
 
     if (data.screenshot() != null) {
       writeScreenshot(bundleDir.resolve("screenshot.png"), data.screenshot());
@@ -263,6 +269,26 @@ public final class EvidenceBundleExporter {
   }
 
   private static String escape(String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    StringBuilder out = new StringBuilder(s.length() + 8);
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      switch (c) {
+        case '\\' -> out.append("\\\\");
+        case '"' -> out.append("\\\"");
+        case '\b' -> out.append("\\b");
+        case '\f' -> out.append("\\f");
+        case '\n' -> out.append("\\n");
+        case '\r' -> out.append("\\r");
+        case '\t' -> out.append("\\t");
+        default -> {
+          if (c < 0x20) {
+            out.append(String.format(Locale.ROOT, "\\u%04x", (int) c));
+          } else {
+            out.append(c);
+          }
+        }
+      }
+    }
+    return out.toString();
   }
 }

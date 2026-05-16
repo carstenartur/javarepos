@@ -101,6 +101,17 @@ public final class SpectrumSnapshot implements AnalysisSnapshot {
   }
 
   /**
+   * Read-only access to the internal magnitudes array. Callers must not mutate the returned array.
+   * Intended for hot rendering paths and downstream analyzers that need to avoid per-frame
+   * allocations.
+   *
+   * @return the internal magnitudes array (do not mutate)
+   */
+  public float[] magnitudesView() {
+    return magnitudes;
+  }
+
+  /**
    * @return number of frequency bins in the one-sided spectrum
    */
   public int binCount() {
