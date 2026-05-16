@@ -3,6 +3,7 @@ package org.hammer.audio.experimental.acoustic.simulation;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -82,6 +83,20 @@ class SimulatedMicrophoneArraySourceTest {
     AudioBlock reflectedNoisyBlock = reflectedNoisy.readBlock(256).orElseThrow();
 
     assertNotEquals(channelSignature(dryBlock, 1), channelSignature(reflectedNoisyBlock, 1));
+  }
+
+  @Test
+  void rejectsNullRoomAndArrayAtConstruction() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new SimulatedMicrophoneArraySource(
+                null, array(), List.of(movingEmitter()), 8_000.0f, 0.2, 1L));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new SimulatedMicrophoneArraySource(
+                room(0.0, 0.0), null, List.of(movingEmitter()), 8_000.0f, 0.2, 1L));
   }
 
   private static SimulatedMicrophoneArraySource source(

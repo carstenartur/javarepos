@@ -34,6 +34,12 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
       float sampleRate,
       double durationSeconds,
       long randomSeed) {
+    if (room == null) {
+      throw new IllegalArgumentException("room must not be null");
+    }
+    if (array == null) {
+      throw new IllegalArgumentException("array must not be null");
+    }
     if (emitters == null || emitters.isEmpty()) {
       throw new IllegalArgumentException("emitters must not be empty");
     }
