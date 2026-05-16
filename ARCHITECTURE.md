@@ -223,18 +223,21 @@ New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 
 ## Extension points
 
-|                Want to add                |                                   Implement                                   |
-|-------------------------------------------|-------------------------------------------------------------------------------|
-| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                                     |
-| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` where `MySnapshot` implements `AnalysisSnapshot` |
-| New spectrum-derived view                 | Reuse `SpectrumAnalyzer` / `SpectrogramAnalyzer` output, add a UI renderer    |
-| New diagnostic rule                       | Add a rule to `DiagnosisAnalyzer` returning a `DiagnosisFinding`              |
-| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot              |
-| New experimental localization algorithm   | New class under `org.hammer.audio.experimental.acoustic` (plugin module only) |
-| New visualization                         | Concrete snapshot class or `AudioBlock` input plus a UI renderer/panel        |
-| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                     |
-| Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`                   |
-| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                                |
+|                Want to add                |                                                                                    Implement                                                                                    |
+|-------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                                                                                                                                       |
+| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` where `MySnapshot` implements `AnalysisSnapshot`                                                                                                   |
+| New spectrum-derived view                 | Reuse `SpectrumAnalyzer` / `SpectrogramAnalyzer` output, add a UI renderer                                                                                                      |
+| New diagnostic rule                       | Add a rule to `DiagnosisAnalyzer` returning a `DiagnosisFinding`                                                                                                                |
+| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot                                                                                                                |
+| New experimental localization algorithm   | New class under `org.hammer.audio.experimental.acoustic` (plugin module only)                                                                                                   |
+| New visualization                         | Concrete snapshot class or `AudioBlock` input plus a UI renderer/panel                                                                                                          |
+| New display-mode overlay (peak hold, avg) | New stateful helper alongside `PeakHoldSpectrum` / `SpectrumAverager`, surfaced through `SpectrumDisplayState`                                                                  |
+| New trigger / time-domain alignment       | New class similar to `WaveformTrigger`, exposed via the relevant panel                                                                                                          |
+| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                                                                                                                       |
+| Recording / replay                        | Reuse the `org.hammer.audio.recording` package (`AudioBlockRecordingWriter` / `AudioBlockRecordingReader` / `RecordedAudioCaptureService`) or write a new `AudioCaptureService` |
+| A/B / regression comparison               | Build on `RecordingComparator` + `ComparisonReport`; add a renderer alongside `MarkdownComparisonReportRenderer`                                                                |
+| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                                                                                                                                  |
 
 ## Experimental acoustic localization plugin
 

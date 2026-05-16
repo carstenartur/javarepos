@@ -34,6 +34,14 @@ live waveform, spectrum, phase and stereo-delay readouts for microphone input or
   spectrogram and diagnosis panels, demo mode, pause/freeze, peak-frequency + measurement
   readouts, stereo-delay / approximate direction estimate, and CSV/PNG / evidence-bundle export
   for quick acoustic diagnostics.
+- **Oscilloscope-style waveform trigger** (level / slope / holdoff / auto-or-normal mode) for
+  stable inspection of repeating or transient events, plus spectrum **peak hold** and
+  **exponential averaging** display modes. See [docs/features/oscilloscope-trigger.md](docs/features/oscilloscope-trigger.md)
+  and [docs/features/peak-hold-and-averaging.md](docs/features/peak-hold-and-averaging.md).
+- **Recording, replay and A/B comparison** — capture every `AudioBlock` into a small `.aar` file,
+  replay it as if it were live, and produce a Markdown A/B report comparing two recordings'
+  measurements, spectrum and diagnosis findings. See [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md)
+  and [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
 - **Experimental acoustic localization** (`audio-experimental-acoustic`) — isolated research
   plugin with wingbeat frequency tracking, GCC-PHAT / cross-correlation TDOA estimators,
   delay-and-sum beamforming and a deterministic 2D room simulator. Not a production tracker —
@@ -141,6 +149,8 @@ audio-app                  -> audio-core, audio-dsp
   contributing.
 - [Quality gates & coverage](docs/quality.md) — current gates, hardening roadmap, coverage
   targets.
+- [Feature guides](docs/features/README.md) — oscilloscope-style waveform trigger, spectrum peak
+  hold / averaging, recording & replay, A/B comparison.
 - [Stereo localization](docs/use-cases/stereo-localization.md) — what stereo time-delay analysis
   can and cannot infer, microphone spacing, cross-correlation and demo usage.
 - [Experimental acoustic localization architecture](docs/architecture/experimental-acoustic-localization.md) —

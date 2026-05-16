@@ -7,7 +7,10 @@ current capabilities rather than roadmap items.
 > **Status note.** Earlier roadmap phases for a spectrogram/waterfall view, rule-based noise
 > diagnosis and an evidence-export bundle have landed and now ship as part of the application
 > (`SpectrogramAnalyzer` / `SpectrogramPanel`, `DiagnosisAnalyzer` / `DiagnosisPanel`,
-> `EvidenceBundleExporter`). They are kept here for context but are no longer open work.
+> `EvidenceBundleExporter`). Phases A (oscilloscope trigger + peak hold / averaging), B (recording
+> and replay) and C (A/B comparison and report generation) have all landed too — they ship today
+> and are kept here for context but are no longer open work. See
+> [docs/features/](docs/features/) for the per-feature documentation.
 
 ## ✅ Done — spectrogram / waterfall
 
@@ -28,24 +31,33 @@ current capabilities rather than roadmap items.
   image, spectrogram, stereo-delay and diagnosis context. Quick CSV/PNG exports are unchanged.
 - Bundle metadata, reproducibility hints and richer report formatting are still open.
 
-## Phase A: Triggered oscilloscope + peak hold / averaging
+## ✅ Done — Phase A: Triggered oscilloscope + peak hold / averaging
 
-- Add trigger controls for stable waveform inspection of repeating or transient events.
-- Add spectrum peak hold and averaging modes for slower-changing diagnostics.
-- Preserve current pause/freeze behavior for manual inspection.
+- Oscilloscope-style waveform trigger (level, slope, holdoff, auto/normal mode) shipped as
+  `WaveformTrigger` (`audio-dsp`) and wired into `WaveformPanel`. Controllable from the **File**
+  menu of the main window. See [docs/features/oscilloscope-trigger.md](docs/features/oscilloscope-trigger.md).
+- Spectrum peak hold and exponential averaging shipped as `PeakHoldSpectrum` and `SpectrumAverager`
+  with `SpectrumDisplayState`. Controllable from the **File** menu. See
+  [docs/features/peak-hold-and-averaging.md](docs/features/peak-hold-and-averaging.md).
+- Pause / freeze behavior on the waveform panel is preserved and works alongside the trigger.
 
-## Phase B: Recording / replay
+## ✅ Done — Phase B: Recording / replay
 
-- Record normalized `AudioBlock` streams with format metadata for deterministic replay.
-- Replay captures through the same analysis and UI paths as live/demo input.
-- Keep file I/O outside the core DSP and analysis packages.
+- Binary `.aar` recording format (`AudioBlockRecordingFormat`, `AudioBlockRecordingWriter`,
+  `AudioBlockRecordingReader` in `audio-dsp`) records normalized `AudioBlock` streams with their
+  format header, frame index and timestamp metadata.
+- `RecordingTap` (in `audio-app`) captures the active session into a file; `RecordedAudioCaptureService`
+  implements the regular `AudioCaptureService` interface so replay behaves identically to live
+  capture for every downstream panel. See
+  [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md).
+- All file I/O lives outside the core DSP / analysis packages.
 
-## Phase C: A/B comparison and report generation
+## ✅ Done — Phase C: A/B comparison and report generation
 
-- Compare two recordings or replay sessions using shared measurements and diagnostics.
-- Surface before/after differences for dominant frequency, level, clipping, noise rules and
-  stereo-delay estimates.
-- Generate a concise report suitable for diagnostics, QA notes or bug tickets.
+- `RecordingComparator` replays two recordings through the standard analyzer stack and produces a
+  `ComparisonReport`; `MarkdownComparisonReportRenderer` writes the report as Markdown suitable
+  for QA notes or bug tickets. See [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
+- The same machinery is reusable from CI / batch workflows with no Swing dependency.
 
 ## Experimental acoustic localization
 
