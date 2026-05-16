@@ -75,20 +75,20 @@ DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swin
 
 ## Packages
 
-| Package                          | Responsibility                                                                 |
-|----------------------------------|--------------------------------------------------------------------------------|
-| `org.hammer.audio.core`          | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`           |
-| `org.hammer.audio.capture`       | Sample decoding (`SampleDecoder`); JavaSound bridging in capture implementations |
-| `org.hammer.audio.buffer`        | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                      |
-| `org.hammer.audio.dsp`           | `DSPProcessor` extension point + `DSPPipeline` composition                     |
-| `org.hammer.audio.analysis`      | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements |
-| `org.hammer.audio.localization`  | Stereo delay estimation: `StereoDelayAnalyzer`, `StereoDelaySnapshot`, `StereoDelayStatus` |
-| `org.hammer.audio.signal`        | Deterministic generators, including `DemoPresetGenerator` demo scenarios       |
-| `org.hammer.audio.snapshot`      | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`      |
-| `org.hammer.audio.ui`            | Render helpers and theme classes for pixel-aware UI code                       |
-| `org.hammer.audio`               | Capture service API/implementations, demo capture, legacy `WaveformModel`      |
-| `org.hammer`                     | Swing application frame and panels                                             |
-| `org.hammer.audio.benchmark`     | JMH benchmarks (ring buffer, FFT, signal generators)                           |
+|             Package             |                                       Responsibility                                       |
+|---------------------------------|--------------------------------------------------------------------------------------------|
+| `org.hammer.audio.core`         | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                       |
+| `org.hammer.audio.capture`      | Sample decoding (`SampleDecoder`); JavaSound bridging in capture implementations           |
+| `org.hammer.audio.buffer`       | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                  |
+| `org.hammer.audio.dsp`          | `DSPProcessor` extension point + `DSPPipeline` composition                                 |
+| `org.hammer.audio.analysis`     | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements    |
+| `org.hammer.audio.localization` | Stereo delay estimation: `StereoDelayAnalyzer`, `StereoDelaySnapshot`, `StereoDelayStatus` |
+| `org.hammer.audio.signal`       | Deterministic generators, including `DemoPresetGenerator` demo scenarios                   |
+| `org.hammer.audio.snapshot`     | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`                  |
+| `org.hammer.audio.ui`           | Render helpers and theme classes for pixel-aware UI code                                   |
+| `org.hammer.audio`              | Capture service API/implementations, demo capture, legacy `WaveformModel`                  |
+| `org.hammer`                    | Swing application frame and panels                                                         |
+| `org.hammer.audio.benchmark`    | JMH benchmarks (ring buffer, FFT, signal generators)                                       |
 
 ## Key design choices
 
@@ -184,15 +184,15 @@ New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 
 ## Extension points
 
-| Want to add                              | Implement                                                        |
-|------------------------------------------|------------------------------------------------------------------|
-| New DSP stage (filter, gain, ...)        | `DSPProcessor`, plug into a `DSPPipeline`                        |
+|                Want to add                |                            Implement                             |
+|-------------------------------------------|------------------------------------------------------------------|
+| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                        |
 | New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` returning your immutable snapshot   |
-| New localization diagnostic              | Analyzer in `org.hammer.audio.localization` returning a snapshot |
-| New visualization                        | New `Snapshot` + renderer/panel in the UI layer                  |
-| Alternative FFT backend                  | Replace `SpectrumAnalyzer`'s internal `Fft` with your own        |
-| Recording / replay                       | New writer/reader around `AudioBlock` and `SignalGenerator`      |
-| Headless demo / test                     | Use `SignalGenerator` or `DemoPresetGenerator`                   |
+| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot |
+| New visualization                         | New `Snapshot` + renderer/panel in the UI layer                  |
+| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own        |
+| Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`      |
+| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                   |
 
 ## Concurrency model
 

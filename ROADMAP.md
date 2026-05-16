@@ -59,3 +59,4 @@ Tracked in [`docs/quality.md`](docs/quality.md):
 - Block *new* Checkstyle / SpotBugs / PMD violations on PRs.
 - Then block high-severity SpotBugs / PMD findings.
 - Raise JaCoCo line-coverage floor in steps: 5% → 10% → 20% → 30%.
+
