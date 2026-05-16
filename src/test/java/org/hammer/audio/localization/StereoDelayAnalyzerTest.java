@@ -65,7 +65,7 @@ class StereoDelayAnalyzerTest {
 
   @Test
   void correlation_window_is_limited_to_physical_delay_range() {
-    AudioBlock block = delayedStereoBlock(2_048, 12);
+    AudioBlock block = delayedImpulseStereoBlock(2_048, 12);
     StereoDelayAnalyzer analyzer = new StereoDelayAnalyzer(0.10, 343.0, 0.25);
 
     StereoDelaySnapshot snapshot = analyzer.analyze(block);
