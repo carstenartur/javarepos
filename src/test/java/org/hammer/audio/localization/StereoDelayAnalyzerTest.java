@@ -2,6 +2,7 @@ package org.hammer.audio.localization;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Random;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.core.AudioFormatDescriptor;
 import org.junit.jupiter.api.Test;
@@ -106,10 +107,9 @@ class StereoDelayAnalyzerTest {
 
   private static float[] deterministicWidebandSignal(int frames) {
     float[] signal = new float[frames];
-    long state = 0x5EED_1234L;
+    Random random = new Random(0x5EED_1234L);
     for (int i = 0; i < frames; i++) {
-      state = (state * 1_664_525L + 1_013_904_223L) & 0xffff_ffffL;
-      double noise = ((state / (double) 0xffff_ffffL) * 2.0) - 1.0;
+      double noise = random.nextDouble(-1.0, 1.0);
       double burstEnvelope = Math.exp(-Math.pow((i - frames / 2.0) / (frames / 8.0), 2.0));
       signal[i] =
           (float)

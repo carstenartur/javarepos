@@ -65,7 +65,10 @@ public final class DemoPresetGenerator implements SignalGenerator {
       case HUM_HARMONICS -> humWithHarmonics(absoluteFrame, channel);
       case CLIPPING_TEST -> clippingTest(absoluteFrame);
       case STEREO_DELAY_TEST -> stereoDelayProbe(absoluteFrame);
-      default -> 0.0;
+      case SINE -> DEFAULT_AMPLITUDE * Math.sin(TWO_PI * 440.0 * seconds(absoluteFrame));
+      case SQUARE ->
+          DEFAULT_AMPLITUDE * Math.signum(Math.sin(TWO_PI * 440.0 * seconds(absoluteFrame)));
+      case CHIRP -> chirp(absoluteFrame);
     };
   }
 
@@ -88,6 +91,13 @@ public final class DemoPresetGenerator implements SignalGenerator {
     double position = (seconds(absoluteFrame) % cycle) / cycle;
     double frequency = 350.0 + position * 4_500.0;
     return 0.58 * Math.sin(TWO_PI * frequency * absoluteFrame / format.sampleRate());
+  }
+
+  private double chirp(long absoluteFrame) {
+    double cycle = 2.5;
+    double position = (seconds(absoluteFrame) % cycle) / cycle;
+    double frequency = 120.0 + position * 2_680.0;
+    return DEFAULT_AMPLITUDE * Math.sin(TWO_PI * frequency * absoluteFrame / format.sampleRate());
   }
 
   private double humWithHarmonics(long absoluteFrame, int channel) {
