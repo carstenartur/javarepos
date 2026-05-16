@@ -4,13 +4,14 @@
 [![codecov](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
 [![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
 
-**Audio Analyzer** is a modular real-time audio analysis laboratory built around a Java/Swing
-measurement dashboard. It provides a layered architecture for audio acquisition, ring-buffering,
-DSP, analysis (RMS/peak, FFT spectrum, stereo delay estimation) and visualization, with
-deterministic synthetic signal generators and JMH benchmarks. The bundled Swing UI renders live
-waveform, spectrum, phase and stereo-delay readouts for microphone input or reproducible demos.
+**Audio Analyzer** is a Maven multi-module real-time audio analysis laboratory built around a
+Java/Swing measurement dashboard. It provides a layered architecture for audio acquisition,
+ring-buffering, DSP, analysis (RMS/peak, FFT spectrum, stereo delay estimation) and visualization,
+with deterministic synthetic signal generators and JMH benchmarks. The bundled Swing UI renders
+live waveform, spectrum, phase and stereo-delay readouts for microphone input or reproducible demos.
 
-> The Maven artifact is named `audioin` for historical reasons; the application is **Audio Analyzer**.
+> The root Maven parent is named `audioin-parent`; the runnable application artifact is
+> `audio-app`.
 
 ## Features
 
@@ -42,13 +43,12 @@ Requires **Java 21** or higher.
 # Build, test, run static analysis and coverage
 ./mvnw clean verify
 
-# Run the application (after package/verify, requires target/lib runtime jars)
-java -jar target/audioin-0.0.1-SNAPSHOT.jar
-# Runtime dependencies are copied to target/lib during the Maven package phase.
+# Run the application (after package/verify, requires audio-app/target/lib runtime jars)
+java -jar audio-app/target/audio-app-0.0.1-SNAPSHOT.jar
+# Runtime dependencies are copied to audio-app/target/lib during the Maven package phase.
 
 # Run JMH benchmarks
-./mvnw -Pjmh package
-java -jar target/audioin-0.0.1-SNAPSHOT.jar  # see exec-maven-plugin config
+./mvnw -pl audio-dsp -Pjmh package
 ```
 
 On Windows use `mvnw.cmd` instead of `./mvnw`.
@@ -93,6 +93,28 @@ dominant frequency, RMS/peak level and clipping status visible in one view._
 - **Validate generated test signals** by comparing the selected demo signal with the measured
   dominant frequency and level.
 - **Export evidence** as CSV or PNG for reports, diagnostics or bug tickets.
+
+## Maven modules
+
+The repository is now split into build-enforced modules so stable audio APIs cannot accidentally
+depend on Swing UI or experimental acoustic localization code:
+
+```text
+audio-core
+audio-geometry
+audio-acquisition          -> audio-core, audio-geometry
+audio-dsp                  -> audio-core
+audio-experimental-acoustic -> audio-core, audio-geometry, audio-acquisition, audio-dsp
+audio-app                  -> audio-core, audio-dsp
+```
+
+- `audio-core` — immutable audio-domain types, snapshots and the ring buffer.
+- `audio-geometry` — reusable 2D geometry and localization constraints.
+- `audio-acquisition` — microphone metadata, arrays, multichannel sources and sample clocks.
+- `audio-dsp` — FFT, DSP pipeline, analysis, diagnostics, spectrogram and stereo-delay logic.
+- `audio-experimental-acoustic` — isolated acoustic localization experiments built only on stable
+  modules.
+- `audio-app` — Swing UI, JavaSound/demo wiring, export and the application entry point.
 
 ## Documentation
 

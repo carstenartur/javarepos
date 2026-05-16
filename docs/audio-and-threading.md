@@ -86,7 +86,7 @@ The application uses `java.util.logging` for diagnostics.
 
 ```bash
 java -Djava.util.logging.config.file=logging.properties \
-     -jar target/audioin-0.0.1-SNAPSHOT.jar
+     -jar audio-app/target/audio-app-0.0.1-SNAPSHOT.jar
 ```
 
 `logging.properties`:
@@ -100,4 +100,3 @@ java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
 ```
 
 > Avoid enabling `FINE` in production; it generates substantial output during real-time capture.
-

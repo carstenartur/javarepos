@@ -79,7 +79,7 @@ The current decision is:
 5. Split Maven modules later when either dependency sets diverge or the acoustic plugin needs an
    independent release cadence.
 
-The intended future Maven direction remains:
+The Maven module split now enforces this direction:
 
 - `audio-core` for `AudioBlock`, format metadata and generic immutable domain models;
 - `audio-acquisition` for synchronized source and microphone-array contracts;
@@ -89,17 +89,20 @@ The intended future Maven direction remains:
 
 ## Enforced dependency guards
 
-`src/test/java/org/hammer/audio/ArchitectureBoundaryTest.java` currently fails the build if:
+`audio-app/src/test/java/org/hammer/audio/ArchitectureBoundaryTest.java` currently fails the build
+if:
 
-- stable packages under `org.hammer.audio` import `org.hammer.audio.experimental.*`;
-- `org.hammer.audio.dsp`, `org.hammer.audio.acquisition` or `org.hammer.audio.geometry` import UI
-  packages or top-level Swing application packages.
+- stable modules import `org.hammer.audio.experimental.*`;
+- stable modules import UI packages or top-level Swing application packages;
+- stable module POMs depend on `audio-app` or `audio-experimental-acoustic`;
+- `audio-app` requires `audio-experimental-acoustic`.
 
 This keeps experimental acoustic code dependent on stable APIs only, while preventing stable core,
 DSP, acquisition or geometry code from depending on the plugin or app/UI layers.
 
 ## Rationale
 
-A package-level module is the smallest backwards-compatible refactor for the existing single-module
-project. It avoids introducing build complexity before the research surface stabilizes while making
-the dependency direction explicit and enforceable by automated tests.
+A build-level module boundary is the smallest backwards-compatible refactor that prevents
+experimental research code from becoming an implicit dependency of the stable platform. It was done
+now, before more acoustic localization experiments are added, so dependency direction is explicit
+and enforced by both Maven and automated tests.
