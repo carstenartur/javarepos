@@ -1,5 +1,6 @@
 package org.hammer;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -8,6 +9,7 @@ import java.awt.Rectangle;
 import java.awt.geom.Path2D;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.analysis.SpectrumAnalyzer;
+import org.hammer.audio.analysis.SpectrumDisplayState;
 import org.hammer.audio.analysis.SpectrumSnapshot;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.ui.theme.PlotRenderTheme;
@@ -29,8 +31,10 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private transient SpectrumAnalyzer analyzer;
   private transient SpectrumSnapshot latestSpectrum;
   private transient SpectrumSnapshot frozenSpectrum;
+  private final transient SpectrumDisplayState displayState = new SpectrumDisplayState();
   private long latestSpectrumFrameIndex = Long.MIN_VALUE;
   private long latestSpectrumTimestampNanos = Long.MIN_VALUE;
+  private long displayStateFrameIndex = Long.MIN_VALUE;
   private boolean frozen;
 
   public SpectrumPanel() {
@@ -53,7 +57,9 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     this.frozenSpectrum = null;
     this.latestSpectrumFrameIndex = Long.MIN_VALUE;
     this.latestSpectrumTimestampNanos = Long.MIN_VALUE;
+    this.displayStateFrameIndex = Long.MIN_VALUE;
     this.frozen = false;
+    this.displayState.clear();
   }
 
   /**
@@ -72,23 +78,52 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   }
 
   /**
+   * @return the display state, exposing peak-hold and averaging configuration
+   */
+  public SpectrumDisplayState getDisplayState() {
+    return displayState;
+  }
+
+  /** Enable or disable the peak-hold trace overlay. */
+  public void setPeakHoldEnabled(boolean enabled) {
+    displayState.setPeakHoldEnabled(enabled);
+    repaint();
+  }
+
+  /** Enable or disable the exponential-average trace overlay. */
+  public void setAveragingEnabled(boolean enabled) {
+    displayState.setAveragingEnabled(enabled);
+    repaint();
+  }
+
+  /** Reset the peak-hold trace without changing other settings. */
+  public void resetPeakHold() {
+    displayState.resetPeakHold();
+    repaint();
+  }
+
+  /**
    * @return current spectrum snapshot, or {@code null} if no audio block is available
    */
   public SpectrumSnapshot getCurrentSpectrum() {
     if (frozen && frozenSpectrum != null) {
+      maybeUpdateDisplayState(frozenSpectrum);
       return frozenSpectrum;
     }
     AudioCaptureService service = audioCaptureService;
     if (service == null) {
+      maybeUpdateDisplayState(latestSpectrum);
       return latestSpectrum;
     }
     AudioBlock block = service.getLatestBlock();
     if (block == null) {
+      maybeUpdateDisplayState(latestSpectrum);
       return latestSpectrum;
     }
     if (latestSpectrum != null
         && latestSpectrumFrameIndex == block.frameIndex()
         && latestSpectrumTimestampNanos == block.timestampNanos()) {
+      maybeUpdateDisplayState(latestSpectrum);
       return latestSpectrum;
     }
     SpectrumAnalyzer currentAnalyzer = analyzer;
@@ -103,7 +138,19 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     latestSpectrum = currentAnalyzer.analyze(block);
     latestSpectrumFrameIndex = block.frameIndex();
     latestSpectrumTimestampNanos = block.timestampNanos();
+    maybeUpdateDisplayState(latestSpectrum);
     return latestSpectrum;
+  }
+
+  private void maybeUpdateDisplayState(SpectrumSnapshot snapshot) {
+    if (snapshot == null) {
+      return;
+    }
+    if (snapshot.sourceFrameIndex() == displayStateFrameIndex) {
+      return;
+    }
+    displayState.update(snapshot);
+    displayStateFrameIndex = snapshot.sourceFrameIndex();
   }
 
   /**
@@ -160,13 +207,30 @@ public final class SpectrumPanel extends javax.swing.JPanel {
       return;
     }
 
-    float[] magnitudes = spectrum.magnitudes();
+    float[] magnitudes = spectrum.magnitudesView();
     if (magnitudes.length <= 1) {
       PlotRenderTheme.drawEmptyState(g, plotBounds, "Insufficient FFT bins");
       return;
     }
+    float[] peaks = displayState.isPeakHoldEnabled() ? displayState.peakHold().peaksView() : null;
+    float[] averaged =
+        displayState.isAveragingEnabled() ? displayState.averager().averageView() : null;
     float referenceMagnitude = findReferenceMagnitude(magnitudes);
+    if (peaks != null && peaks.length == magnitudes.length) {
+      for (float p : peaks) {
+        if (p > referenceMagnitude) {
+          referenceMagnitude = p;
+        }
+      }
+    }
     drawSpectrumShape(g, plotBounds, magnitudes, referenceMagnitude);
+
+    if (averaged != null && averaged.length == magnitudes.length) {
+      drawTrace(g, plotBounds, averaged, referenceMagnitude, PlotRenderTheme.WAVEFORM_RIGHT);
+    }
+    if (peaks != null && peaks.length == magnitudes.length) {
+      drawTrace(g, plotBounds, peaks, referenceMagnitude, PlotRenderTheme.HIGHLIGHT);
+    }
 
     int peakBin = findPeakBin(magnitudes);
     if (peakBin > 0) {
@@ -223,6 +287,32 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     g.fillPolygon(areaPolygon);
     g.setColor(PlotRenderTheme.SPECTRUM_LINE);
     g.setStroke(PlotRenderTheme.TRACE_STROKE);
+    g.draw(linePath);
+  }
+
+  private void drawTrace(
+      Graphics2D g,
+      Rectangle plotBounds,
+      float[] magnitudes,
+      float referenceMagnitude,
+      Color color) {
+    int bins = magnitudes.length;
+    Path2D.Double linePath = new Path2D.Double();
+    for (int bin = 1; bin < bins; bin++) {
+      int x = xForBin(plotBounds, bin, bins);
+      int y =
+          yForNormalized(
+              plotBounds,
+              PlotRenderTheme.normalizedMagnitude(
+                  normalizedMagnitude(magnitudes[bin], referenceMagnitude)));
+      if (bin == 1) {
+        linePath.moveTo(x, y);
+      } else {
+        linePath.lineTo(x, y);
+      }
+    }
+    g.setColor(color);
+    g.setStroke(PlotRenderTheme.THIN_TRACE_STROKE);
     g.draw(linePath);
   }
 
