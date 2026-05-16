@@ -6,7 +6,7 @@
 
 **Audio Analyzer** is a modular real-time audio analysis laboratory built around a Java/Swing
 measurement dashboard. It provides a layered architecture for audio acquisition, ring-buffering,
-DSP, analysis (RMS/peak, FFT spectrum, stereo delay/localization) and visualization, with
+DSP, analysis (RMS/peak, FFT spectrum, stereo delay estimation) and visualization, with
 deterministic synthetic signal generators and JMH benchmarks. The bundled Swing UI renders live
 waveform, spectrum, phase and stereo-delay readouts for microphone input or reproducible demos.
 
@@ -21,14 +21,14 @@ waveform, spectrum, phase and stereo-delay readouts for microphone input or repr
 - **Lock-free SPSC ring buffer** for realtime workloads, with `offer` and `offerOverwrite`.
 - **DSP extension points** — implement `DSPProcessor` and chain stages with `DSPPipeline`.
 - **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT) and
-  `StereoDelayAnalyzer` producing immutable snapshots suitable for any UI or remote API.
+  `StereoDelayAnalyzer` producing immutable snapshots for UI or other consumers.
 - **Deterministic synthetic signals** — sine, square, chirp, hum/harmonics, clipping,
   stereo-delay, moving-chirp and mosquito-like high-frequency burst presets for tests, headless
   demos and DSP verification.
 - **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
-  demo mode, pause/freeze, peak-frequency + measurement readouts, stereo-delay / direction
-  estimate, and CSV/PNG export for quick acoustic diagnostics.
-- **Headless-friendly tests** — 81 unit tests covering immutability, FFT correctness, SPSC
+  demo mode, pause/freeze, peak-frequency + measurement readouts, stereo-delay / approximate
+  direction estimate, and CSV/PNG export for quick acoustic diagnostics.
+- **Headless-friendly tests** — unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
   allocations.
@@ -85,8 +85,9 @@ dominant frequency, RMS/peak level and clipping status visible in one view._
 
 - **Detect dominant frequency** by finding the strongest FFT peak.
 - **Find hum/noise/resonance problems** with the 50 Hz hum + harmonics demo and spectrum readouts.
-- **Estimate stereo delay / sound direction** from inter-channel cross-correlation and microphone
-  spacing. See [Stereo localization](docs/use-cases/stereo-localization.md).
+- **Estimate stereo delay / broad left-right sound direction** from inter-channel
+  cross-correlation and microphone spacing. See
+  [Stereo localization](docs/use-cases/stereo-localization.md).
 - **Inspect high-frequency intermittent sounds** with the mosquito-like burst scenario, framed as a
   localized high-frequency intermittent sound source rather than species detection.
 - **Validate generated test signals** by comparing the selected demo signal with the measured
@@ -111,4 +112,4 @@ dominant frequency, RMS/peak level and clipping status visible in one view._
 
 ## License
 
-No license file is currently provided in this repository. Until one is added, all rights are reserved by the author.
+This project is licensed under the MIT License. See LICENSE.

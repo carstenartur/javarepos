@@ -3,144 +3,174 @@
 ## Overview
 
 This project has been refactored from a single-purpose Swing waveform demo into a layered
-real-time audio processing platform. The new architecture cleanly separates audio acquisition,
-buffering, DSP processing, analysis and visualization, and provides extension points for future
-modules (spectrograms, phase scopes, triggered oscilloscopes, recording/replay, plug-in DSP,
-alternative UIs, ...).
+real-time audio processing platform. The current application separates audio acquisition,
+buffering, DSP processing, analysis, localization, snapshots and visualization. It includes
+microphone capture, deterministic demo input, FFT spectrum analysis, stereo delay estimation,
+CSV/PNG evidence export and extension points for future modules (spectrograms, noise diagnosis,
+triggered oscilloscopes, recording/replay, plug-in DSP, alternative UIs, ...).
+
+Stereo delay analysis estimates inter-channel delay and broad left/right direction from a stereo
+pair. It does not provide full 3D localization or exact source coordinates.
 
 ## Layered architecture
 
 ```
-┌──────────────────────┐
-│   audio device       │   javax.sound.sampled.TargetDataLine
-│   (microphone, ...)  │
-└──────────┬───────────┘
-           │ raw PCM bytes
-           ▼
+┌──────────────────────────┐
+│ audio source             │
+│  microphone / demo input │
+└────────────┬─────────────┘
+             │ raw PCM bytes or generated AudioBlock
+             ▼
 ┌──────────────────────────────────────────┐
-│  capture                                 │
-│   AudioCaptureService(Impl)              │
-│     ├─ SampleDecoder  (bytes -> float[])│
-│     └─ produces AudioBlock (immutable)  │
-└──────────┬───────────────────────────────┘
-           │ AudioBlock
-           ▼
+│ capture / signal                         │
+│  AudioCaptureService(Impl)               │
+│    ├─ SampleDecoder  (bytes -> float[])  │
+│    ├─ DemoAudioCaptureService            │
+│    └─ SignalGenerator / demo presets     │
+└────────────┬─────────────────────────────┘
+             │ AudioBlock (immutable)
+             ▼
 ┌──────────────────────────────────────────┐
-│  buffer                                  │
-│   AudioRingBuffer<AudioBlock>            │
-│   (lock-free SPSC, bounded)              │
-└──────────┬───────────────────────────────┘
-           │ AudioBlock (consumer thread)
-           ▼
+│ buffer                                   │
+│  AudioRingBuffer<AudioBlock>             │
+│  (lock-free SPSC, bounded)               │
+└────────────┬─────────────────────────────┘
+             │ AudioBlock (consumer thread)
+             ▼
 ┌──────────────────────────────────────────┐
-│  dsp                                     │
-│   DSPPipeline = [DSPProcessor, ...]      │
-│   stateless, immutable                   │
-└──────────┬───────────────────────────────┘
-           │ AudioBlock
-           ▼
+│ dsp                                      │
+│  DSPPipeline = [DSPProcessor, ...]       │
+│  stateless, immutable                    │
+└────────────┬─────────────────────────────┘
+             │ AudioBlock
+             ▼
 ┌──────────────────────────────────────────┐
-│  analysis                                │
-│   AnalysisModule<S extends Snapshot>     │
-│     ├─ RmsPeakAnalyzer  -> RmsPeakSnapshot│
-│     └─ SpectrumAnalyzer -> SpectrumSnapshot│
-│       (uses pure-Java radix-2 Fft)       │
-└──────────┬───────────────────────────────┘
-           │ Snapshot (immutable)
-           ▼
+│ analysis / localization                  │
+│  AnalysisModule<S extends                │
+│  AnalysisSnapshot>                       │
+│    ├─ RmsPeakAnalyzer -> RmsPeakSnapshot │
+│    ├─ SpectrumAnalyzer                   │
+│    │  -> SpectrumSnapshot                │
+│    └─ StereoDelayAnalyzer                │
+│       -> StereoDelaySnapshot / Status    │
+└────────────┬─────────────────────────────┘
+             │ AnalysisSnapshot (immutable)
+             ▼
 ┌──────────────────────────────────────────┐
-│  snapshot                                │
-│   WaveformSnapshot                       │
-│   PhaseScopeSnapshot                     │
-│   (UI-friendly, audio-domain only)       │
-└──────────┬───────────────────────────────┘
-           │ snapshot (or block)
-           ▼
+│ snapshot                                 │
+│  WaveformSnapshot                        │
+│  PhaseScopeSnapshot                      │
+│  (UI-friendly, audio-domain only)        │
+└────────────┬─────────────────────────────┘
+             │ snapshot (or block)
+             ▼
 ┌──────────────────────────────────────────┐
-│  ui                                      │
-│   WaveformRenderer                       │
-│   (the only place that knows pixels)     │
-│   Existing Swing panels consume this.    │
-│   Future: JavaFX / Web / REST.           │
+│ ui                                       │
+│  Swing panels and renderers              │
+│  waveform, spectrum, phase, measurements │
+│  export CSV / PNG                        │
 └──────────────────────────────────────────┘
 ```
 
-The key invariant: **everything below `ui` stays in normalized `float` audio space.**
-No DSP/analysis/buffer code knows about pixels, panel dimensions, Swing or JavaFX.
+The key invariant: **everything below `ui` stays in normalized `float` audio space.** No
+DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swing or JavaFX.
 
 ## Packages
 
-|           Package            |                                   Responsibility                                   |
-|------------------------------|------------------------------------------------------------------------------------|
-| `org.hammer.audio.core`      | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`               |
-| `org.hammer.audio.capture`   | Sample decoding (`SampleDecoder`); JavaSound bridging in `AudioCaptureServiceImpl` |
-| `org.hammer.audio.buffer`    | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                          |
-| `org.hammer.audio.dsp`       | `DSPProcessor` extension point + `DSPPipeline` composition                         |
-| `org.hammer.audio.analysis`  | `AnalysisModule`, `AnalysisSnapshot`, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer` |
-| `org.hammer.audio.signal`    | Deterministic synthetic generators: `Sine`, `Square`, `Chirp`                      |
-| `org.hammer.audio.snapshot`  | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`          |
-| `org.hammer.audio.ui`        | `WaveformRenderer` — the only pixel-aware code                                     |
-| `org.hammer.audio` (legacy)  | `WaveformModel`, `AudioCaptureService(Impl)` (kept for back-compat)                |
-| `org.hammer.audio.benchmark` | JMH benchmarks (ring buffer, FFT, signal generators)                               |
+|             Package             |                                       Responsibility                                       |
+|---------------------------------|--------------------------------------------------------------------------------------------|
+| `org.hammer.audio.core`         | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                       |
+| `org.hammer.audio.capture`      | Sample decoding utilities (`SampleDecoder`)                                                |
+| `org.hammer.audio.buffer`       | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                  |
+| `org.hammer.audio.dsp`          | `DSPProcessor` extension point + `DSPPipeline` composition                                 |
+| `org.hammer.audio.analysis`     | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements    |
+| `org.hammer.audio.localization` | Stereo delay estimation: `StereoDelayAnalyzer`, `StereoDelaySnapshot`, `StereoDelayStatus` |
+| `org.hammer.audio.signal`       | Deterministic generators, including `DemoPresetGenerator` demo scenarios                   |
+| `org.hammer.audio.snapshot`     | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`                  |
+| `org.hammer.audio.ui`           | Render helpers and theme classes for pixel-aware UI code                                   |
+| `org.hammer.audio`              | Capture service API, JavaSound/demo capture implementations, legacy `WaveformModel`        |
+| `org.hammer`                    | Swing application frame and panels                                                         |
+| `org.hammer.audio.benchmark`    | JMH benchmarks (ring buffer, FFT, signal generators)                                       |
 
 ## Key design choices
 
 ### 1. Immutable audio domain
 
-`AudioFormatDescriptor` and `AudioBlock` are immutable, thread-safe and free of any UI or
-JavaSound types. Samples are normalized `float[channels][frames]` in `[-1, 1]`. Each block
-carries a monotonic `frameIndex` and a `timestampNanos` so any downstream consumer (analysis,
-recording, replay) can correlate it back to the source.
+`AudioFormatDescriptor` and `AudioBlock` are immutable, thread-safe and free of any UI or JavaSound
+types. Samples are normalized `float[channels][frames]` in `[-1, 1]`. Each block carries a
+monotonic `frameIndex` and a `timestampNanos` so any downstream consumer (analysis, recording,
+replay) can correlate it back to the source.
 
 ### 2. Lock-free SPSC ring buffer
 
 The audio capture thread is the sole producer; downstream DSP/analysis is the sole consumer.
-`AudioRingBuffer` uses two `AtomicLong` sequences with `lazySet` semantics and a power-of-two
-mask, avoiding locks on the hot path. The capacity is rounded up to the next power of two.
-Two write strategies are exposed:
+`AudioRingBuffer` uses two `AtomicLong` sequences with `lazySet` semantics and a power-of-two mask,
+avoiding locks on the hot path. The capacity is rounded up to the next power of two. Two write
+strategies are exposed:
 
 - `offer(T)` — fail fast if full (caller can decide what to do).
 - `offerOverwrite(T)` — drop the oldest element if full (typical for "latest wins" UI feeds).
 
 ### 3. Composable DSP pipeline
 
-`DSPProcessor` is a single-method functional interface (`AudioBlock -> AudioBlock`). Pipelines
-are immutable lists of stages, threaded sequentially. Plug-in DSP modules implement
-`DSPProcessor` (or `AnalysisModule` if they produce a snapshot rather than another block).
+`DSPProcessor` is a single-method functional interface (`AudioBlock -> AudioBlock`). Pipelines are
+immutable lists of stages, threaded sequentially. Plug-in DSP modules implement `DSPProcessor` (or
+`AnalysisModule` if they produce a snapshot rather than another block).
 
-### 4. Pure-Java FFT
+### 4. Pure-Java FFT and measurements
 
-`Fft` is a dependency-free in-place radix-2 Cooley-Tukey FFT with cached twiddle and
-bit-reverse tables. The architecture is more important than absolute FFT performance: callers
-who want vectorized or native acceleration can plug in an alternative implementation behind a
-custom `AnalysisModule` while keeping the rest of the platform unchanged.
+`Fft` is a dependency-free in-place radix-2 Cooley-Tukey FFT with cached twiddle and bit-reverse
+tables. `SpectrumAnalyzer` produces immutable `SpectrumSnapshot` values for the Swing spectrum
+panel and measurement/export paths. `MeasurementCalculator` combines block and spectrum data into
+RMS, peak, clipping, dominant-frequency and spectrum-peak readouts.
 
-### 5. Deterministic synthetic signals
+### 5. Stereo delay estimation
 
-`SineGenerator`, `SquareGenerator` and `ChirpGenerator` produce repeatable `AudioBlock` streams
-with no audio device. They underpin every DSP/analysis test in this PR and enable headless
-demos and CI smoke tests.
+`StereoDelayAnalyzer` computes normalized cross-correlation between the first two channels across
+physically possible lags. It returns a `StereoDelaySnapshot` with delay in samples/milliseconds,
+path-length difference, approximate angle, confidence and the correlation curve. `StereoDelayStatus`
+classifies valid results and common rejection reasons: mono input, silence, low correlation or
+physically impossible delay.
 
-### 6. UI-only pixel scaling
+The angle is only a broad direction estimate from a two-microphone time-delay model. Reflections,
+channel mismatch and microphone geometry can dominate the result; this is not full 3D localization.
 
-`WaveformRenderer` is the single place that converts a `WaveformSnapshot` into pixel-space
-arrays for a Swing canvas. The legacy `WaveformModel` is now built from a `WaveformSnapshot`
-via the renderer, so existing UI code keeps working unchanged.
+### 6. Deterministic synthetic signals and demo presets
+
+`SineGenerator`, `SquareGenerator` and `ChirpGenerator` produce repeatable `AudioBlock` streams with
+no audio device. `DemoPresetGenerator` adds UI-oriented scenarios used by `DemoAudioCaptureService`:
+
+- sine
+- square
+- chirp
+- stereo delay test
+- mosquito-like high-frequency burst
+- moving chirp source
+- 50 Hz hum + harmonics
+- clipping test
+
+These presets enable headless tests, repeatable demos and deterministic DSP/localization checks.
+
+### 7. UI-only pixel scaling
+
+`WaveformRenderer` is the single place that converts a `WaveformSnapshot` into pixel-space arrays
+for a Swing canvas. Swing panels consume immutable audio-domain snapshots or `AudioBlock` data and
+perform rendering/export at the application boundary.
 
 ## Capture lifecycle
 
 ```
 start()
    │
-   ├─ open TargetDataLine
-   ├─ allocate decode buffers
+   ├─ open TargetDataLine or start demo worker
+   ├─ allocate decode/generation buffers
    ├─ spawn worker thread (daemon, single-thread executor)
    │
  capture loop (worker):
-   │  read raw bytes
-   │  -> SampleDecoder.decode -> float[channels][frames]
+   │  read raw bytes or generate demo block
+   │  -> SampleDecoder.decode if using microphone input
    │  -> AudioBlock (frameIndex, timestamp)
-   │  -> ringBuffer.offerOverwrite(block)
+   │  -> ringBuffer.offer(block), dropping the new block if full
    │  -> latestBlock = block (volatile, for "latest" consumers)
    │  -> latestModel = WaveformRenderer(snapshot, panelWidth, panelHeight)
    │
@@ -148,23 +178,23 @@ stop()
    │
    ├─ flag running=false
    ├─ shutdownNow worker
-   └─ close TargetDataLine
+   └─ close TargetDataLine when live input is active
 ```
 
-The legacy `WaveformModel` is still produced by the worker so existing Swing panels keep
-working without modification. New consumers should prefer `getRingBuffer()` or
-`getLatestBlock()`.
+The legacy `WaveformModel` is still produced by the worker so existing Swing panels keep working.
+New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 
 ## Extension points
 
-|                Want to add                |                           Implement                            |
-|-------------------------------------------|----------------------------------------------------------------|
-| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                      |
-| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` returning your immutable snapshot |
-| New visualization                         | New `Snapshot` + new renderer in `org.hammer.audio.ui`         |
-| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own      |
-| Recording / replay                        | New `DSPProcessor` (writer) and a `SignalGenerator` (reader)   |
-| Headless demo / test                      | Use `SignalGenerator` instead of `AudioCaptureServiceImpl`     |
+|                Want to add                |                                   Implement                                   |
+|-------------------------------------------|-------------------------------------------------------------------------------|
+| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                                     |
+| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` where `MySnapshot` implements `AnalysisSnapshot` |
+| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot              |
+| New visualization                         | Concrete snapshot class or `AudioBlock` input plus a UI renderer/panel        |
+| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                     |
+| Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`                   |
+| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                                |
 
 ## Concurrency model
 
