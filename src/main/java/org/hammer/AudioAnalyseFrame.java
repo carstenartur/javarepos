@@ -95,6 +95,12 @@ public class AudioAnalyseFrame extends JFrame {
   private final WaveformPanel waveformPanel = new WaveformPanel();
   private final PhaseDiagramPanel phaseDiagramPanel = new PhaseDiagramPanel();
   private final SpectrumPanel spectrumPanel = new SpectrumPanel();
+  private final SpectrogramPanel spectrogramPanel = new SpectrogramPanel();
+  private final DiagnosisPanel diagnosisPanel = new DiagnosisPanel();
+  private final transient org.hammer.audio.diagnosis.DiagnosisAnalyzer diagnosisAnalyzer =
+      new org.hammer.audio.diagnosis.DiagnosisAnalyzer();
+  private transient org.hammer.audio.diagnosis.DiagnosisSnapshot lastDiagnosis =
+      org.hammer.audio.diagnosis.DiagnosisSnapshot.empty();
 
   private final JTextField textFieldDataSize;
   private final JTextField textFieldDivisor;
@@ -231,6 +237,7 @@ public class AudioAnalyseFrame extends JFrame {
     waveformPanel.setAudioCaptureService(audioCaptureService);
     phaseDiagramPanel.setAudioCaptureService(audioCaptureService);
     spectrumPanel.setAudioCaptureService(audioCaptureService);
+    spectrogramPanel.setAudioCaptureService(audioCaptureService);
     setFrozen(false);
   }
 
@@ -258,6 +265,29 @@ public class AudioAnalyseFrame extends JFrame {
     JMenuItem exportPng = new JMenuItem("Export measurement PNG...");
     exportPng.addActionListener(e -> exportMeasurementPng());
     mnFile.add(exportPng);
+
+    JMenuItem exportBundle = new JMenuItem("Export evidence bundle...");
+    exportBundle.setToolTipText(
+        "Export screenshot, samples, spectrum, spectrogram, stereo delay, diagnosis and metadata"
+            + " into one directory.");
+    exportBundle.addActionListener(e -> exportEvidenceBundle());
+    mnFile.add(exportBundle);
+
+    mnFile.addSeparator();
+
+    JCheckBoxMenuItem mntmPeakHold = new JCheckBoxMenuItem("Spectrum: peak hold");
+    mntmPeakHold.addActionListener(
+        e -> spectrumPanel.setPeakHoldEnabled(mntmPeakHold.isSelected()));
+    mnFile.add(mntmPeakHold);
+
+    JCheckBoxMenuItem mntmAveraging = new JCheckBoxMenuItem("Spectrum: averaging");
+    mntmAveraging.addActionListener(
+        e -> spectrumPanel.setAveragingEnabled(mntmAveraging.isSelected()));
+    mnFile.add(mntmAveraging);
+
+    JMenuItem mntmResetPeak = new JMenuItem("Spectrum: reset peak hold");
+    mntmResetPeak.addActionListener(e -> spectrumPanel.resetPeakHold());
+    mnFile.add(mntmResetPeak);
 
     menuBar.add(Box.createGlue());
 
@@ -389,14 +419,26 @@ public class AudioAnalyseFrame extends JFrame {
     waveformPanel.setBorder(UiTheme.createPanelBorder());
     phaseDiagramPanel.setBorder(UiTheme.createPanelBorder());
     spectrumPanel.setBorder(UiTheme.createPanelBorder());
+    spectrogramPanel.setBorder(UiTheme.createPanelBorder());
+    diagnosisPanel.setBorder(UiTheme.createPanelBorder());
 
     JPanel lowerPanel = new JPanel(new GridLayout(1, 2, 8, 0));
     lowerPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
     lowerPanel.add(spectrumPanel);
     lowerPanel.add(phaseDiagramPanel);
 
-    JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, waveformPanel, lowerPanel);
-    splitPane.setResizeWeight(0.64);
+    JPanel spectrogramRow = new JPanel(new BorderLayout(8, 0));
+    spectrogramRow.add(spectrogramPanel, BorderLayout.CENTER);
+    spectrogramRow.add(diagnosisPanel, BorderLayout.EAST);
+
+    JSplitPane innerSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, lowerPanel, spectrogramRow);
+    innerSplit.setResizeWeight(0.5);
+    innerSplit.setDividerSize(7);
+    innerSplit.setBorder(null);
+    innerSplit.setContinuousLayout(true);
+
+    JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, waveformPanel, innerSplit);
+    splitPane.setResizeWeight(0.45);
     splitPane.setDividerSize(7);
     splitPane.setBorder(null);
     splitPane.setContinuousLayout(true);
@@ -547,6 +589,8 @@ public class AudioAnalyseFrame extends JFrame {
         frozen && audioCaptureService != null ? audioCaptureService.getLatestBlock() : null;
     waveformPanel.setFrozen(frozen);
     spectrumPanel.setFrozen(frozen);
+    spectrogramPanel.setFrozen(frozen);
+    diagnosisPanel.setFrozen(frozen);
     mntmFreeze.setSelected(frozen);
   }
 
@@ -571,6 +615,7 @@ public class AudioAnalyseFrame extends JFrame {
               currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
       updateMeasurementFields(measurements);
       updateStereoDelayFields(currentMeasurementBlock());
+      updateDiagnosis(currentMeasurementBlock());
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
@@ -579,8 +624,20 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldPeakFrequency.setText("n/a");
       updateMeasurementFields(NO_MEASUREMENT);
       updateStereoDelayFields(null);
+      updateDiagnosis(null);
       mntmStart.setSelected(false);
     }
+  }
+
+  private void updateDiagnosis(AudioBlock block) {
+    SpectrumSnapshot spectrum = spectrumPanel.getCurrentSpectrum();
+    org.hammer.audio.spectrogram.SpectrogramHistory history = spectrogramPanel.getHistory();
+    StereoDelaySnapshot delay = null;
+    if (block != null && block.channels() >= 2) {
+      delay = stereoDelayAnalyzer().analyze(block);
+    }
+    lastDiagnosis = diagnosisAnalyzer.analyze(block, spectrum, history, delay);
+    diagnosisPanel.setFindings(lastDiagnosis);
   }
 
   private void updateMeasurementFields(MeasurementSnapshot measurements) {
@@ -732,6 +789,86 @@ public class AudioAnalyseFrame extends JFrame {
       LOGGER.log(Level.SEVERE, "Failed to export PNG", ex);
       JOptionPane.showMessageDialog(
           this, "Failed to export PNG: " + ex.getMessage(), ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void exportEvidenceBundle() {
+    AudioBlock block = currentMeasurementBlock();
+    SpectrumSnapshot spectrum = spectrumPanel.getCurrentSpectrum();
+    org.hammer.audio.spectrogram.SpectrogramHistory history = spectrogramPanel.getHistory();
+    StereoDelaySnapshot delay = null;
+    if (block != null && block.channels() >= 2) {
+      delay = stereoDelayAnalyzer().analyze(block);
+    }
+    org.hammer.audio.diagnosis.DiagnosisSnapshot diagnosis =
+        diagnosisAnalyzer.analyze(block, spectrum, history, delay);
+    lastDiagnosis = diagnosis;
+    diagnosisPanel.setFindings(diagnosis);
+
+    if (block == null
+        && spectrum == null
+        && (history == null || history.isEmpty())
+        && delay == null
+        && diagnosis.isEmpty()) {
+      JOptionPane.showMessageDialog(
+          this,
+          "No measurement data available to export.",
+          "Export evidence bundle",
+          JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Export evidence bundle");
+    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+      return;
+    }
+    java.io.File parent = chooser.getSelectedFile();
+    if (parent == null) {
+      return;
+    }
+    BufferedImage screenshot = null;
+    if (visualizationPanel.getWidth() > 0 && visualizationPanel.getHeight() > 0) {
+      screenshot =
+          new BufferedImage(
+              visualizationPanel.getWidth(),
+              visualizationPanel.getHeight(),
+              BufferedImage.TYPE_INT_ARGB);
+      java.awt.Graphics2D graphics = screenshot.createGraphics();
+      try {
+        visualizationPanel.paintAll(graphics);
+      } finally {
+        graphics.dispose();
+      }
+    }
+    org.hammer.audio.export.EvidenceData payload =
+        org.hammer.audio.export.EvidenceData.builder()
+            .timestamp(java.time.Instant.now())
+            .screenshot(screenshot)
+            .block(block)
+            .spectrum(spectrum)
+            .spectrogram(history)
+            .stereoDelay(delay)
+            .diagnosis(diagnosis)
+            .notes(
+                inputMode == InputMode.DEMO ? "Demo signal: " + selectedDemoSignal() : "Live input")
+            .build();
+    try {
+      java.nio.file.Path bundleDir =
+          new org.hammer.audio.export.EvidenceBundleExporter().export(parent.toPath(), payload);
+      JOptionPane.showMessageDialog(
+          this,
+          "Evidence bundle exported to " + bundleDir,
+          "Export evidence bundle",
+          JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException | IllegalArgumentException ex) {
+      LOGGER.log(Level.SEVERE, "Failed to export evidence bundle", ex);
+      JOptionPane.showMessageDialog(
+          this,
+          "Failed to export evidence bundle: " + ex.getMessage(),
+          ERROR_TITLE,
+          JOptionPane.ERROR_MESSAGE);
     }
   }
 
