@@ -2,6 +2,9 @@
 
 This page documents how to configure audio capture, how the runtime is structured across threads, and how diagnostic logging is wired up.
 
+It reflects the current `AudioBlock` + `AudioRingBuffer` architecture. For the legacy
+`WaveformModel`-centric API and migration notes, see [`MIGRATION.md`](MIGRATION.md).
+
 ## Audio Configuration
 
 Audio capture is configured via constructor parameters in `AudioCaptureServiceImpl`:
@@ -32,44 +35,78 @@ AudioCaptureServiceImpl service = new AudioCaptureServiceImpl(
 
 ## Threading Model
 
-The audio service uses a multi-threaded architecture with strict concurrency control.
+The audio service uses a small set of well-defined threads:
 
-- **Main / EDT threads** — service lifecycle (`start()`, `stop()`), configuration (`setDivisor()`, `recomputeLayout()`), UI rendering (`WaveformPanel`, `PhaseDiagramPanel`).
-- **Worker thread** — runs `captureLoop()` continuously, reads audio data, and updates the model.
+- **Main / EDT threads** — service lifecycle (`start()`, `stop()`), configuration
+  (`setDivisor()`, `recomputeLayout()`), UI rendering (`WaveformPanel`, `SpectrumPanel`,
+  `SpectrogramPanel`, `PhaseDiagramPanel`, `DiagnosisPanel`).
+- **Capture worker thread** — daemon, single-thread executor. Runs the capture loop, decodes
+  raw bytes into normalized `float[channels][frames]`, builds an immutable `AudioBlock`, and
+  publishes it to downstream consumers.
+- **DSP / analysis consumer threads** (optional) — single consumer per `AudioRingBuffer` (the
+  buffer is strict SPSC); the application currently consumes "latest wins" on the EDT, but new
+  pipelines can spawn their own consumer thread.
 
-### Synchronization
+### Synchronization primitives in `AudioCaptureServiceImpl`
 
-1. **`AtomicBoolean running`** — lock-free flag for service state, checked by the worker thread, set atomically by `start()` / `stop()`.
-2. **`ReentrantLock modelLock`** — protects mutable state (`datas`, `xPoints`, `yPoints`, `tickEveryNSample`, `datasize`, `numberOfPoints`). Held only for the minimum time required to allocate or copy arrays.
-3. **`volatile WaveformModel latestModel`** — immutable snapshot published by the worker. UI threads read it without acquiring locks.
+The current implementation deliberately avoids locks on the hot path. State is shared through a
+small number of atomics / volatiles:
 
-### Immutable Snapshot Pattern
+|                   Field                   |                                            Concurrency role                                            |
+|-------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `AtomicBoolean running`                   | Lifecycle flag. Set by `start()` / `stop()`, polled by the worker.                                     |
+| `AudioRingBuffer<AudioBlock> ringBuffer`  | Lock-free SPSC queue. Worker calls `offer(block)`; consumer calls `poll()` / `drainTo(...)`.           |
+| `volatile AudioBlock latestBlock`         | "Latest wins" pointer for cheap UI / REST consumers that don't drain the ring buffer.                  |
+| `volatile WaveformModel latestModel`      | Legacy snapshot kept in sync for existing Swing panels.                                                |
+| `volatile int panelWidth` / `panelHeight` | Layout hints from the UI; read in the worker to drive `WaveformRenderer`.                              |
+| `volatile byte[] datas`, `int datasize`   | Worker-owned decode buffers; declared `volatile` so reconfiguration on another thread becomes visible. |
 
-`WaveformModel` is immutable and thread-safe:
+> **There is no `ReentrantLock modelLock`.** Earlier drafts of this page described one; that
+> design was retired when the capture path moved to immutable `AudioBlock` publication. Mutable
+> per-pixel state (`xPoints`, `yPoints`, ...) no longer lives in the capture service.
 
-- All arrays are defensively copied during construction.
-- Getters return defensive copies.
-- Once published via `latestModel`, the object is never mutated.
+### Immutable snapshot publication
 
-This enables lock-free reads, non-blocking publishes, and consistent rendering snapshots (no torn updates).
+Snapshots are immutable and thread-safe:
 
-### Best Practices When Modifying the Service
+- `AudioBlock` carries `float[channels][frames]` samples plus `frameIndex` and
+  `timestampNanos`. Construction copies its inputs; accessors return views into the captured
+  arrays which are not mutated after publication.
+- `AnalysisSnapshot` implementations (`RmsPeakSnapshot`, `SpectrumSnapshot`,
+  `StereoDelaySnapshot`, `DiagnosisSnapshot`, `SpectrogramFrame`, ...) are similarly
+  immutable and safe to hand to UI panels or exporters from any thread.
+- `WaveformModel` (legacy) is still produced by the worker for backwards-compatible Swing
+  rendering; it is built from the same `AudioBlock` the rest of the platform sees.
 
-- Always acquire `modelLock` before mutating `xPoints`, `yPoints`, or related state.
-- Allocate temporary arrays *outside* the lock and copy them in.
-- Use `volatile` for simple state flags whose visibility matters.
-- Prefer immutable objects for shared state to eliminate synchronization complexity.
+This enables lock-free reads, non-blocking publishes, and consistent rendering snapshots (no
+torn updates).
+
+### Best practices when modifying the service
+
+- Treat `AudioBlock` and analysis snapshots as immutable. Publish new instances; do not mutate
+  existing ones.
+- Use `ringBuffer.offer(...)` from the producer (drop on overflow). Do **not** call
+  `offerOverwrite(...)` while a separate consumer thread is draining the same buffer — see the
+  Javadoc on `AudioRingBuffer.offerOverwrite` for the SPSC restriction.
+- Use the `latestBlock` volatile pointer for "give me the most recent block" UI consumers.
+- Use `volatile` for simple state flags whose visibility matters and atomics for lock-free
+  counters; avoid introducing locks on the capture path.
 
 ## Performance Notes
 
 The capture pipeline is optimized for real-time processing:
 
-- **Buffer reuse** — the `datas` byte array is allocated once and reused across all capture iterations; the working `int[][]` (`workingYPoints`) is reused across loop iterations to eliminate per-iteration allocations.
-- **Precomputed constants** — `bytesPerSample` and `frameSize` are computed once when the audio line opens.
-- **Integer arithmetic** — `recomputeXValues()` distributes points using integer division (`(long) panelW * i / pointsM1`) instead of floating-point, avoiding `float` conversions and rounding overhead.
-- **Narrow lock scope** — sample I/O and decoding happen outside `modelLock`; only model publication is inside.
+- **Buffer reuse** — the `datas` byte array and the per-channel decode buffer are allocated
+  once and reused across capture iterations; only the exact-sized `float[channels][frames]`
+  used to construct the immutable `AudioBlock` is freshly allocated per iteration.
+- **Precomputed constants** — `bytesPerSample` and `frameSize` are computed once when the
+  audio line opens.
+- **Lock-free publication** — the ring buffer uses `lazySet` on producer / consumer sequences
+  and a power-of-two mask; "latest wins" UI reads go through the `volatile latestBlock`
+  pointer instead of acquiring a lock.
 
-These optimizations preserve external behavior while reducing GC churn and improving throughput.
+These optimizations preserve external behavior while reducing GC churn and improving
+throughput.
 
 ## Logging & Observability
 
