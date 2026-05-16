@@ -157,17 +157,19 @@ public final class WaveformPanel extends JPanel {
     int channel0Points = yPoints.length > 0 ? Math.min(points, yPoints[0].length) : 0;
     int channel1Points = yPoints.length > 1 ? Math.min(points, yPoints[1].length) : 0;
     int xCount = xPoints.length;
+    int leftRenderPoints = Math.min(xCount, channel0Points);
+    int rightRenderPoints = Math.min(xCount, channel1Points);
 
     if (channel0Points > 1 && xCount > 1) {
       g2.setColor(PlotRenderTheme.WAVEFORM_LEFT);
       g2.setStroke(PlotRenderTheme.TRACE_STROKE);
-      g2.drawPolyline(xPoints, yPoints[0], Math.min(xCount, channel0Points));
+      g2.drawPolyline(xPoints, yPoints[0], leftRenderPoints);
     }
 
     if (channel1Points > 1 && xCount > 1) {
       g2.setColor(PlotRenderTheme.WAVEFORM_RIGHT);
       g2.setStroke(PlotRenderTheme.THIN_TRACE_STROKE);
-      g2.drawPolyline(xPoints, yPoints[1], Math.min(xCount, channel1Points));
+      g2.drawPolyline(xPoints, yPoints[1], rightRenderPoints);
     }
 
     int centerY = getHeight() / 2;

@@ -170,8 +170,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     if (peakBin > 0) {
       double peakHz = spectrum.frequencyOfBin(peakBin);
       int peakX = xForBin(plotBounds, peakBin, magnitudes.length);
-      double peakNorm =
-          PlotRenderTheme.normalizedDb(PlotRenderTheme.magnitudeToDb(magnitudes[peakBin]));
+      double peakNorm = PlotRenderTheme.normalizedMagnitude(magnitudes[peakBin]);
       int peakY = yForNormalized(plotBounds, peakNorm);
       g.setColor(PlotRenderTheme.HIGHLIGHT);
       g.setStroke(PlotRenderTheme.PEAK_STROKE);
@@ -202,8 +201,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     areaPolygon.addPoint(plotBounds.x, plotBounds.y + plotBounds.height - 1);
     for (int bin = 1; bin < bins; bin++) {
       int x = xForBin(plotBounds, bin, bins);
-      double db = PlotRenderTheme.magnitudeToDb(magnitudes[bin]);
-      int y = yForNormalized(plotBounds, PlotRenderTheme.normalizedDb(db));
+      int y = yForNormalized(plotBounds, PlotRenderTheme.normalizedMagnitude(magnitudes[bin]));
       if (bin == 1) {
         linePath.moveTo(x, y);
       } else {

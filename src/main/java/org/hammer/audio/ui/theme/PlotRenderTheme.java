@@ -125,4 +125,9 @@ public final class PlotRenderTheme {
   public static double normalizedDb(double db) {
     return Math.max(0d, Math.min(1d, (db - DB_FLOOR) / Math.abs(DB_FLOOR)));
   }
+
+  /** Converts magnitude directly to normalized dB display range [0, 1]. */
+  public static double normalizedMagnitude(float magnitude) {
+    return normalizedDb(magnitudeToDb(magnitude));
+  }
 }

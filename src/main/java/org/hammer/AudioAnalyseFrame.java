@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
@@ -36,7 +37,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -73,6 +73,7 @@ public class AudioAnalyseFrame extends JFrame {
   private static final String ERROR_TITLE = "Error";
   private static final int CONTENT_PANE_HGAP = 5;
   private static final int CONTENT_PANE_VGAP = 5;
+  private static final int CONTENT_PANE_PADDING = 8;
   private static final int DEFAULT_WINDOW_WIDTH = 900;
   private static final int DEFAULT_WINDOW_HEIGHT = 680;
 
@@ -137,7 +138,12 @@ public class AudioAnalyseFrame extends JFrame {
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
     contentPane = new JPanel(new BorderLayout(CONTENT_PANE_HGAP, CONTENT_PANE_VGAP));
-    contentPane.setBorder(new EmptyBorder(8, 8, 8, 8));
+    contentPane.setBorder(
+        new EmptyBorder(
+            CONTENT_PANE_PADDING,
+            CONTENT_PANE_PADDING,
+            CONTENT_PANE_PADDING,
+            CONTENT_PANE_PADDING));
     setContentPane(contentPane);
 
     // Initialize fields before calling init methods
@@ -275,7 +281,7 @@ public class AudioAnalyseFrame extends JFrame {
     modePanel.add(radioDemoMode);
     settingsPanel.add(modePanel);
 
-    settingsPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    settingsPanel.add(Box.createHorizontalStrut(8));
     settingsPanel.add(new JLabel("Demo"));
     comboBoxDemoSignal.addItemListener(
         event -> {
@@ -290,7 +296,7 @@ public class AudioAnalyseFrame extends JFrame {
     comboBoxAudioDevice.addItemListener(this::audioDeviceSelectionChanged);
     settingsPanel.add(comboBoxAudioDevice);
 
-    settingsPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    settingsPanel.add(Box.createHorizontalStrut(8));
     settingsPanel.add(new JLabel("Size"));
     configureReadOnlyField(textFieldDataSize, 6);
     settingsPanel.add(textFieldDataSize);
@@ -351,7 +357,7 @@ public class AudioAnalyseFrame extends JFrame {
     phaseDiagramPanel.setBorder(UiTheme.createPanelBorder());
     spectrumPanel.setBorder(UiTheme.createPanelBorder());
 
-    JPanel lowerPanel = new JPanel(new java.awt.GridLayout(1, 2, 8, 0));
+    JPanel lowerPanel = new JPanel(new GridLayout(1, 2, 8, 0));
     lowerPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
     lowerPanel.add(spectrumPanel);
     lowerPanel.add(phaseDiagramPanel);
