@@ -25,7 +25,8 @@ audio input.
 - **Deterministic synthetic signals** — `SineGenerator`, `SquareGenerator`, `ChirpGenerator` for
   tests, headless demos and DSP verification.
 - **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
-  pause/freeze, peak-frequency readout, and CSV/PNG export for quick acoustic diagnostics.
+  demo mode (sine/square/chirp), pause/freeze, peak-frequency + measurement readouts, and CSV/PNG
+  export for quick acoustic diagnostics.
 - **Headless-friendly tests** — 81 unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -52,12 +53,29 @@ On Windows use `mvnw.cmd` instead of `./mvnw`.
 
 ## MVP workflow
 
-1. Select an audio input device from the **audio device** dropdown, or keep the system default.
-2. Use **File → Start/Stop** to begin live capture.
-3. Inspect the waveform and FFT spectrum; the dominant peak is shown as **peak frequency**.
-4. Use **File → Pause/Freeze** to hold the current measurement.
-5. Export the frozen or current measurement with **File → Export measurement CSV...** or
+![Audio Analyzer screenshot](docs/images/audio-analyzer-demo.png)
+
+### Demo workflow (without microphone)
+
+1. In **Settings**, switch input mode to **Demo mode**.
+2. Select one of the built-in test signals (**Sine**, **Square**, or **Chirp**).
+3. Use **File → Start/Stop** to start playback from the selected signal source.
+4. Verify the live panels update together: waveform, phase diagram, FFT spectrum and peak
+   frequency.
+5. Watch the **Measurements** panel:
+   - **RMS** and **Peak level** (linear normalized level),
+   - **Dominant frequency** (strongest FFT bin),
+   - **Stereo correlation** (n/a for mono or silence),
+   - **Clipping** (highlighted when |sample| reaches clipping threshold).
+6. Use **File → Pause/Freeze** to hold the current measurement.
+7. Export the frozen or current measurement with **File → Export measurement CSV...** or
    **File → Export measurement PNG...**.
+
+### Live microphone workflow
+
+1. Switch input mode back to **Live microphone** and select an **audio device** (or keep system
+   default).
+2. Use **File → Start/Stop** to begin live capture.
 
 ## Documentation
 
