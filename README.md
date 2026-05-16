@@ -41,8 +41,9 @@ Requires **Java 21** or higher.
 # Build, test, run static analysis and coverage
 ./mvnw clean verify
 
-# Run the application
+# Run the application (after package/verify, requires target/lib runtime jars)
 java -jar target/audioin-0.0.1-SNAPSHOT.jar
+# Runtime dependencies are copied to target/lib during the Maven package phase.
 
 # Run JMH benchmarks
 ./mvnw -Pjmh package
@@ -62,7 +63,7 @@ On Windows use `mvnw.cmd` instead of `./mvnw`.
 `docs/images/screenshot.png` is the reserved path for the current dashboard screenshot.
 If the file is missing in your checkout, regenerate it with:
 
-1. Run the app (`java -jar target/audioin-0.0.1-SNAPSHOT.jar`) and switch to demo mode.
+1. Run the app (`java -jar target/audioin-0.0.1-SNAPSHOT.jar`) in either demo mode or live microphone mode.
 2. Start capture via **File → Start/Stop**, then pause with **File → Pause/Freeze**.
 3. Export a PNG via **File → Export measurement PNG...**.
 4. Save/copy the exported image as `docs/images/screenshot.png`.
