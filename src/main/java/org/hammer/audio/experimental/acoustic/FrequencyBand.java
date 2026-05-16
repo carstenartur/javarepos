@@ -5,8 +5,12 @@ public record FrequencyBand(double lowHz, double highHz) {
 
   /** Create a closed frequency band. */
   public FrequencyBand {
-    if (!(lowHz >= 0.0) || !(highHz > lowHz) || !Double.isFinite(lowHz) || !Double.isFinite(highHz)) {
-      throw new IllegalArgumentException("frequency band must be finite and satisfy 0 <= low < high");
+    if (!(lowHz >= 0.0)
+        || !(highHz > lowHz)
+        || !Double.isFinite(lowHz)
+        || !Double.isFinite(highHz)) {
+      throw new IllegalArgumentException(
+          "frequency band must be finite and satisfy 0 <= low < high");
     }
   }
 

@@ -76,7 +76,8 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
         samples[mic.channel()][frame] = (float) sampleAt(mic.positionMeters(), receiverTime);
       }
     }
-    AudioBlock block = AudioBlock.wrap(format, samples, nextFrameIndex, clock.timestampForFrame(nextFrameIndex));
+    AudioBlock block =
+        AudioBlock.wrap(format, samples, nextFrameIndex, clock.timestampForFrame(nextFrameIndex));
     nextFrameIndex += blockFrames;
     return Optional.of(block);
   }
@@ -89,10 +90,14 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
       double travelSeconds = distance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
       sample += emitter.sampleAt(receiverTimeSeconds - travelSeconds) / distance;
       if (room.reflectionGain() > 0.0) {
-        Vector2 reflected = new Vector2(room.widthMeters() - emitterPosition.x(), emitterPosition.y());
+        Vector2 reflected =
+            new Vector2(room.widthMeters() - emitterPosition.x(), emitterPosition.y());
         double reflectedDistance = Math.max(0.01, microphonePosition.distanceTo(reflected));
         double reflectedTravel = reflectedDistance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
-        sample += room.reflectionGain() * emitter.sampleAt(receiverTimeSeconds - reflectedTravel) / reflectedDistance;
+        sample +=
+            room.reflectionGain()
+                * emitter.sampleAt(receiverTimeSeconds - reflectedTravel)
+                / reflectedDistance;
       }
     }
     return Math.max(-1.0, Math.min(1.0, sample));

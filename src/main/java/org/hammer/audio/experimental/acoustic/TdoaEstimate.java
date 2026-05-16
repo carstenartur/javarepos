@@ -29,6 +29,7 @@ public record TdoaEstimate(
 
   /** Convert to a reusable 2D localization constraint. */
   public LocalizationConstraint2D asConstraint() {
-    return new LocalizationConstraint2D(firstMicrophoneId, secondMicrophoneId, pathDifferenceMeters, confidence);
+    return new LocalizationConstraint2D(
+        firstMicrophoneId, secondMicrophoneId, pathDifferenceMeters, confidence);
   }
 }

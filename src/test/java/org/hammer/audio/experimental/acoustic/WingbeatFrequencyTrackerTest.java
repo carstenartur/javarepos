@@ -18,7 +18,8 @@ class WingbeatFrequencyTrackerTest {
       samples[0][i] = (float) Math.sin(2.0 * Math.PI * 440.0 * i / sampleRate);
     }
     AudioBlock block = new AudioBlock(new AudioFormatDescriptor(sampleRate, 1, 32), samples, 0, 0);
-    WingbeatFrequencyTracker tracker = new WingbeatFrequencyTracker(1_024, new FrequencyBand(300.0, 600.0));
+    WingbeatFrequencyTracker tracker =
+        new WingbeatFrequencyTracker(1_024, new FrequencyBand(300.0, 600.0));
 
     SpectralPeak peak = tracker.track(block, 0);
 

@@ -17,7 +17,9 @@ class SimulatedMicrophoneArraySourceTest {
   void producesTimestampedMultichannelBlocks() {
     MicrophoneArray array =
         new MicrophoneArray(
-            List.of(new Microphone("a", new Vector2(0.0, 0.0), 0), new Microphone("b", new Vector2(0.2, 0.0), 1)));
+            List.of(
+                new Microphone("a", new Vector2(0.0, 0.0), 0),
+                new Microphone("b", new Vector2(0.2, 0.0), 1)));
     SimulatedMicrophoneArraySource source =
         new SimulatedMicrophoneArraySource(
             new Room2D(2.0, 2.0, 0.0, 0.0),

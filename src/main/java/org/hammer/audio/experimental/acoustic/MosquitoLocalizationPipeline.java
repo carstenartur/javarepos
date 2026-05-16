@@ -44,6 +44,12 @@ public final class MosquitoLocalizationPipeline {
     List<BeamformingPoint> heatmap = beamformer.scan(block, array, candidateGrid);
     Vector2 bestPosition = beamformer.best(block, array, candidateGrid).positionMeters();
     return new AcousticLocalizationSnapshot(
-        block.frameIndex(), block.timestampNanos(), peak, estimates, constraints, heatmap, bestPosition);
+        block.frameIndex(),
+        block.timestampNanos(),
+        peak,
+        estimates,
+        constraints,
+        heatmap,
+        bestPosition);
   }
 }

@@ -18,7 +18,8 @@ public record AcousticLocalizationSnapshot(
   /** Create an immutable acoustic-localization snapshot. */
   public AcousticLocalizationSnapshot {
     if (trackedFrequency == null || estimatedPositionMeters == null) {
-      throw new IllegalArgumentException("trackedFrequency and estimatedPositionMeters must not be null");
+      throw new IllegalArgumentException(
+          "trackedFrequency and estimatedPositionMeters must not be null");
     }
     tdoaEstimates = List.copyOf(tdoaEstimates);
     constraints = List.copyOf(constraints);

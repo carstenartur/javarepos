@@ -29,8 +29,12 @@ public final class WingbeatFrequencyTracker {
     float[] magnitudes = new float[fftSize / 2 + 1];
     fft.magnitudesOneSided(re, im, magnitudes);
 
-    int lowBin = Math.max(0, (int) Math.ceil(searchBand.lowHz() * fftSize / block.format().sampleRate()));
-    int highBin = Math.min(magnitudes.length - 1, (int) Math.floor(searchBand.highHz() * fftSize / block.format().sampleRate()));
+    int lowBin =
+        Math.max(0, (int) Math.ceil(searchBand.lowHz() * fftSize / block.format().sampleRate()));
+    int highBin =
+        Math.min(
+            magnitudes.length - 1,
+            (int) Math.floor(searchBand.highHz() * fftSize / block.format().sampleRate()));
     int bestBin = lowBin;
     double bestMagnitude = 0.0;
     double bandEnergy = 0.0;

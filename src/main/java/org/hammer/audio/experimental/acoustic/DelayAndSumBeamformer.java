@@ -21,7 +21,8 @@ public final class DelayAndSumBeamformer {
   }
 
   /** Score candidate positions and return a heatmap sorted in input order. */
-  public List<BeamformingPoint> scan(AudioBlock block, MicrophoneArray array, List<Vector2> candidates) {
+  public List<BeamformingPoint> scan(
+      AudioBlock block, MicrophoneArray array, List<Vector2> candidates) {
     List<BeamformingPoint> points = new ArrayList<>(candidates.size());
     for (Vector2 candidate : candidates) {
       points.add(new BeamformingPoint(candidate, scoreCandidate(block, array, candidate)));

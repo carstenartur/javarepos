@@ -26,7 +26,9 @@ class CrossCorrelationTdoaEstimatorTest {
     AudioBlock block = new AudioBlock(new AudioFormatDescriptor(sampleRate, 2, 32), samples, 0, 0);
     MicrophoneArray array =
         new MicrophoneArray(
-            List.of(new Microphone("left", new Vector2(0.0, 0.0), 0), new Microphone("right", new Vector2(0.10, 0.0), 1)));
+            List.of(
+                new Microphone("left", new Vector2(0.0, 0.0), 0),
+                new Microphone("right", new Vector2(0.10, 0.0), 1)));
 
     TdoaEstimate estimate = new CrossCorrelationTdoaEstimator(343.0).estimate(block, array, 0, 1);
 

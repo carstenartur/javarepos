@@ -1,6 +1,8 @@
 package org.hammer.audio.geometry;
 
-/** Hyperbola-like 2D TDOA constraint between two sensors, represented by a path-length difference. */
+/**
+ * Hyperbola-like 2D TDOA constraint between two sensors, represented by a path-length difference.
+ */
 public record LocalizationConstraint2D(
     String firstSensorId, String secondSensorId, double pathDifferenceMeters, double confidence) {
 

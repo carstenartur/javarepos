@@ -7,5 +7,6 @@ import org.hammer.audio.core.AudioBlock;
 public interface TdoaEstimator {
 
   /** Estimate TDOA between two channels. */
-  TdoaEstimate estimate(AudioBlock block, MicrophoneArray array, int firstChannel, int secondChannel);
+  TdoaEstimate estimate(
+      AudioBlock block, MicrophoneArray array, int firstChannel, int secondChannel);
 }

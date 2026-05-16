@@ -18,7 +18,8 @@ public final class CrossCorrelationTdoaEstimator implements TdoaEstimator {
   }
 
   @Override
-  public TdoaEstimate estimate(AudioBlock block, MicrophoneArray array, int firstChannel, int secondChannel) {
+  public TdoaEstimate estimate(
+      AudioBlock block, MicrophoneArray array, int firstChannel, int secondChannel) {
     Microphone first = array.microphone(firstChannel);
     Microphone second = array.microphone(secondChannel);
     float[] a = block.channelView(firstChannel);
