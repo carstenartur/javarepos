@@ -11,4 +11,6 @@ bin-release/
 # information for Eclipse / Flash Builder.
 /dist/
 /target/
+**/target/
 /nbproject/
+target/
