@@ -52,34 +52,39 @@ java -jar target/audioin-0.0.1-SNAPSHOT.jar  # see exec-maven-plugin config
 
 On Windows use `mvnw.cmd` instead of `./mvnw`.
 
-## Hero screenshot
+## Detect a signal's dominant frequency
 
 ![Audio Analyzer modern dashboard screenshot](docs/images/screenshot.png)
 
-## Use case: Detecting the dominant frequency of a signal
+_Staged demo: Demo mode is running a frozen 440 Hz sine signal, with the waveform, FFT peak,
+dominant frequency, RMS/peak level and clipping status visible in one view._
 
-The screenshot shows a practical measurement workflow:
+### What you can see
 
-- **Waveform** panel: time-domain shape of the current signal.
-- **FFT spectrum** panel: frequency-domain energy distribution.
-- **Peak / dominant frequency** readout: strongest spectral component.
-- **RMS / Peak level** readouts: average and maximum signal level.
-- **Clipping** indicator: warns when samples reach clipping threshold.
-- **Demo / Live input mode** controls: switch between synthetic test input and microphone capture.
+- **Demo mode** selected with the **Sine** signal.
+- A visible **waveform** for the generated signal.
+- An **FFT spectrum** with a marked peak at **440.0 Hz**.
+- **Peak Frequency** and **Dominant frequency** readouts showing **440.0 Hz**.
+- **RMS**, **Peak level** and **Clipping** readouts.
+- A **Paused / Frozen demo** state for repeatable inspection.
 
-### Why this is useful
+### Try it yourself
 
-This helps with quick acoustic diagnostics, validating test signals, inspecting microphone input, and exporting CSV/PNG evidence for reports or bug tickets.
+1. Build and run the app.
+2. Open **Settings** and switch input mode to **Demo mode**.
+3. Select **Sine** or **Chirp** as the demo signal.
+4. Start capture with **File → Start/Stop**.
+5. Freeze the current view with **File → Pause/Freeze**.
+6. Export evidence via **File → Export measurement CSV...** or
+   **File → Export measurement PNG...**.
 
-### Reproducible demo scenario
+### Use cases
 
-Use this scenario to reproduce a screenshot similar to `docs/images/screenshot.png`:
-
-1. Open **Settings** and switch input mode to **Demo mode**.
-2. Select **Sine** or **Chirp** as the demo signal.
-3. Start capture with **File → Start/Stop**.
-4. Freeze the current view with **File → Pause/Freeze**.
-5. Export the result via **File → Export measurement PNG...**.
+- **Detect dominant hum or noise frequency** by finding the strongest FFT peak.
+- **Validate generated test signals** by comparing the selected demo signal with the measured
+  dominant frequency and level.
+- **Inspect microphone input and export evidence** as CSV or PNG for reports, diagnostics or bug
+  tickets.
 
 ## Documentation
 
