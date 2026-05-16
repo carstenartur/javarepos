@@ -8,7 +8,15 @@
   <packaging>jar</packaging>
 
   <name>Audio Analyzer</name>
-  <description>Audio waveform analyzer and visualization tool</description>
+  <description>Real-time Java audio analysis laboratory with DSP, FFT spectrum, stereo delay estimation and acoustic diagnostics.</description>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <properties>
     <!-- Java version -->

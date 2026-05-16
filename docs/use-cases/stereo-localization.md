@@ -2,12 +2,8 @@
 
 Audio Analyzer can estimate the time delay between the left and right channels of a stereo
 microphone pair. With a known microphone spacing, that delay can be converted into an approximate
-path-length difference and angle of arrival.
-
-With a stereo microphone pair, Audio Analyzer estimates the inter-channel time delay and derives an
-approximate angle of arrival. This can help investigate short, localized sounds such as clicks,
-insects, fans or mechanical noises, but room reflections and microphone geometry strongly affect
-accuracy.
+path-length difference and broad angle-of-arrival estimate. This can help investigate short,
+localized sounds such as clicks, insects, fans or mechanical noises.
 
 ## What it can do
 
@@ -26,6 +22,13 @@ accuracy.
   localized high-frequency intermittent sound source.
 - It assumes the left/right channels are synchronized and that the microphone spacing setting
   matches the real setup.
+
+## Accuracy limitations
+
+The reported angle is an estimate from inter-channel time delay, not a precise position. Room
+reflections, reverberation, echoes, microphone spacing, microphone orientation and channel mismatch
+can dominate the result, especially indoors or near reflective surfaces. Treat stable readings as
+evidence of broad left/right direction, not exact source coordinates.
 
 ## How it works
 
