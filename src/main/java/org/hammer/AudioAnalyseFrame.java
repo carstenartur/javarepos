@@ -330,7 +330,8 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldMicrophoneSpacing.setText(
         String.format(Locale.ROOT, "%.2f", StereoDelayAnalyzer.DEFAULT_MICROPHONE_SPACING_METERS));
     textFieldMicrophoneSpacing.setColumns(5);
-    textFieldMicrophoneSpacing.setToolTipText("Stereo microphone spacing used for direction estimate");
+    textFieldMicrophoneSpacing.setToolTipText(
+        "Stereo microphone spacing used for direction estimate");
     settingsPanel.add(textFieldMicrophoneSpacing);
     return settingsPanel;
   }

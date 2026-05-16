@@ -75,15 +75,10 @@ public final class DemoPresetGenerator implements SignalGenerator {
     double burstPosition = seconds(absoluteFrame) % burstPeriod;
     double burstLength = 0.055;
     double envelope =
-        burstPosition < burstLength
-            ? Math.sin(Math.PI * burstPosition / burstLength)
-            : 0.0;
+        burstPosition < burstLength ? Math.sin(Math.PI * burstPosition / burstLength) : 0.0;
     double carrier = Math.sin(TWO_PI * 5_200.0 * absoluteFrame / sampleRate);
     double flutter = 0.65 + 0.35 * Math.sin(TWO_PI * 95.0 * absoluteFrame / sampleRate);
-    double echo =
-        0.18
-            * envelope
-            * Math.sin(TWO_PI * 5_200.0 * (absoluteFrame - 18) / sampleRate);
+    double echo = 0.18 * envelope * Math.sin(TWO_PI * 5_200.0 * (absoluteFrame - 18) / sampleRate);
     double noise = 0.015 * deterministicNoise(absoluteFrame + channel * 17L);
     return 0.52 * envelope * flutter * carrier + echo + noise;
   }

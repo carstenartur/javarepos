@@ -53,7 +53,8 @@ class StereoDelayAnalyzerTest {
 
   @Test
   void silence_does_not_produce_fake_localization() {
-    AudioBlock block = AudioBlock.wrap(STEREO_FORMAT, new float[][] {new float[512], new float[512]}, 0, 0);
+    AudioBlock block =
+        AudioBlock.wrap(STEREO_FORMAT, new float[][] {new float[512], new float[512]}, 0, 0);
     StereoDelayAnalyzer analyzer = new StereoDelayAnalyzer();
 
     StereoDelaySnapshot snapshot = analyzer.analyze(block);
@@ -114,8 +115,7 @@ class StereoDelayAnalyzerTest {
           (float)
               (0.6
                   * burstEnvelope
-                  * (0.6 * noise
-                      + 0.4 * Math.sin(2.0 * Math.PI * 3137.0 * i / SAMPLE_RATE)));
+                  * (0.6 * noise + 0.4 * Math.sin(2.0 * Math.PI * 3137.0 * i / SAMPLE_RATE)));
     }
     return signal;
   }

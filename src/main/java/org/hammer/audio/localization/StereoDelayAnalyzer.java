@@ -51,7 +51,8 @@ public final class StereoDelayAnalyzer implements AnalysisModule<StereoDelaySnap
     float[] left = block.channelView(0);
     float[] right = block.channelView(1);
     int frames = Math.min(left.length, right.length);
-    if (frames == 0 || rms(left, frames) < SILENCE_RMS_THRESHOLD
+    if (frames == 0
+        || rms(left, frames) < SILENCE_RMS_THRESHOLD
         || rms(right, frames) < SILENCE_RMS_THRESHOLD) {
       return invalid(block, StereoDelayStatus.SILENCE, 0, 0.0, new float[0], 0);
     }

@@ -59,8 +59,7 @@ public final class StereoDelaySnapshot implements AnalysisSnapshot {
     this.microphoneSpacingMeters = microphoneSpacingMeters;
     this.speedOfSoundMetersPerSecond = speedOfSoundMetersPerSecond;
     this.minCorrelationLagSamples = minCorrelationLagSamples;
-    this.correlationByLag =
-        correlationByLag == null ? new float[0] : correlationByLag.clone();
+    this.correlationByLag = correlationByLag == null ? new float[0] : correlationByLag.clone();
   }
 
   @Override
