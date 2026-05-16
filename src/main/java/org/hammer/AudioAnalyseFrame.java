@@ -55,6 +55,9 @@ import org.hammer.audio.analysis.MeasurementCalculator;
 import org.hammer.audio.analysis.MeasurementSnapshot;
 import org.hammer.audio.analysis.SpectrumSnapshot;
 import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.localization.StereoDelayAnalyzer;
+import org.hammer.audio.localization.StereoDelaySnapshot;
+import org.hammer.audio.localization.StereoDelayStatus;
 import org.hammer.audio.ui.theme.UiTheme;
 
 /**
@@ -102,6 +105,10 @@ public class AudioAnalyseFrame extends JFrame {
   private final JTextField textFieldDominantFrequency;
   private final JTextField textFieldStereoCorrelation;
   private final JTextField textFieldClipping;
+  private final JTextField textFieldMicrophoneSpacing;
+  private final JTextField textFieldStereoDelay;
+  private final JTextField textFieldStereoAngle;
+  private final JTextField textFieldStereoConfidence;
   private final JComboBox<AudioDeviceItem> comboBoxAudioDevice;
   private final JComboBox<DemoSignalType> comboBoxDemoSignal;
   private final JRadioButton radioLiveMicrophone;
@@ -156,6 +163,10 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldDominantFrequency = new JTextField();
     textFieldStereoCorrelation = new JTextField();
     textFieldClipping = new JTextField();
+    textFieldMicrophoneSpacing = new JTextField();
+    textFieldStereoDelay = new JTextField();
+    textFieldStereoAngle = new JTextField();
+    textFieldStereoConfidence = new JTextField();
     comboBoxAudioDevice = new JComboBox<>();
     comboBoxDemoSignal = new JComboBox<>(DemoSignalType.values());
     radioLiveMicrophone = new JRadioButton("Live microphone", true);
@@ -314,6 +325,13 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldPeakFrequency.setHorizontalAlignment(SwingConstants.CENTER);
     configureReadOnlyField(textFieldPeakFrequency, 10);
     settingsPanel.add(textFieldPeakFrequency);
+
+    settingsPanel.add(new JLabel("Mic spacing m"));
+    textFieldMicrophoneSpacing.setText(
+        String.format(Locale.ROOT, "%.2f", StereoDelayAnalyzer.DEFAULT_MICROPHONE_SPACING_METERS));
+    textFieldMicrophoneSpacing.setColumns(5);
+    textFieldMicrophoneSpacing.setToolTipText("Stereo microphone spacing used for direction estimate");
+    settingsPanel.add(textFieldMicrophoneSpacing);
     return settingsPanel;
   }
 
@@ -343,6 +361,18 @@ public class AudioAnalyseFrame extends JFrame {
     configureReadOnlyField(textFieldClipping, 5);
     textFieldClipping.setEnabled(true);
     measurementPanel.add(textFieldClipping);
+
+    measurementPanel.add(new JLabel("Delay"));
+    configureReadOnlyField(textFieldStereoDelay, 11);
+    measurementPanel.add(textFieldStereoDelay);
+
+    measurementPanel.add(new JLabel("Angle"));
+    configureReadOnlyField(textFieldStereoAngle, 8);
+    measurementPanel.add(textFieldStereoAngle);
+
+    measurementPanel.add(new JLabel("Conf"));
+    configureReadOnlyField(textFieldStereoConfidence, 7);
+    measurementPanel.add(textFieldStereoConfidence);
     return measurementPanel;
   }
 
@@ -537,6 +567,7 @@ public class AudioAnalyseFrame extends JFrame {
           measurementCalculator.calculate(
               currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
       updateMeasurementFields(measurements);
+      updateStereoDelayFields(currentMeasurementBlock());
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
@@ -544,6 +575,7 @@ public class AudioAnalyseFrame extends JFrame {
       textFieldAudioFormat.setText("");
       textFieldPeakFrequency.setText("n/a");
       updateMeasurementFields(NO_MEASUREMENT);
+      updateStereoDelayFields(null);
       mntmStart.setSelected(false);
     }
   }
@@ -572,6 +604,52 @@ public class AudioAnalyseFrame extends JFrame {
 
   private static String formatLevel(double value) {
     return Double.isNaN(value) ? "n/a" : String.format(Locale.ROOT, "%.4f", value);
+  }
+
+  private void updateStereoDelayFields(AudioBlock block) {
+    if (block == null) {
+      textFieldStereoDelay.setText("n/a");
+      textFieldStereoAngle.setText("n/a");
+      textFieldStereoConfidence.setText("n/a");
+      return;
+    }
+    StereoDelayAnalyzer analyzer =
+        new StereoDelayAnalyzer(
+            microphoneSpacingMeters(),
+            StereoDelayAnalyzer.DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND,
+            0.35);
+    StereoDelaySnapshot delay = analyzer.analyze(block);
+    textFieldStereoConfidence.setText(String.format(Locale.ROOT, "%.2f", delay.confidence()));
+    if (delay.valid()) {
+      textFieldStereoDelay.setText(
+          String.format(Locale.ROOT, "%+d / %+.2f ms", delay.delaySamples(), delay.delayMillis()));
+      textFieldStereoAngle.setText(String.format(Locale.ROOT, "%+.1f°", delay.angleDegrees()));
+    } else {
+      textFieldStereoDelay.setText(delayStatusLabel(delay.status()));
+      textFieldStereoAngle.setText("n/a");
+    }
+  }
+
+  private double microphoneSpacingMeters() {
+    try {
+      double spacing = Double.parseDouble(textFieldMicrophoneSpacing.getText().trim());
+      if (spacing > 0.0 && Double.isFinite(spacing)) {
+        return spacing;
+      }
+    } catch (NumberFormatException ex) {
+      LOGGER.fine(() -> "Invalid microphone spacing: " + textFieldMicrophoneSpacing.getText());
+    }
+    return StereoDelayAnalyzer.DEFAULT_MICROPHONE_SPACING_METERS;
+  }
+
+  private static String delayStatusLabel(StereoDelayStatus status) {
+    return switch (status) {
+      case MONO_INPUT -> "mono";
+      case SILENCE -> "silence";
+      case LOW_CORRELATION -> "low corr";
+      case DELAY_OUTSIDE_PHYSICAL_RANGE -> "impossible";
+      case VALID -> "valid";
+    };
   }
 
   private void exportMeasurementCsv() {
