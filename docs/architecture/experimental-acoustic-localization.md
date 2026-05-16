@@ -65,14 +65,41 @@ application model.
 
 ## Modularization plan
 
+Full Maven modularization is intentionally deferred for this PR. Splitting the existing
+single-artifact Swing application into `audio-core`, `audio-acquisition`, `audio-dsp`,
+`audio-experimental-acoustic` and `audio-app` is feasible, but it would be a broad build-layout
+change unrelated to proving the acoustic experiment boundary.
+
+The current decision is:
+
 1. Keep the current Maven artifact as the compatibility boundary for now.
 2. Treat package roots as modules: stable `audio.*` APIs versus `audio.experimental.*` plugins.
-3. Promote only proven generic interfaces from the plugin into core.
-4. If dependencies diverge later, split Maven modules in this direction: `audio-core`,
-   `audio-acquisition`, `audio-dsp`, `audio-experimental-acoustic`, `audio-app`.
+3. Enforce the dependency direction with `ArchitectureBoundaryTest` in the Maven test suite.
+4. Promote only proven generic interfaces from the plugin into core.
+5. Split Maven modules later when either dependency sets diverge or the acoustic plugin needs an
+   independent release cadence.
+
+The intended future Maven direction remains:
+
+- `audio-core` for `AudioBlock`, format metadata and generic immutable domain models;
+- `audio-acquisition` for synchronized source and microphone-array contracts;
+- `audio-dsp` / `audio-analysis` for reusable FFT, DSP and analyzer contracts;
+- `audio-experimental-acoustic` for mosquito/insect-specific research components;
+- `audio-app` for Swing UI, JavaSound wiring and packaging.
+
+## Enforced dependency guards
+
+`src/test/java/org/hammer/audio/ArchitectureBoundaryTest.java` currently fails the build if:
+
+- stable packages under `org.hammer.audio` import `org.hammer.audio.experimental.*`;
+- `org.hammer.audio.dsp`, `org.hammer.audio.acquisition` or `org.hammer.audio.geometry` import UI
+  packages or top-level Swing application packages.
+
+This keeps experimental acoustic code dependent on stable APIs only, while preventing stable core,
+DSP, acquisition or geometry code from depending on the plugin or app/UI layers.
 
 ## Rationale
 
 A package-level module is the smallest backwards-compatible refactor for the existing single-module
-project. It avoids introducing build complexity before the research surface stabilizes while still
-making the dependency direction explicit and enforceable by code review.
+project. It avoids introducing build complexity before the research surface stabilizes while making
+the dependency direction explicit and enforceable by automated tests.

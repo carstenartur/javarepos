@@ -80,11 +80,14 @@ class MosquitoLocalizationPipelineTest {
 
   @Test
   void validatesConstructorAndAnalysisInputs() {
-    WingbeatFrequencyTracker tracker = new WingbeatFrequencyTracker(128, new FrequencyBand(300.0, 900.0));
+    WingbeatFrequencyTracker tracker =
+        new WingbeatFrequencyTracker(128, new FrequencyBand(300.0, 900.0));
     DelayAndSumBeamformer beamformer = new DelayAndSumBeamformer(343.0);
     assertThrows(
         NullPointerException.class,
-        () -> new MosquitoLocalizationPipeline(null, new RecordingEstimator(), beamformer, List.of(Vector2.ZERO)));
+        () ->
+            new MosquitoLocalizationPipeline(
+                null, new RecordingEstimator(), beamformer, List.of(Vector2.ZERO)));
     assertThrows(
         IllegalArgumentException.class,
         () ->
@@ -104,10 +107,17 @@ class MosquitoLocalizationPipelineTest {
 
     MosquitoLocalizationPipeline pipeline =
         new MosquitoLocalizationPipeline(
-            tracker, new RecordingEstimator(), beamformer, List.of(Vector2.ZERO), 2, false, TdoaPairingMode.ALL_PAIRS);
+            tracker,
+            new RecordingEstimator(),
+            beamformer,
+            List.of(Vector2.ZERO),
+            2,
+            false,
+            TdoaPairingMode.ALL_PAIRS);
     assertThrows(NullPointerException.class, () -> pipeline.analyze(null, testArray(2)));
     assertThrows(NullPointerException.class, () -> pipeline.analyze(testBlock(2), null));
-    assertThrows(IllegalArgumentException.class, () -> pipeline.analyze(testBlock(2), testArray(2)));
+    assertThrows(
+        IllegalArgumentException.class, () -> pipeline.analyze(testBlock(2), testArray(2)));
   }
 
   private static AudioBlock testBlock(int channels) {
@@ -147,7 +157,12 @@ class MosquitoLocalizationPipelineTest {
         AudioBlock block, MicrophoneArray array, int firstChannel, int secondChannel) {
       pairs.add(firstChannel + ":" + secondChannel);
       return new TdoaEstimate(
-          array.microphone(firstChannel).id(), array.microphone(secondChannel).id(), 0, 0.0, 0.0, 1.0);
+          array.microphone(firstChannel).id(),
+          array.microphone(secondChannel).id(),
+          0,
+          0.0,
+          0.0,
+          1.0);
     }
   }
 }

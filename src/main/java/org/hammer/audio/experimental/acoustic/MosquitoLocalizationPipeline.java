@@ -77,7 +77,8 @@ public final class MosquitoLocalizationPipeline {
       throw new IllegalArgumentException("block channel count must match microphone array");
     }
     if (frequencyReferenceChannel >= array.channels()) {
-      throw new IllegalArgumentException("frequencyReferenceChannel must exist in microphone array");
+      throw new IllegalArgumentException(
+          "frequencyReferenceChannel must exist in microphone array");
     }
     SpectralPeak peak = trackFrequency(block, array);
     List<TdoaEstimate> estimates = new ArrayList<>();

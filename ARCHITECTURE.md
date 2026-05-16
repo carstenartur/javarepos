@@ -205,6 +205,8 @@ The acoustic localization work is intentionally isolated under
 `org.hammer.audio.experimental.acoustic`. Stable packages provide only reusable acquisition and
 geometry abstractions; mosquito-specific frequency tracking, room simulation, GCC-PHAT/TDOA
 experiments and beamforming stay in the plugin. Core code must not import `org.hammer.audio.experimental.*`.
+`ArchitectureBoundaryTest` enforces that stable audio packages do not import experimental packages
+and that DSP/acquisition/geometry do not depend on Swing/UI/app packages.
 
 See [`docs/architecture/experimental-acoustic-localization.md`](docs/architecture/experimental-acoustic-localization.md)
 and [`docs/plugins/acoustic-localization/README.md`](docs/plugins/acoustic-localization/README.md) for the

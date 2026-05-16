@@ -1,7 +1,7 @@
 package org.hammer.audio.experimental.acoustic.simulation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -75,7 +75,8 @@ class SimulatedMicrophoneArraySourceTest {
   void reflectionAndNoiseConfigurationAffectsSignal() {
     MicrophoneArray array = array();
     SimulatedMicrophoneArraySource dry = source(array, 7L, movingEmitter(), room(0.0, 0.0));
-    SimulatedMicrophoneArraySource reflectedNoisy = source(array, 7L, movingEmitter(), room(0.4, 0.02));
+    SimulatedMicrophoneArraySource reflectedNoisy =
+        source(array, 7L, movingEmitter(), room(0.4, 0.02));
 
     AudioBlock dryBlock = dry.readBlock(256).orElseThrow();
     AudioBlock reflectedNoisyBlock = reflectedNoisy.readBlock(256).orElseThrow();
@@ -89,7 +90,11 @@ class SimulatedMicrophoneArraySourceTest {
   }
 
   private static SimulatedMicrophoneArraySource source(
-      MicrophoneArray array, long seed, SoundEmitter2D firstEmitter, SoundEmitter2D secondEmitter, Room2D room) {
+      MicrophoneArray array,
+      long seed,
+      SoundEmitter2D firstEmitter,
+      SoundEmitter2D secondEmitter,
+      Room2D room) {
     List<SoundEmitter2D> emitters =
         secondEmitter == null ? List.of(firstEmitter) : List.of(firstEmitter, secondEmitter);
     return new SimulatedMicrophoneArraySource(room, array, emitters, 8_000.0f, 0.2, seed);

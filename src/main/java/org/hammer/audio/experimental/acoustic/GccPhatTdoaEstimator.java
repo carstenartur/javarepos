@@ -1,8 +1,8 @@
 package org.hammer.audio.experimental.acoustic;
 
-import org.hammer.audio.analysis.Fft;
 import org.hammer.audio.acquisition.Microphone;
 import org.hammer.audio.acquisition.MicrophoneArray;
+import org.hammer.audio.analysis.Fft;
 import org.hammer.audio.core.AudioBlock;
 
 /**
@@ -121,6 +121,5 @@ public final class GccPhatTdoaEstimator implements TdoaEstimator {
     return Math.max(2, result);
   }
 
-  private record LagScore(int lag, double confidence) {
-  }
+  private record LagScore(int lag, double confidence) {}
 }

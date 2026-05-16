@@ -38,7 +38,8 @@ class ArchitectureBoundaryTest {
   void dspAcquisitionAndGeometryDoNotDependOnUiOrAppPackages() throws IOException {
     List<String> violations = new ArrayList<>();
     for (String packagePath : List.of("dsp", "acquisition", "geometry")) {
-      try (Stream<Path> files = Files.walk(MAIN_JAVA.resolve("org/hammer/audio").resolve(packagePath))) {
+      try (Stream<Path> files =
+          Files.walk(MAIN_JAVA.resolve("org/hammer/audio").resolve(packagePath))) {
         files
             .filter(path -> path.toString().endsWith(".java"))
             .forEach(

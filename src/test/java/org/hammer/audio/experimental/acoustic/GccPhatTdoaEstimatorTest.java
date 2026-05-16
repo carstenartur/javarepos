@@ -32,7 +32,8 @@ class GccPhatTdoaEstimatorTest {
     assertTrue(estimate.confidence() > 0.05);
   }
 
-  private static AudioBlock delayedPulseBlock(int delay, double noiseAmplitude, boolean reflection) {
+  private static AudioBlock delayedPulseBlock(
+      int delay, double noiseAmplitude, boolean reflection) {
     int sampleRate = 48_000;
     int frames = 512;
     float[][] samples = new float[2][frames];
