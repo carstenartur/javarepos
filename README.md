@@ -108,6 +108,10 @@ dominant frequency, RMS/peak level and clipping status visible in one view._
   targets.
 - [Stereo localization](docs/use-cases/stereo-localization.md) — what stereo time-delay analysis
   can and cannot infer, microphone spacing, cross-correlation and demo usage.
+- [Experimental acoustic localization architecture](docs/architecture/experimental-acoustic-localization.md) —
+  module boundaries for reusable core APIs versus research plugin code.
+- [Acoustic localization plugin](docs/plugins/acoustic-localization/README.md) — DSP concepts,
+  microphone setup, simulator, limitations and future research directions.
 - [Roadmap](ROADMAP.md) — planned features and next issues.
 
 ## License
