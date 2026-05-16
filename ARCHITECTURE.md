@@ -185,9 +185,14 @@ These presets enable headless tests, repeatable demos and deterministic DSP/loca
 
 ### 7. UI-only pixel scaling
 
-`WaveformRenderer` is the single place that converts a `WaveformSnapshot` into pixel-space arrays
-for a Swing canvas. Swing panels consume immutable audio-domain snapshots or `AudioBlock` data and
-perform rendering/export at the application boundary.
+`WaveformRenderer` is the single place that converts a `WaveformSnapshot` into pixel-space
+arrays for a Swing canvas. Swing panels consume immutable audio-domain snapshots or
+`AudioBlock` data and perform rendering/export at the application boundary.
+
+For backwards compatibility the capture worker still builds a legacy `WaveformModel` via
+`WaveformRenderer` so existing Swing panels keep working without changes; new consumers should
+prefer `getRingBuffer()` / `getLatestBlock()` and call `WaveformRenderer` themselves at the UI
+layer.
 
 ## Capture lifecycle
 
@@ -222,7 +227,10 @@ New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 |-------------------------------------------|-------------------------------------------------------------------------------|
 | New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                                     |
 | New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` where `MySnapshot` implements `AnalysisSnapshot` |
+| New spectrum-derived view                 | Reuse `SpectrumAnalyzer` / `SpectrogramAnalyzer` output, add a UI renderer    |
+| New diagnostic rule                       | Add a rule to `DiagnosisAnalyzer` returning a `DiagnosisFinding`              |
 | New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot              |
+| New experimental localization algorithm   | New class under `org.hammer.audio.experimental.acoustic` (plugin module only) |
 | New visualization                         | Concrete snapshot class or `AudioBlock` input plus a UI renderer/panel        |
 | Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                     |
 | Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`                   |

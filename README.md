@@ -21,14 +21,23 @@ live waveform, spectrum, phase and stereo-delay readouts for microphone input or
   `float[channels][frames]` samples, frame indices and timestamps; no UI types.
 - **Lock-free SPSC ring buffer** for realtime workloads, with `offer` and `offerOverwrite`.
 - **DSP extension points** — implement `DSPProcessor` and chain stages with `DSPPipeline`.
-- **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT) and
-  `StereoDelayAnalyzer` producing immutable snapshots for UI or other consumers.
+- **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT),
+  `StereoDelayAnalyzer`, `SpectrogramAnalyzer` and rule-based `DiagnosisAnalyzer` producing
+  immutable snapshots for UI or other consumers.
+- **Acquisition abstractions** — `Microphone`, `MicrophoneArray`, `MultiChannelAudioSource` and
+  `SampleClock` in `audio-acquisition` provide UI-/JavaSound-free contracts that experimental
+  multi-channel research code (e.g. acoustic localization) builds on.
 - **Deterministic synthetic signals** — sine, square, chirp, hum/harmonics, clipping,
   stereo-delay, moving-chirp and mosquito-like high-frequency burst presets for tests, headless
   demos and DSP verification.
 - **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
-  demo mode, pause/freeze, peak-frequency + measurement readouts, stereo-delay / approximate
-  direction estimate, and CSV/PNG export for quick acoustic diagnostics.
+  spectrogram and diagnosis panels, demo mode, pause/freeze, peak-frequency + measurement
+  readouts, stereo-delay / approximate direction estimate, and CSV/PNG / evidence-bundle export
+  for quick acoustic diagnostics.
+- **Experimental acoustic localization** (`audio-experimental-acoustic`) — isolated research
+  plugin with wingbeat frequency tracking, GCC-PHAT / cross-correlation TDOA estimators,
+  delay-and-sum beamforming and a deterministic 2D room simulator. Not a production tracker —
+  see the [experimental docs](docs/plugins/acoustic-localization/README.md) for limitations.
 - **Headless-friendly tests** — unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -120,6 +129,10 @@ audio-app                  -> audio-core, audio-dsp
 
 - [Architecture](ARCHITECTURE.md) — layered architecture, packages, design choices, capture
   lifecycle, extension points.
+- [QA findings & technical debt](docs/QA-FINDINGS.md) — current QA-pass summary, known doc/code
+  drift items and prioritized follow-ups.
+- [Contributing guide](docs/contributing/README.md) — where stable APIs vs experiments live,
+  how to add a new analyzer or DSP experiment safely.
 - [Migration notes](docs/MIGRATION.md) — moving from the legacy `WaveformModel`-centric API to
   the new platform.
 - [Audio configuration & threading](docs/audio-and-threading.md) — capture parameters, threading
@@ -135,6 +148,22 @@ audio-app                  -> audio-core, audio-dsp
 - [Acoustic localization plugin](docs/plugins/acoustic-localization/README.md) — DSP concepts,
   microphone setup, simulator, limitations and future research directions.
 - [Roadmap](ROADMAP.md) — planned features and next issues.
+
+## Project status
+
+This repository is best read as **a reusable Java audio/DSP laboratory with experimental
+acoustic-localization extensions**, not a finished production acoustic tracking platform:
+
+- The capture, ring-buffer, DSP-pipeline, FFT, spectrum, RMS/peak, stereo-delay, spectrogram,
+  rule-based diagnosis and Swing visualization layers are **stable infrastructure** with unit
+  tests and architecture-boundary tests.
+- The contents of `audio-experimental-acoustic` (wingbeat tracking, TDOA, beamforming, room
+  simulation) are **experimental research code** and intentionally isolated from stable modules.
+  They are validated mostly against synthetic signals.
+- Quality gates are reporting-only today; see [docs/quality.md](docs/quality.md) for the
+  hardening roadmap.
+
+See [docs/QA-FINDINGS.md](docs/QA-FINDINGS.md) for a current list of remaining technical debt.
 
 ## License
 

@@ -100,12 +100,13 @@ int[][] ys = WaveformRenderer.computeYPointsAllChannels(snap, panelHeight);
 g.drawPolyline(xs, ys[0], xs.length);
 ```
 
-## Removing the legacy `WaveformModel`
+## Status of the legacy `WaveformModel`
 
 The legacy model is still emitted on every capture iteration to keep existing Swing panels
-working. When all consumers have migrated to `WaveformSnapshot`, the model can be removed in
-a follow-up PR. Until then, both representations are kept in sync (the legacy model is built
-from the same `AudioBlock` the rest of the platform sees).
+working. There is no scheduled removal: both representations are kept in sync (the legacy model
+is built from the same `AudioBlock` the rest of the platform sees), and the legacy API will only
+be retired once all in-tree consumers have migrated to `WaveformSnapshot` and a deprecation
+window has been provided.
 
 ## Compatibility matrix
 
