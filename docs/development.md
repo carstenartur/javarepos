@@ -31,10 +31,10 @@ Artifacts use a fixed `project.build.outputTimestamp`, so repeated builds from t
 
 ```bash
 ./mvnw clean package
-sha256sum target/audioin-0.0.1-SNAPSHOT.jar
+sha256sum audio-app/target/audio-app-0.0.1-SNAPSHOT.jar
 
 ./mvnw clean package
-sha256sum target/audioin-0.0.1-SNAPSHOT.jar
+sha256sum audio-app/target/audio-app-0.0.1-SNAPSHOT.jar
 # Both checksums must match.
 ```
 

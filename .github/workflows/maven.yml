@@ -48,7 +48,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: junit-xml
-        path: target/surefire-reports/*.xml
+        path: '**/target/surefire-reports/*.xml'
         if-no-files-found: ignore
         retention-days: 30
     
@@ -58,8 +58,8 @@ jobs:
       with:
         name: surefire-raw
         path: |
-          target/surefire-reports/*.txt
-          target/surefire-reports/*.dump
+          **/target/surefire-reports/*.txt
+          **/target/surefire-reports/*.dump
         if-no-files-found: ignore
         retention-days: 30
     
@@ -73,7 +73,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: surefire-html
-        path: target/site/
+        path: '**/target/site/'
         if-no-files-found: ignore
         retention-days: 30
     
@@ -82,7 +82,7 @@ jobs:
       uses: dorny/test-reporter@v3.0.0
       with:
         name: JUnit Tests
-        path: target/surefire-reports/*.xml
+        path: '**/target/surefire-reports/*.xml'
         reporter: java-junit
         fail-on-error: false
     
@@ -91,7 +91,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: jacoco-report
-        path: target/site/jacoco/
+        path: '**/target/site/jacoco/'
         retention-days: 30
     
     - name: Upload Checkstyle report
@@ -99,7 +99,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: checkstyle-report
-        path: target/checkstyle-result.xml
+        path: '**/target/checkstyle-result.xml'
         if-no-files-found: ignore
         retention-days: 30
     
@@ -108,7 +108,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: spotbugs-report
-        path: target/spotbugsXml.xml
+        path: '**/target/spotbugsXml.xml'
         if-no-files-found: ignore
         retention-days: 30
     
@@ -117,19 +117,19 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: pmd-report
-        path: target/pmd.xml
+        path: '**/target/pmd.xml'
         if-no-files-found: ignore
         retention-days: 30
     
     - name: Debug coverage path
       if: always()
-      run: ls -al target/site/jacoco || echo "JaCoCo directory missing"
+      run: find . -maxdepth 5 -path '*/target/site/jacoco' -type d -print
     
     - name: Upload coverage reports to Codecov
       if: always()
       uses: codecov/codecov-action@v6
       with:
-        files: ./target/site/jacoco/jacoco.xml
+        files: '**/target/site/jacoco/jacoco.xml'
         fail_ci_if_error: false
         verbose: true
 
