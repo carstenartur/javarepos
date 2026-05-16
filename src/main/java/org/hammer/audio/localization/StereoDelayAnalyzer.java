@@ -145,8 +145,7 @@ public final class StereoDelayAnalyzer implements AnalysisModule<StereoDelaySnap
   private int physicallyPossibleLagSamples(float sampleRate, int frames) {
     double maxDelaySeconds = microphoneSpacingMeters / speedOfSoundMetersPerSecond;
     int physicalLag = (int) Math.ceil(maxDelaySeconds * sampleRate);
-    int frameBasedMaxLag = frames - 1;
-    return physicalLag <= frameBasedMaxLag ? physicalLag : frameBasedMaxLag;
+    return Math.min(physicalLag, frames - 1);
   }
 
   private static double normalizedCorrelation(float[] left, float[] right, int frames, int lag) {

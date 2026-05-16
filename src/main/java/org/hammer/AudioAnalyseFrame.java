@@ -643,6 +643,7 @@ public class AudioAnalyseFrame extends JFrame {
   private StereoDelayAnalyzer stereoDelayAnalyzer() {
     double spacingMeters = microphoneSpacingMeters();
     if (stereoDelayAnalyzer == null
+        || !Double.isFinite(stereoDelayAnalyzerSpacingMeters)
         || Double.compare(stereoDelayAnalyzerSpacingMeters, spacingMeters) != 0) {
       stereoDelayAnalyzer =
           new StereoDelayAnalyzer(
