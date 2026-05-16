@@ -1,6 +1,7 @@
 package org.hammer;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -23,6 +24,7 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
@@ -33,6 +35,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
@@ -47,6 +50,10 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.hammer.audio.AudioCaptureService;
 import org.hammer.audio.AudioCaptureServiceImpl;
+import org.hammer.audio.DemoAudioCaptureService;
+import org.hammer.audio.DemoSignalType;
+import org.hammer.audio.analysis.MeasurementCalculator;
+import org.hammer.audio.analysis.MeasurementSnapshot;
 import org.hammer.audio.analysis.SpectrumSnapshot;
 import org.hammer.audio.core.AudioBlock;
 
@@ -75,6 +82,9 @@ public class AudioAnalyseFrame extends JFrame {
   private static final int DEFAULT_CHANNELS = 2;
   private static final boolean DEFAULT_SIGNED = false;
   private static final boolean DEFAULT_BIG_ENDIAN = false;
+  private static final int TOP_PANEL_HGAP = 8;
+  private static final MeasurementSnapshot NO_MEASUREMENT =
+      new MeasurementSnapshot(Double.NaN, Double.NaN, Double.NaN, Double.NaN, false, false);
 
   private final JPanel contentPane;
   private final JPanel visualizationPanel = new JPanel(new BorderLayout(4, 4));
@@ -86,7 +96,16 @@ public class AudioAnalyseFrame extends JFrame {
   private final JTextField textFieldDivisor;
   private final JTextField textFieldAudioFormat;
   private final JTextField textFieldPeakFrequency;
+  private final JTextField textFieldRms;
+  private final JTextField textFieldPeakLevel;
+  private final JTextField textFieldDominantFrequency;
+  private final JTextField textFieldStereoCorrelation;
+  private final JTextField textFieldClipping;
   private final JComboBox<AudioDeviceItem> comboBoxAudioDevice;
+  private final JComboBox<DemoSignalType> comboBoxDemoSignal;
+  private final JRadioButton radioLiveMicrophone;
+  private final JRadioButton radioDemoMode;
+  private final MeasurementCalculator measurementCalculator = new MeasurementCalculator();
 
   private final JCheckBoxMenuItem mntmStart;
   private final JCheckBoxMenuItem mntmFreeze;
@@ -95,6 +114,7 @@ public class AudioAnalyseFrame extends JFrame {
   // Audio capture service
   private AudioCaptureService audioCaptureService;
   private transient AudioBlock frozenBlock;
+  private transient InputMode inputMode = InputMode.LIVE;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(
@@ -124,7 +144,15 @@ public class AudioAnalyseFrame extends JFrame {
     textFieldDivisor = new JTextField();
     textFieldAudioFormat = new JTextField();
     textFieldPeakFrequency = new JTextField();
+    textFieldRms = new JTextField();
+    textFieldPeakLevel = new JTextField();
+    textFieldDominantFrequency = new JTextField();
+    textFieldStereoCorrelation = new JTextField();
+    textFieldClipping = new JTextField();
     comboBoxAudioDevice = new JComboBox<>();
+    comboBoxDemoSignal = new JComboBox<>(DemoSignalType.values());
+    radioLiveMicrophone = new JRadioButton("Live microphone", true);
+    radioDemoMode = new JRadioButton("Demo mode");
     mntmStart = new JCheckBoxMenuItem("Start/Stop");
     mntmFreeze = new JCheckBoxMenuItem("Pause/Freeze");
 
@@ -160,15 +188,25 @@ public class AudioAnalyseFrame extends JFrame {
   private void initializeAudioService(Mixer.Info mixerInfo) {
     LOGGER.info("Initializing audio capture service");
     int divisor = audioCaptureService != null ? audioCaptureService.getDivisor() : 1;
-    audioCaptureService =
-        new AudioCaptureServiceImpl(
-            DEFAULT_SAMPLE_RATE,
-            DEFAULT_SAMPLE_BITS,
-            DEFAULT_CHANNELS,
-            DEFAULT_SIGNED,
-            DEFAULT_BIG_ENDIAN,
-            divisor,
-            mixerInfo);
+    if (inputMode == InputMode.DEMO) {
+      audioCaptureService =
+          new DemoAudioCaptureService(
+              DEFAULT_SAMPLE_RATE,
+              DEFAULT_SAMPLE_BITS,
+              DEFAULT_CHANNELS,
+              divisor,
+              selectedDemoSignal());
+    } else {
+      audioCaptureService =
+          new AudioCaptureServiceImpl(
+              DEFAULT_SAMPLE_RATE,
+              DEFAULT_SAMPLE_BITS,
+              DEFAULT_CHANNELS,
+              DEFAULT_SIGNED,
+              DEFAULT_BIG_ENDIAN,
+              divisor,
+              mixerInfo);
+    }
 
     waveformPanel.setAudioCaptureService(audioCaptureService);
     phaseDiagramPanel.setAudioCaptureService(audioCaptureService);
@@ -212,8 +250,17 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void initTopSettingsPanel() {
-    JPanel textfelder = new JPanel();
-    textfelder.setBorder(
+    JPanel topContainer = new JPanel(new GridLayout(1, 2, TOP_PANEL_HGAP, 0));
+    contentPane.add(topContainer, BorderLayout.NORTH);
+    topContainer.add(createSettingsPanel());
+    topContainer.add(createMeasurementPanel());
+    updateModeControls();
+    updateUIFromModel();
+  }
+
+  private JPanel createSettingsPanel() {
+    JPanel settingsPanel = new JPanel();
+    settingsPanel.setBorder(
         new TitledBorder(
             new EtchedBorder(EtchedBorder.LOWERED, null, null),
             "Settings",
@@ -221,51 +268,94 @@ public class AudioAnalyseFrame extends JFrame {
             TitledBorder.TOP,
             null,
             null));
-    contentPane.add(textfelder, BorderLayout.NORTH);
-    textfelder.setLayout(new GridLayout(5, 2, 4, 2));
+    settingsPanel.setLayout(new GridLayout(7, 2, 4, 2));
 
-    JLabel lblAudioDevice = new JLabel("Audio Device");
-    textfelder.add(lblAudioDevice);
+    settingsPanel.add(new JLabel("Input mode"));
+    JPanel modePanel = new JPanel(new GridLayout(1, 2, 4, 0));
+    ButtonGroup buttonGroup = new ButtonGroup();
+    buttonGroup.add(radioLiveMicrophone);
+    buttonGroup.add(radioDemoMode);
+    radioLiveMicrophone.addActionListener(e -> switchInputMode(InputMode.LIVE));
+    radioDemoMode.addActionListener(e -> switchInputMode(InputMode.DEMO));
+    modePanel.add(radioLiveMicrophone);
+    modePanel.add(radioDemoMode);
+    settingsPanel.add(modePanel);
 
+    settingsPanel.add(new JLabel("Demo signal"));
+    comboBoxDemoSignal.addItemListener(
+        event -> {
+          if (event.getStateChange() == ItemEvent.SELECTED && inputMode == InputMode.DEMO) {
+            switchServicePreservingRunning(null);
+          }
+        });
+    settingsPanel.add(comboBoxDemoSignal);
+
+    settingsPanel.add(new JLabel("Audio device"));
     populateAudioDeviceChoices();
     comboBoxAudioDevice.addItemListener(this::audioDeviceSelectionChanged);
-    textfelder.add(comboBoxAudioDevice);
+    settingsPanel.add(comboBoxAudioDevice);
 
-    JLabel lblDatasize = new JLabel("datasize");
-    textfelder.add(lblDatasize);
+    settingsPanel.add(new JLabel("datasize"));
+    configureReadOnlyField(textFieldDataSize, 10);
+    settingsPanel.add(textFieldDataSize);
 
-    textFieldDataSize.setEnabled(false);
-    textFieldDataSize.setEditable(false);
-    textFieldDataSize.setColumns(10);
-    textfelder.add(textFieldDataSize);
+    settingsPanel.add(new JLabel("divisor"));
+    configureReadOnlyField(textFieldDivisor, 10);
+    settingsPanel.add(textFieldDivisor);
 
-    JLabel lblDivisor = new JLabel("divisor");
-    textfelder.add(lblDivisor);
-
-    textFieldDivisor.setEnabled(false);
-    textFieldDivisor.setEditable(false);
-    textFieldDivisor.setColumns(10);
-    textfelder.add(textFieldDivisor);
-
-    JLabel lblAudioformat = new JLabel("audioformat");
-    textfelder.add(lblAudioformat);
-
+    settingsPanel.add(new JLabel("audioformat"));
     textFieldAudioFormat.setHorizontalAlignment(SwingConstants.CENTER);
-    textFieldAudioFormat.setEnabled(false);
-    textFieldAudioFormat.setEditable(false);
-    textFieldAudioFormat.setColumns(30);
-    textfelder.add(textFieldAudioFormat);
+    configureReadOnlyField(textFieldAudioFormat, 30);
+    settingsPanel.add(textFieldAudioFormat);
 
-    JLabel lblPeakFrequency = new JLabel("Peak Frequency");
-    textfelder.add(lblPeakFrequency);
-
+    settingsPanel.add(new JLabel("Peak Frequency"));
     textFieldPeakFrequency.setHorizontalAlignment(SwingConstants.CENTER);
-    textFieldPeakFrequency.setEnabled(false);
-    textFieldPeakFrequency.setEditable(false);
-    textFieldPeakFrequency.setColumns(12);
-    textfelder.add(textFieldPeakFrequency);
+    configureReadOnlyField(textFieldPeakFrequency, 12);
+    settingsPanel.add(textFieldPeakFrequency);
+    return settingsPanel;
+  }
 
-    updateUIFromModel();
+  private JPanel createMeasurementPanel() {
+    JPanel measurementPanel = new JPanel();
+    measurementPanel.setBorder(
+        new TitledBorder(
+            new EtchedBorder(EtchedBorder.LOWERED, null, null),
+            "Measurements",
+            TitledBorder.LEADING,
+            TitledBorder.TOP,
+            null,
+            null));
+    measurementPanel.setLayout(new GridLayout(5, 2, 4, 2));
+
+    measurementPanel.add(new JLabel("RMS"));
+    configureReadOnlyField(textFieldRms, 10);
+    measurementPanel.add(textFieldRms);
+
+    measurementPanel.add(new JLabel("Peak level"));
+    configureReadOnlyField(textFieldPeakLevel, 10);
+    measurementPanel.add(textFieldPeakLevel);
+
+    measurementPanel.add(new JLabel("Dominant frequency"));
+    configureReadOnlyField(textFieldDominantFrequency, 12);
+    measurementPanel.add(textFieldDominantFrequency);
+
+    measurementPanel.add(new JLabel("Stereo correlation"));
+    configureReadOnlyField(textFieldStereoCorrelation, 10);
+    measurementPanel.add(textFieldStereoCorrelation);
+
+    measurementPanel.add(new JLabel("Clipping"));
+    textFieldClipping.setHorizontalAlignment(SwingConstants.CENTER);
+    textFieldClipping.setOpaque(true);
+    configureReadOnlyField(textFieldClipping, 10);
+    textFieldClipping.setEnabled(true);
+    measurementPanel.add(textFieldClipping);
+    return measurementPanel;
+  }
+
+  private void configureReadOnlyField(JTextField textField, int columns) {
+    textField.setEnabled(false);
+    textField.setEditable(false);
+    textField.setColumns(columns);
   }
 
   private void initCenterAndEast() {
@@ -318,13 +408,37 @@ public class AudioAnalyseFrame extends JFrame {
     if (event.getStateChange() != ItemEvent.SELECTED) {
       return;
     }
-    AudioDeviceItem item = (AudioDeviceItem) event.getItem();
-    boolean wasRunning = audioCaptureService != null && audioCaptureService.isRunning();
-    if (wasRunning) {
-      stopAudioIfRunning();
-      mntmStart.setSelected(false);
+    if (inputMode == InputMode.DEMO) {
+      return;
     }
-    initializeAudioService(item.mixerInfo());
+    AudioDeviceItem item = (AudioDeviceItem) event.getItem();
+    switchServicePreservingRunning(item.mixerInfo());
+  }
+
+  private void switchInputMode(InputMode newMode) {
+    if (newMode == inputMode) {
+      updateModeControls();
+      return;
+    }
+    inputMode = newMode;
+    updateModeControls();
+    switchServicePreservingRunning(selectedMixerInfo());
+  }
+
+  private void updateModeControls() {
+    boolean demoMode = inputMode == InputMode.DEMO;
+    radioLiveMicrophone.setSelected(!demoMode);
+    radioDemoMode.setSelected(demoMode);
+    comboBoxAudioDevice.setEnabled(!demoMode);
+    comboBoxDemoSignal.setEnabled(demoMode);
+  }
+
+  private void switchServicePreservingRunning(Mixer.Info mixerInfo) {
+    boolean wasRunning = audioCaptureService != null && audioCaptureService.isRunning();
+    stopAudioIfRunning();
+    mntmStart.setSelected(false);
+    initializeAudioService(mixerInfo);
+    updateModeControls();
     if (wasRunning) {
       try {
         audioCaptureService.start();
@@ -333,11 +447,27 @@ public class AudioAnalyseFrame extends JFrame {
         LOGGER.log(Level.SEVERE, "Failed to restart audio capture", ex);
         JOptionPane.showMessageDialog(
             this,
-            "Failed to start selected audio device: " + ex.getMessage(),
+            "Failed to start selected source: " + ex.getMessage(),
             ERROR_TITLE,
             JOptionPane.ERROR_MESSAGE);
       }
     }
+  }
+
+  private Mixer.Info selectedMixerInfo() {
+    Object selectedItem = comboBoxAudioDevice.getSelectedItem();
+    if (selectedItem instanceof AudioDeviceItem audioDeviceItem) {
+      return audioDeviceItem.mixerInfo();
+    }
+    return null;
+  }
+
+  private DemoSignalType selectedDemoSignal() {
+    Object selectedItem = comboBoxDemoSignal.getSelectedItem();
+    if (selectedItem instanceof DemoSignalType signalType) {
+      return signalType;
+    }
+    return DemoSignalType.SINE;
   }
 
   private void toggleAudioStartStop(ActionEvent evt) {
@@ -399,14 +529,45 @@ public class AudioAnalyseFrame extends JFrame {
       double peakHz = spectrumPanel.getPeakFrequencyHz();
       textFieldPeakFrequency.setText(
           Double.isNaN(peakHz) ? "n/a" : String.format("%.1f Hz", peakHz));
+      MeasurementSnapshot measurements =
+          measurementCalculator.calculate(
+              currentMeasurementBlock(), spectrumPanel.getCurrentSpectrum());
+      updateMeasurementFields(measurements);
       mntmStart.setSelected(audioCaptureService.isRunning());
     } else {
       textFieldDataSize.setText("");
       textFieldDivisor.setText("");
       textFieldAudioFormat.setText("");
       textFieldPeakFrequency.setText("n/a");
+      updateMeasurementFields(NO_MEASUREMENT);
       mntmStart.setSelected(false);
     }
+  }
+
+  private void updateMeasurementFields(MeasurementSnapshot measurements) {
+    textFieldRms.setText(formatLevel(measurements.rms()));
+    textFieldPeakLevel.setText(formatLevel(measurements.peakLevel()));
+    textFieldDominantFrequency.setText(
+        Double.isNaN(measurements.dominantFrequencyHz())
+            ? "n/a"
+            : String.format(Locale.ROOT, "%.1f Hz", measurements.dominantFrequencyHz()));
+    textFieldStereoCorrelation.setText(
+        measurements.stereoCorrelationAvailable()
+            ? String.format(Locale.ROOT, "%.3f", measurements.stereoCorrelation())
+            : "n/a");
+    if (measurements.clipping()) {
+      textFieldClipping.setText("YES");
+      textFieldClipping.setForeground(Color.WHITE);
+      textFieldClipping.setBackground(new Color(180, 0, 0));
+    } else {
+      textFieldClipping.setText("no");
+      textFieldClipping.setForeground(Color.BLACK);
+      textFieldClipping.setBackground(new Color(225, 240, 225));
+    }
+  }
+
+  private static String formatLevel(double value) {
+    return Double.isNaN(value) ? "n/a" : String.format(Locale.ROOT, "%.4f", value);
   }
 
   private void exportMeasurementCsv() {
@@ -551,6 +712,11 @@ public class AudioAnalyseFrame extends JFrame {
       }
       return mixerInfo.getName() + " — " + mixerInfo.getDescription();
     }
+  }
+
+  private enum InputMode {
+    LIVE,
+    DEMO
   }
 
   private class SwingAction extends AbstractAction {
