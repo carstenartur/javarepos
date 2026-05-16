@@ -72,6 +72,7 @@ class StereoDelayAnalyzerTest {
 
     int maxPhysicalLag = (int) Math.ceil(0.10 / 343.0 * SAMPLE_RATE);
     assertEquals(-maxPhysicalLag, snapshot.minCorrelationLagSamples());
+    assertEquals(maxPhysicalLag, snapshot.maxCorrelationLagSamples());
     assertEquals(maxPhysicalLag * 2 + 1, snapshot.correlationByLag().length);
   }
 

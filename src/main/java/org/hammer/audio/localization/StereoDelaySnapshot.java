@@ -112,6 +112,10 @@ public final class StereoDelaySnapshot implements AnalysisSnapshot {
     return minCorrelationLagSamples;
   }
 
+  public int maxCorrelationLagSamples() {
+    return minCorrelationLagSamples + correlationByLag.length - 1;
+  }
+
   public int correlationLagForIndex(int index) {
     return minCorrelationLagSamples + index;
   }
