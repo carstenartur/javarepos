@@ -26,7 +26,7 @@ pair. It does not provide full 3D localization or exact source coordinates.
 │  AudioCaptureService(Impl)               │
 │    ├─ SampleDecoder  (bytes -> float[])  │
 │    ├─ DemoAudioCaptureService            │
-│    └─ SignalGenerator / DemoPresetGenerator│
+│    └─ SignalGenerator / demo presets     │
 └────────────┬─────────────────────────────┘
              │ AudioBlock (immutable)
              ▼
@@ -46,13 +46,15 @@ pair. It does not provide full 3D localization or exact source coordinates.
              ▼
 ┌──────────────────────────────────────────┐
 │ analysis / localization                  │
-│  AnalysisModule<S extends Snapshot>      │
+│  AnalysisModule<S extends                │
+│  AnalysisSnapshot>                       │
 │    ├─ RmsPeakAnalyzer -> RmsPeakSnapshot │
-│    ├─ SpectrumAnalyzer -> SpectrumSnapshot│
+│    ├─ SpectrumAnalyzer                   │
+│    │  -> SpectrumSnapshot                │
 │    └─ StereoDelayAnalyzer                │
 │       -> StereoDelaySnapshot / Status    │
 └────────────┬─────────────────────────────┘
-             │ Snapshot (immutable)
+             │ AnalysisSnapshot (immutable)
              ▼
 ┌──────────────────────────────────────────┐
 │ snapshot                                 │
@@ -78,7 +80,7 @@ DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swin
 |             Package             |                                       Responsibility                                       |
 |---------------------------------|--------------------------------------------------------------------------------------------|
 | `org.hammer.audio.core`         | Immutable audio-domain models: `AudioBlock`, `AudioFormatDescriptor`                       |
-| `org.hammer.audio.capture`      | Sample decoding (`SampleDecoder`); JavaSound bridging in capture implementations           |
+| `org.hammer.audio.capture`      | Sample decoding utilities (`SampleDecoder`)                                                |
 | `org.hammer.audio.buffer`       | `AudioRingBuffer<T>` — bounded lock-free SPSC ring buffer                                  |
 | `org.hammer.audio.dsp`          | `DSPProcessor` extension point + `DSPPipeline` composition                                 |
 | `org.hammer.audio.analysis`     | `AnalysisModule`, snapshots, `Fft`, `RmsPeakAnalyzer`, `SpectrumAnalyzer`, measurements    |
@@ -86,7 +88,7 @@ DSP/analysis/buffer/localization code knows about pixels, panel dimensions, Swin
 | `org.hammer.audio.signal`       | Deterministic generators, including `DemoPresetGenerator` demo scenarios                   |
 | `org.hammer.audio.snapshot`     | UI-friendly immutable snapshots: `WaveformSnapshot`, `PhaseScopeSnapshot`                  |
 | `org.hammer.audio.ui`           | Render helpers and theme classes for pixel-aware UI code                                   |
-| `org.hammer.audio`              | Capture service API/implementations, demo capture, legacy `WaveformModel`                  |
+| `org.hammer.audio`              | Capture service API, JavaSound/demo capture implementations, legacy `WaveformModel`        |
 | `org.hammer`                    | Swing application frame and panels                                                         |
 | `org.hammer.audio.benchmark`    | JMH benchmarks (ring buffer, FFT, signal generators)                                       |
 
@@ -160,7 +162,7 @@ perform rendering/export at the application boundary.
 ```
 start()
    │
-   ├─ open TargetDataLine or reset demo generator
+   ├─ open TargetDataLine or start demo worker
    ├─ allocate decode/generation buffers
    ├─ spawn worker thread (daemon, single-thread executor)
    │
@@ -168,7 +170,7 @@ start()
    │  read raw bytes or generate demo block
    │  -> SampleDecoder.decode if using microphone input
    │  -> AudioBlock (frameIndex, timestamp)
-   │  -> ringBuffer.offerOverwrite(block)
+   │  -> ringBuffer.offer(block), dropping the new block if full
    │  -> latestBlock = block (volatile, for "latest" consumers)
    │  -> latestModel = WaveformRenderer(snapshot, panelWidth, panelHeight)
    │
@@ -184,15 +186,15 @@ New consumers should prefer `getRingBuffer()` or `getLatestBlock()`.
 
 ## Extension points
 
-|                Want to add                |                            Implement                             |
-|-------------------------------------------|------------------------------------------------------------------|
-| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                        |
-| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` returning your immutable snapshot   |
-| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot |
-| New visualization                         | New `Snapshot` + renderer/panel in the UI layer                  |
-| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own        |
-| Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`      |
-| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                   |
+|                Want to add                |                                   Implement                                   |
+|-------------------------------------------|-------------------------------------------------------------------------------|
+| New DSP stage (filter, gain, ...)         | `DSPProcessor`, plug into a `DSPPipeline`                                     |
+| New analyzer (loudness, correlation, ...) | `AnalysisModule<MySnapshot>` where `MySnapshot` implements `AnalysisSnapshot` |
+| New localization diagnostic               | Analyzer in `org.hammer.audio.localization` returning a snapshot              |
+| New visualization                         | Concrete snapshot class or `AudioBlock` input plus a UI renderer/panel        |
+| Alternative FFT backend                   | Replace `SpectrumAnalyzer`'s internal `Fft` with your own                     |
+| Recording / replay                        | New writer/reader around `AudioBlock` and `SignalGenerator`                   |
+| Headless demo / test                      | Use `SignalGenerator` or `DemoPresetGenerator`                                |
 
 ## Concurrency model
 
