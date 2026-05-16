@@ -1,0 +1,5 @@
+org/hammer/audio/acquisition/SampleClock.class
+org/hammer/audio/acquisition/package-info.class
+org/hammer/audio/acquisition/MicrophoneArray.class
+org/hammer/audio/acquisition/Microphone.class
+org/hammer/audio/acquisition/MultiChannelAudioSource.class

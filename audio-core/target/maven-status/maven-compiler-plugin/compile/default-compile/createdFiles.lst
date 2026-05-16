@@ -1,0 +1,8 @@
+org/hammer/audio/core/package-info.class
+org/hammer/audio/snapshot/PhaseScopeSnapshot.class
+org/hammer/audio/core/AudioBlock.class
+org/hammer/audio/snapshot/WaveformSnapshot.class
+org/hammer/audio/buffer/package-info.class
+org/hammer/audio/buffer/AudioRingBuffer.class
+org/hammer/audio/core/AudioFormatDescriptor.class
+org/hammer/audio/snapshot/package-info.class

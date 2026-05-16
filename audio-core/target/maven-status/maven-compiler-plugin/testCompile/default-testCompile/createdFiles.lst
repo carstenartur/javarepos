@@ -1,0 +1,3 @@
+org/hammer/audio/core/AudioFormatDescriptorTest.class
+org/hammer/audio/core/AudioBlockTest.class
+org/hammer/audio/buffer/AudioRingBufferTest.class

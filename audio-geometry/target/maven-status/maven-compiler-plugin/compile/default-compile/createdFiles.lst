@@ -1,0 +1,4 @@
+org/hammer/audio/geometry/Ray2D.class
+org/hammer/audio/geometry/LocalizationConstraint2D.class
+org/hammer/audio/geometry/package-info.class
+org/hammer/audio/geometry/Vector2.class

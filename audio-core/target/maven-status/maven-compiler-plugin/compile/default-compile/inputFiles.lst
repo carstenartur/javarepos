@@ -1,0 +1,8 @@
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/buffer/AudioRingBuffer.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/buffer/package-info.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/core/AudioBlock.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/core/AudioFormatDescriptor.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/core/package-info.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/snapshot/PhaseScopeSnapshot.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/snapshot/WaveformSnapshot.java
+/home/runner/work/javarepos/javarepos/audio-core/src/main/java/org/hammer/audio/snapshot/package-info.java

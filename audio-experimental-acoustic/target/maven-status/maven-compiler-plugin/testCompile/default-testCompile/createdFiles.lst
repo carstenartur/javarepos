@@ -1,0 +1,6 @@
+org/hammer/audio/experimental/acoustic/MosquitoLocalizationPipelineTest.class
+org/hammer/audio/experimental/acoustic/WingbeatFrequencyTrackerTest.class
+org/hammer/audio/experimental/acoustic/GccPhatTdoaEstimatorTest.class
+org/hammer/audio/experimental/acoustic/simulation/SimulatedMicrophoneArraySourceTest.class
+org/hammer/audio/experimental/acoustic/MosquitoLocalizationPipelineTest$RecordingEstimator.class
+org/hammer/audio/experimental/acoustic/CrossCorrelationTdoaEstimatorTest.class
