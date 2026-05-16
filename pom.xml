@@ -211,10 +211,29 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
+              <classpathPrefix>lib/</classpathPrefix>
               <mainClass>org.hammer.AudioAnalyseFrame</mainClass>
             </manifest>
           </archive>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.9.0</version>
+        <executions>
+          <execution>
+            <id>copy-runtime-dependencies</id>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <includeScope>runtime</includeScope>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>

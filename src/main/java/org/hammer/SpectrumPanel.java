@@ -21,6 +21,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;
   private static final int BOTTOM_MARGIN = 28;
+  private static final float MIN_PEAK_MAGNITUDE = 1.0e-6f;
   // Avoid rebuilding the analyzer for insignificant float-format differences.
   private static final float SAMPLE_RATE_TOLERANCE = 0.0001f;
 
@@ -164,13 +165,16 @@ public final class SpectrumPanel extends javax.swing.JPanel {
       PlotRenderTheme.drawEmptyState(g, plotBounds, "Insufficient FFT bins");
       return;
     }
-    drawSpectrumShape(g, plotBounds, magnitudes);
+    float referenceMagnitude = findReferenceMagnitude(magnitudes);
+    drawSpectrumShape(g, plotBounds, magnitudes, referenceMagnitude);
 
     int peakBin = findPeakBin(magnitudes);
     if (peakBin > 0) {
       double peakHz = spectrum.frequencyOfBin(peakBin);
       int peakX = xForBin(plotBounds, peakBin, magnitudes.length);
-      double peakNorm = PlotRenderTheme.normalizedMagnitude(magnitudes[peakBin]);
+      double peakNorm =
+          PlotRenderTheme.normalizedMagnitude(
+              normalizedMagnitude(magnitudes[peakBin], referenceMagnitude));
       int peakY = yForNormalized(plotBounds, peakNorm);
       g.setColor(PlotRenderTheme.HIGHLIGHT);
       g.setStroke(PlotRenderTheme.PEAK_STROKE);
@@ -194,14 +198,19 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "-80 dB");
   }
 
-  private void drawSpectrumShape(Graphics2D g, Rectangle plotBounds, float[] magnitudes) {
+  private void drawSpectrumShape(
+      Graphics2D g, Rectangle plotBounds, float[] magnitudes, float referenceMagnitude) {
     int bins = magnitudes.length;
     Path2D.Double linePath = new Path2D.Double();
     Polygon areaPolygon = new Polygon();
     areaPolygon.addPoint(plotBounds.x, plotBounds.y + plotBounds.height - 1);
     for (int bin = 1; bin < bins; bin++) {
       int x = xForBin(plotBounds, bin, bins);
-      int y = yForNormalized(plotBounds, PlotRenderTheme.normalizedMagnitude(magnitudes[bin]));
+      int y =
+          yForNormalized(
+              plotBounds,
+              PlotRenderTheme.normalizedMagnitude(
+                  normalizedMagnitude(magnitudes[bin], referenceMagnitude)));
       if (bin == 1) {
         linePath.moveTo(x, y);
       } else {
@@ -219,7 +228,7 @@ public final class SpectrumPanel extends javax.swing.JPanel {
 
   private static int findPeakBin(float[] magnitudes) {
     int peakBin = -1;
-    float peakMagnitude = Float.NEGATIVE_INFINITY;
+    float peakMagnitude = MIN_PEAK_MAGNITUDE;
     for (int bin = 1; bin < magnitudes.length; bin++) {
       float magnitude = magnitudes[bin];
       if (magnitude > peakMagnitude) {
@@ -228,6 +237,21 @@ public final class SpectrumPanel extends javax.swing.JPanel {
       }
     }
     return peakBin;
+  }
+
+  private static float findReferenceMagnitude(float[] magnitudes) {
+    float reference = 0f;
+    for (int bin = 1; bin < magnitudes.length; bin++) {
+      reference = Math.max(reference, magnitudes[bin]);
+    }
+    return Math.max(reference, MIN_PEAK_MAGNITUDE);
+  }
+
+  private static float normalizedMagnitude(float magnitude, float referenceMagnitude) {
+    if (referenceMagnitude <= 0f) {
+      return 0f;
+    }
+    return magnitude / referenceMagnitude;
   }
 
   private static int xForBin(Rectangle plotBounds, int bin, int bins) {

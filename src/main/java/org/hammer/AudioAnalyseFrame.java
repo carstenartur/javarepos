@@ -257,11 +257,11 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void initTopSettingsPanel() {
-    JPanel topContainer = new JPanel(new BorderLayout(TOP_PANEL_HGAP, 0));
+    JPanel topContainer = new JPanel(new GridLayout(2, 1, 0, TOP_PANEL_HGAP));
     topContainer.setBorder(new EmptyBorder(0, 0, 4, 0));
     contentPane.add(topContainer, BorderLayout.NORTH);
     topContainer.add(createSettingsPanel());
-    topContainer.add(createMeasurementPanel(), BorderLayout.EAST);
+    topContainer.add(createMeasurementPanel());
     updateModeControls();
     updateUIFromModel();
   }
