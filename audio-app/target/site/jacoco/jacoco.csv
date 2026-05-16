@@ -1,0 +1,25 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+Audio Analyzer App,org.hammer,AudioAnalyseFrame.new WindowAdapter() {...},23,0,4,0,5,0,4,0,2,0
+Audio Analyzer App,org.hammer,DiagnosisPanel,326,0,18,0,71,0,19,0,9,0
+Audio Analyzer App,org.hammer,AudioAnalyseFrame.AudioDeviceItem,19,0,2,0,4,0,3,0,2,0
+Audio Analyzer App,org.hammer,AudioAnalyseFrame.InputMode,15,0,0,0,3,0,1,0,1,0
+Audio Analyzer App,org.hammer,SpectrogramPanel,630,0,58,0,135,0,42,0,13,0
+Audio Analyzer App,org.hammer,PhaseDiagramCanvas,323,21,18,0,62,6,15,2,6,2
+Audio Analyzer App,org.hammer,SpectrumPanel,690,170,68,16,154,46,55,8,17,4
+Audio Analyzer App,org.hammer,PhaseDiagramPanel,13,35,2,0,3,8,2,2,1,2
+Audio Analyzer App,org.hammer,WaveformPanel,402,58,54,2,90,15,34,4,6,4
+Audio Analyzer App,org.hammer,AudioAnalyseFrame.SwingAction,19,0,0,0,6,0,2,0,2,0
+Audio Analyzer App,org.hammer,AudioAnalyseFrame,2399,0,143,0,536,0,123,0,50,0
+Audio Analyzer App,org.hammer,WaveformPanel.new ComponentAdapter() {...},20,45,1,3,1,8,1,3,0,2
+Audio Analyzer App,org.hammer,AudioAnalyseFrame.new ChangeListener() {...},31,0,2,0,7,0,3,0,2,0
+Audio Analyzer App,org.hammer.audio,DemoAudioCaptureService,65,276,13,15,24,66,17,14,6,10
+Audio Analyzer App,org.hammer.audio,AudioCaptureServiceImpl,92,479,14,30,28,119,17,25,4,16
+Audio Analyzer App,org.hammer.audio,WaveformModel,39,139,4,12,3,24,5,13,1,9
+Audio Analyzer App,org.hammer.audio,AudioCaptureService,6,0,0,0,3,0,3,0,3,0
+Audio Analyzer App,org.hammer.audio,DefaultAudioLineProvider,78,10,6,0,20,5,5,2,2,2
+Audio Analyzer App,org.hammer.audio.ui,WaveformRenderer,0,143,0,20,0,31,0,13,0,3
+Audio Analyzer App,org.hammer.audio.export,EvidenceBundleExporter,252,778,32,44,35,133,32,21,1,11
+Audio Analyzer App,org.hammer.audio.export,EvidenceData.Builder,10,38,0,0,4,14,2,8,2,8
+Audio Analyzer App,org.hammer.audio.export,EvidenceData,8,85,9,7,0,22,7,12,0,11
+Audio Analyzer App,org.hammer.audio.ui.theme,UiTheme,80,0,2,0,17,0,5,0,4,0
+Audio Analyzer App,org.hammer.audio.ui.theme,PlotRenderTheme,246,189,12,0,45,24,13,3,7,3
