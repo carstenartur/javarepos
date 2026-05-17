@@ -145,6 +145,29 @@ These errors can be larger than the inter-microphone delays the localization pip
 measure. Shared-clock multi-channel audio interfaces therefore remain the preferred hardware for
 precise TDOA localization.
 
+### Hardware feasibility: ultrasonic bandwidth and sample rate
+
+Beacon-aided carrier-phase synchronization at 35–45 kHz is only physically possible if the entire
+capture chain actually passes that band. Many consumer USB microphones are designed for speech and
+are mechanically, electrically or in firmware band-limited to roughly 20 kHz, which makes them
+unsuitable as ultrasonic receivers regardless of the host sample rate.
+
+Concretely, the system must verify before calibration that:
+
+- the microphone capsule and its preamplifier have usable sensitivity in the 35–45 kHz band (check
+  the manufacturer's frequency-response curve, not just the nominal "up to 20 kHz" marketing
+  claim);
+- the ADC and any internal DSP do not apply an anti-aliasing or "voice" filter that attenuates the
+  beacon band;
+- the host sample rate is high enough to satisfy Nyquist with margin — for a 40 kHz beacon this
+  means strictly more than 80 kHz, and in practice 96 kHz or 192 kHz, with 192 kHz preferred to
+  keep the beacon well away from the anti-alias roll-off;
+- the captured spectrum actually contains beacon energy with the expected SNR at the nominal
+  carrier frequency, measured on every channel before the calibration movement starts.
+
+If any of these checks fail, the calibration must be aborted with an explicit hardware-feasibility
+error rather than producing a misleading time base.
+
 ### Experimental workaround
 
 Independent USB stereo microphones can still be useful in experiments if the setup contains a known
@@ -167,16 +190,31 @@ motion modelling and cycle-count continuity.
 
 A practical low-cost experiment should prefer three stereo USB microphones over six independent mono
 USB microphones. Treat each stereo device as a locally synchronized microphone pair. Arrange the
-three stereo pairs with known positions and different baseline orientations so the combined array
-observes multiple spatial directions.
+three stereo pairs with known positions and **non-coplanar, differently oriented baselines** in
+3D room coordinates: ideally one baseline approximately along each of the room axes `x`, `y` and
+`z`, or at minimum three baselines whose direction vectors `b1, b2, b3` span 3D space (i.e. no two
+are parallel and the three are not coplanar). A typical layout places one stereo device with a
+horizontal baseline along the `x`-axis, one with a baseline along the `y`-axis, and one mounted
+vertically with a baseline along the `z`-axis. The combined array then observes all three spatial
+directions and avoids degenerate angle-of-arrival geometry.
 
-Calibrate and record:
+Calibrate and record, distinguishing **externally measured** from **beacon-estimated** quantities:
 
-- the 3D position of every capsule;
-- the baseline direction and spacing inside each stereo device;
-- the fixed relative delay within each stereo device;
-- the relative delay, drift and cycle-slip state between the three USB devices;
-- the ultrasonic beacon position and waveform.
+- the 3D position of every capsule — **externally measured** (tape, laser distance meter, room
+  survey) for absolute accuracy; the beacon-driven carrier-phase movement can refine relative
+  positions and baseline orientations once a coarse external measurement exists;
+- the baseline direction and spacing inside each stereo device — **externally measured** from the
+  device datasheet/mechanics;
+- the fixed relative delay within each stereo device — **estimated** from the beacon, since most
+  consumer stereo USB devices do not publish their intra-pair sample alignment;
+- the relative delay, drift and cycle-slip state between the three USB devices — **estimated**
+  continuously from the beacon (this is the core function of the carrier-phase synchronizer);
+- the ultrasonic beacon position and waveform — **externally measured** for the position;
+  recorded from configuration for the waveform.
+
+Without at least a coarse external measurement of capsule positions and beacon position, the
+beacon can still synchronize the devices in time, but the array geometry remains underdetermined
+and absolute localization is not possible.
 
 This is still an experimental alternative, not a replacement for shared-clock capture. The beacon
 helps align the USB devices over time, while the stereo baselines provide redundant local direction
@@ -266,7 +304,7 @@ Doppler/frequency trend before and after a dropout can help reconstruct the like
 cycles. If the reconstructed trajectory is inconsistent with the motion model, geometry or beacon
 observations, the system should warn the user and ask them to repeat the calibration movement.
 
-### Better beacon waveforms
+### Multi-frequency carriers and synthetic wavelengths
 
 A single sine is useful for continuous carrier-phase tracking, but it is fragile after signal loss.
 For robust re-acquisition, prefer one of:
@@ -276,9 +314,28 @@ For robust re-acquisition, prefer one of:
 - coded beacon / PRBS / MLS-like sequence;
 - sine carrier plus periodic sync marker.
 
-Multi-frequency or coded beacons increase the unambiguous range and help detect cycle slips. They
-also make it easier to distinguish true clock drift from propagation-path changes, reflections or
-temporary signal loss.
+Multi-frequency carriers are not just "more of the same" — they enable **synthetic-wavelength
+ranging**. If the beacon transmits two close carriers `f1` and `f2` with `f2 > f1`, the phase
+difference `Δφ = φ2 − φ1` behaves as if it had been measured at the much lower beat frequency
+`Δf = f2 − f1`, with the corresponding synthetic wavelength
+
+```text
+lambda_synth = c / (f2 - f1)
+```
+
+Example: at `c ≈ 343 m/s`, two carriers at `f1 = 40.0 kHz` and `f2 = 40.5 kHz` give
+`Δf = 500 Hz` and `lambda_synth ≈ 0.686 m`. The unambiguous one-way range is then on the order of
+`lambda_synth / 2 ≈ 0.34 m`, compared to only `lambda / 2 ≈ 4.3 mm` for a single 40 kHz carrier.
+This is exactly the trick used in GNSS wide-lane combinations and in optical EDM, and it is the
+key mechanism for resolving cycle ambiguity after a dropout in the USB/beacon setup.
+
+The tradeoff is noise sensitivity: any phase noise on `f1` and `f2` adds on the difference signal,
+so the effective phase noise on `lambda_synth` is larger than on a single carrier. Closer
+frequencies give a longer unambiguous range but worse SNR per metre. A practical recipe is to use
+a **cascade**: a wide synthetic wavelength (small `Δf`) to coarsely fix the cycle integer, then
+the original short wavelength of the individual carriers for fine resolution. Three or more
+carriers extend this idea further but require correspondingly higher beacon bandwidth and a mic
+chain that passes all of them.
 
 ### Suggested pipeline
 
@@ -380,33 +437,140 @@ target bandwidth, room reflections or array geometry. Target localization qualit
 depends on the same physical limits described earlier on this page; the beacon only removes (within
 its own residual error) the synchronization handicap of independent USB devices.
 
+### Doppler sign convention and scope
+
+Two Doppler observations occur in the pipeline and must be kept strictly separate. They have
+different physical sources and different downstream uses, and confusing them will corrupt both
+calibration and target tracking.
+
+Use the standard convention for an acoustic emitter at rest and a moving receiver: when the
+receiver approaches the source, the observed frequency is *higher* than the emitted frequency.
+For a microphone with radial velocity `v_r` relative to the beacon (positive when moving away),
+
+```text
+f_observed = f_emitted * (1 - v_r / c)
+v_r ≈ -c * (f_observed - f_emitted) / f_emitted
+```
+
+so a positive `v_r` (moving away) yields `f_observed < f_emitted` and a negative `Δf`.
+
+1. **Doppler from microphone movement relative to the (stationary, known) beacon.** This is the
+   **calibration** Doppler. Its purpose is to estimate the microphone's radial velocity along the
+   line of sight to the beacon, to verify the smooth-motion model, and to reconstruct the missed
+   cycle count after a dropout. It feeds the offset/drift/cycle-slip estimator.
+2. **Doppler from the (moving) target signal observed by the (stationary, post-calibration)
+   microphones.** This is the **target** Doppler. Its purpose is to estimate the target's radial
+   velocity in the tracking phase, e.g. for insect flight analysis. It is downstream of the
+   corrected virtual time base and must not be fed back into the synchronization estimator.
+
+The two channels must be processed separately: the calibration Doppler is computed on the beacon
+carrier in a narrow band around the known beacon frequency, while the target Doppler is computed
+on the target signal in its own (typically lower) band. Mixing the two — for example, by feeding
+target Doppler into the beacon tracker after calibration — would let target motion masquerade as
+clock drift and silently bias the time base.
+
+### Validation metrics and reject thresholds
+
+The calibration and tracking pipeline should expose a small set of explicit metrics, both for
+logging and for automatic accept/reject decisions. Suggested metrics and example reject
+thresholds (to be tuned per hardware combination, not absolute):
+
+|             Metric             |                                 Definition                                  |        Example accept range / reject trigger         |
+|--------------------------------|-----------------------------------------------------------------------------|------------------------------------------------------|
+| Beacon SNR (per channel)       | Peak power at beacon carrier vs. noise floor in neighbouring band           | Accept ≥ 20 dB; warn 10–20 dB; reject < 10 dB        |
+| Residual phase error           | RMS of `Δphi` residual vs. motion model after PLL/FLL tracking              | Accept ≤ 0.1 cycle (≈ 36°); reject > 0.25 cycle      |
+| Cycle-slip count / probability | Detected integer-cycle jumps per minute, or estimated slip probability      | Accept ≤ 1 / min during calibration; reject burst    |
+| Drift                          | Estimated inter-device clock drift in ppm                                   | Accept ≤ ±50 ppm steady; reject step > 10 ppm/s      |
+| Timing residual                | RMS residual of the synchronizer's time-base estimate                       | Accept ≤ 1 µs; warn 1–5 µs; reject > 5 µs            |
+| Path-length residual           | Phase residual × wavelength, in millimetres                                 | Accept ≤ 1 mm (≈ 0.1 cycle at 40 kHz); reject > 5 mm |
+| Localization residual          | RMS distance between predicted and observed source position on test signals | Accept ≤ 5 cm; reject > 20 cm                        |
+| Beacon-frequency mismatch      | Difference between observed and nominal beacon carrier                      | Reject if larger than tracker bandwidth              |
+| Hardware-feasibility check     | Beacon detected within microphone bandwidth at expected SNR                 | Reject calibration if any channel fails              |
+
+Reject triggers should cause the system to abort or restart the calibration, prompt the operator
+to repeat the guided movement, and never silently fall through to the tracking phase. Pass/fail of
+each metric must be logged together with the calibration record so the experiment can be audited
+later.
+
 ### References and background
 
-The techniques used here are adapted from several mature fields. The list below is intentionally
-short and topical; it points at canonical entry points rather than at a comprehensive bibliography.
+The techniques used here are adapted from several mature fields. The list below points at concrete,
+verifiable entry points (papers with DOIs where possible, and authoritative project pages or
+encyclopedias otherwise). It is not a comprehensive bibliography.
 
-- Carrier-phase tracking and phase unwrapping — see general DSP textbooks, e.g. Oppenheim &
-  Schafer, *Discrete-Time Signal Processing*; Proakis & Manolakis, *Digital Signal Processing*.
-- PLL/FLL carrier tracking — Best, *Phase-Locked Loops: Design, Simulation, and Applications*;
-  Gardner, *Phaselock Techniques*.
-- Cycle-slip detection and integer ambiguity — Misra & Enge, *Global Positioning System: Signals,
-  Measurements, and Performance*; Teunissen's LAMBDA method for GNSS integer ambiguity resolution.
-- GNSS / RTK carrier-phase ambiguity resolution — Kaplan & Hegarty, *Understanding GPS/GNSS:
-  Principles and Applications*; IGS and RTKLIB documentation as practical references.
-- Multi-frequency phase ranging — classical electronic distance measurement (EDM) literature; for
-  acoustic analogues see ultrasonic ranging papers using two-tone or chirp methods.
-- Asynchronous microphone-array calibration — research literature on self-calibrating distributed
-  microphone arrays and wireless acoustic sensor networks, e.g. work by Plinge, Gannot, Bertrand
-  and collaborators in IEEE Signal Processing Magazine special issues on distributed arrays.
-- TDOA and GCC-PHAT — Knapp & Carter, "The Generalized Correlation Method for Estimation of Time
-  Delay," IEEE Trans. ASSP, 1976; Brandstein & Ward (eds.), *Microphone Arrays: Signal Processing
-  Techniques and Applications*.
-- Doppler velocity estimation — Skolnik, *Introduction to Radar Systems*; standard sonar texts for
-  the acoustic case.
+**TDOA and GCC-PHAT**
 
-Online encyclopaedic entries (Wikipedia: "Phase-locked loop", "Carrier recovery",
-"Real Time Kinematic", "Time difference of arrival", "Generalized cross-correlation",
-"Doppler effect") are convenient starting points before reaching for the primary literature.
+- C. Knapp and G. Carter, "The Generalized Correlation Method for Estimation of Time Delay,"
+  *IEEE Transactions on Acoustics, Speech, and Signal Processing*, vol. 24, no. 4, pp. 320–327,
+  Aug. 1976. DOI: [10.1109/TASSP.1976.1162830](https://doi.org/10.1109/TASSP.1976.1162830).
+- M. Brandstein and D. Ward (eds.), *Microphone Arrays: Signal Processing Techniques and
+  Applications*, Springer, 2001. DOI:
+  [10.1007/978-3-662-04619-7](https://doi.org/10.1007/978-3-662-04619-7).
+
+**PLL / FLL carrier tracking**
+
+- F. M. Gardner, *Phaselock Techniques*, 3rd ed., Wiley, 2005. ISBN 978-0-471-43063-6.
+- R. E. Best, *Phase-Locked Loops: Design, Simulation, and Applications*, 6th ed., McGraw-Hill,
+  2007. ISBN 978-0-07-149375-8.
+- Wikipedia: [Phase-locked loop](https://en.wikipedia.org/wiki/Phase-locked_loop),
+  [Carrier recovery](https://en.wikipedia.org/wiki/Carrier_recovery).
+
+**GNSS / RTK carrier-phase ambiguity resolution and cycle slips**
+
+- P. J. G. Teunissen, "The least-squares ambiguity decorrelation adjustment: a method for fast GPS
+  integer ambiguity estimation," *Journal of Geodesy*, vol. 70, no. 1–2, pp. 65–82, 1995. DOI:
+  [10.1007/BF00863419](https://doi.org/10.1007/BF00863419).
+- P. Misra and P. Enge, *Global Positioning System: Signals, Measurements, and Performance*,
+  2nd ed., Ganga-Jamuna Press, 2006. ISBN 978-0-9709544-1-1.
+- ESA Navipedia, [Carrier Phase Cycle-Slip
+  Detection](https://gssc.esa.int/navipedia/index.php/Detector_based_in_carrier_phase_data:_The_geometry-free_combination)
+  and [Integer Ambiguity Resolution](https://gssc.esa.int/navipedia/index.php/Integer_Ambiguity_Resolution).
+- T. Takasu and A. Yasuda, "Development of the low-cost RTK-GPS receiver with an open source
+  program package RTKLIB," in *Proc. International Symposium on GPS/GNSS*, 2009. Project page:
+  [RTKLIB](https://www.rtklib.com/).
+
+**Multi-frequency / synthetic-wavelength phase ranging**
+
+- B. Hofmann-Wellenhof, H. Lichtenegger and E. Wasle, *GNSS — Global Navigation Satellite
+  Systems*, Springer, 2008, chapter on wide-lane and narrow-lane linear combinations. DOI:
+  [10.1007/978-3-211-73017-1](https://doi.org/10.1007/978-3-211-73017-1).
+- K. Creath, "Step height measurement using two-wavelength phase-shifting interferometry,"
+  *Applied Optics*, vol. 26, no. 14, pp. 2810–2816, 1987. DOI:
+  [10.1364/AO.26.002810](https://doi.org/10.1364/AO.26.002810) — canonical reference for the
+  two-wavelength / synthetic-wavelength idea, here in optics but mathematically identical to the
+  acoustic case.
+- Wikipedia: [Electronic distance measurement](https://en.wikipedia.org/wiki/Electronic_distance_measurement).
+
+**Asynchronous microphone-array calibration**
+
+- N. Ono, H. Kohno, N. Ito and S. Sagayama, "Blind alignment of asynchronously recorded signals
+  for distributed microphone array," in *Proc. IEEE WASPAA*, 2009, pp. 161–164. DOI:
+  [10.1109/ASPAA.2009.5346505](https://doi.org/10.1109/ASPAA.2009.5346505).
+- S. Markovich-Golan, S. Gannot and I. Cohen, "Blind Sampling Rate Offset Estimation and
+  Compensation in Wireless Acoustic Sensor Networks with Application to Beamforming," in *Proc.
+  IWAENC*, 2012. arXiv: [1209.5202](https://arxiv.org/abs/1209.5202).
+- A. Plinge, S. Gannot and W. Kellermann (eds.), special issue on distributed microphone arrays
+  in *IEEE Signal Processing Magazine*, vol. 33, no. 4, 2016.
+
+**Ultrasonic ranging, chirp and coded beacons**
+
+- N. B. Priyantha, A. Chakraborty and H. Balakrishnan, "The Cricket Location-Support System," in
+  *Proc. ACM MobiCom*, 2000, pp. 32–43. DOI:
+  [10.1145/345910.345917](https://doi.org/10.1145/345910.345917) — canonical coded-ultrasound
+  indoor localization system.
+- A. Ward, A. Jones and A. Hopper, "A new location technique for the active office," *IEEE
+  Personal Communications*, vol. 4, no. 5, pp. 42–47, 1997. DOI:
+  [10.1109/98.626982](https://doi.org/10.1109/98.626982).
+- M. Hazas and A. Hopper, "Broadband ultrasonic location systems for improved indoor positioning,"
+  *IEEE Transactions on Mobile Computing*, vol. 5, no. 5, pp. 536–547, 2006. DOI:
+  [10.1109/TMC.2006.57](https://doi.org/10.1109/TMC.2006.57) — chirp/broadband ultrasonic
+  ranging.
+
+**Doppler velocity estimation**
+
+- M. I. Skolnik, *Introduction to Radar Systems*, 3rd ed., McGraw-Hill, 2001. ISBN
+  978-0-07-290980-2 — standard treatment of Doppler, directly applicable to the acoustic case.
+- Wikipedia: [Doppler effect](https://en.wikipedia.org/wiki/Doppler_effect).
 
 ### Status and scope
 
