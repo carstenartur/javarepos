@@ -115,6 +115,28 @@ public final class PlotRenderTheme {
     g2.drawString(label, x, y);
   }
 
+  /** Draws a centered X-axis label below the plot area. */
+  public static void drawXAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
+    g2.setFont(LABEL_FONT);
+    g2.setColor(TEXT_MUTED);
+    int textWidth = g2.getFontMetrics().stringWidth(label);
+    int x = plotBounds.x + Math.max(0, (plotBounds.width - textWidth) / 2);
+    int y = plotBounds.y + plotBounds.height + 16;
+    g2.drawString(label, x, y);
+  }
+
+  /** Draws a rotated Y-axis label to the left of the plot area. */
+  public static void drawYAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
+    g2.setFont(LABEL_FONT);
+    g2.setColor(TEXT_MUTED);
+    int textWidth = g2.getFontMetrics().stringWidth(label);
+    int x = Math.max(10, plotBounds.x - 34);
+    int y = plotBounds.y + plotBounds.height / 2 + textWidth / 2;
+    g2.rotate(-Math.PI / 2.0, x, y);
+    g2.drawString(label, x, y);
+    g2.rotate(Math.PI / 2.0, x, y);
+  }
+
   /** Converts linear magnitude to clipped dB FS display value. */
   public static double magnitudeToDb(float magnitude) {
     double db = 20.0d * Math.log10(Math.max(MAG_EPSILON, magnitude));

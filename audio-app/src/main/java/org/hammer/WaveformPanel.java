@@ -177,6 +177,8 @@ public final class WaveformPanel extends JPanel {
     PlotRenderTheme.drawPlotBackground(g2, getWidth(), getHeight(), plotBounds);
     PlotRenderTheme.drawGrid(g2, plotBounds, 10, 8);
     PlotRenderTheme.drawTitle(g2, 10, 16, triggerEnabled ? "Waveform (triggered)" : "Waveform");
+    PlotRenderTheme.drawLabel(g2, 10, getHeight() - 8, "Sample index");
+    PlotRenderTheme.drawLabel(g2, 10, 32, "Amplitude [-1..1]");
 
     if (audioCaptureService == null) {
       LOGGER.warning("paintComponent: audioCaptureService is null");

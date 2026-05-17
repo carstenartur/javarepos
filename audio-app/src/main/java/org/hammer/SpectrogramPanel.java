@@ -28,7 +28,7 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
   private static final long serialVersionUID = 1L;
   private static final int FFT_SIZE = 1024;
   private static final int HISTORY_FRAMES = 256;
-  private static final int LEFT_MARGIN = 44;
+  private static final int LEFT_MARGIN = 52;
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;
   private static final int BOTTOM_MARGIN = 28;
@@ -242,16 +242,14 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
 
   private void drawAxisLabels(Graphics2D g, Rectangle plotBounds, SpectrogramHistory history) {
     g.setColor(Color.WHITE);
-    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 4, "Hz");
+    PlotRenderTheme.drawYAxisLabel(g, plotBounds, "Frequency [Hz]");
     if (history != null) {
       float nyquist = history.sampleRate() / 2.0f;
-      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 14, String.format("%.0f", nyquist));
+      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 14, String.format("%.0f Hz", nyquist));
       PlotRenderTheme.drawLabel(
-          g, 6, plotBounds.y + plotBounds.height / 2 + 4, String.format("%.0f", nyquist / 2.0f));
-      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "0");
+          g, 6, plotBounds.y + plotBounds.height / 2 + 4, String.format("%.0f Hz", nyquist / 2.0f));
+      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "0 Hz");
     }
-    int yLabel = plotBounds.y + plotBounds.height + 14;
-    PlotRenderTheme.drawLabel(g, plotBounds.x, yLabel, "← older");
-    PlotRenderTheme.drawLabel(g, plotBounds.x + plotBounds.width - 42, yLabel, "newer →");
+    PlotRenderTheme.drawXAxisLabel(g, plotBounds, "Time [frames; older → newer]");
   }
 }

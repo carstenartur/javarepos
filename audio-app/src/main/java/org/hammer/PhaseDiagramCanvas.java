@@ -63,6 +63,8 @@ public class PhaseDiagramCanvas extends JPanel {
     PlotRenderTheme.drawGrid(g2, plotBounds, 6, 6);
     drawReferenceGrid(g2, plotBounds);
     PlotRenderTheme.drawTitle(g2, 10, 16, "Phase Scope");
+    PlotRenderTheme.drawLabel(g2, 10, getHeight() - 8, "Left amplitude [-1..1]");
+    PlotRenderTheme.drawLabel(g2, 10, 32, "Right amplitude [-1..1]");
 
     if (audioCaptureService == null) {
       LOGGER.warning("paintComponent: audioCaptureService is null");

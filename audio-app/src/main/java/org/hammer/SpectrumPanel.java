@@ -200,6 +200,8 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     PlotRenderTheme.drawGrid(g, plotBounds, 8, 6);
     PlotRenderTheme.drawTitle(g, plotBounds.x, 14, "Spectrum");
     drawSpectrumAxes(g, plotBounds);
+    PlotRenderTheme.drawXAxisLabel(g, plotBounds, "Frequency [Hz]");
+    PlotRenderTheme.drawYAxisLabel(g, plotBounds, "Magnitude [dB rel. peak]");
 
     SpectrumSnapshot spectrum = getCurrentSpectrum();
     if (spectrum == null) {

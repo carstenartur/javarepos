@@ -177,6 +177,8 @@ public final class DocImageRenderer {
     PlotRenderTheme.drawPlotBackground(g, plot.width, plot.height, plot);
     PlotRenderTheme.drawGrid(g, plot, 16, 8);
     PlotRenderTheme.drawTitle(g, plot.x + 12, plot.y + 22, "Waveform — reproducible 440 Hz sine");
+    PlotRenderTheme.drawLabel(g, plot.x + 12, plot.y + 62, "Y: Amplitude [-1..1]");
+    PlotRenderTheme.drawXAxisLabel(g, plot, "Time [ms]");
     float[] samples = block.channelView(0);
     int visible = Math.min(samples.length, DASHBOARD_WAVEFORM_VISIBLE_SAMPLES);
     int centerY = plot.y + plot.height / 2;
@@ -251,6 +253,11 @@ public final class DocImageRenderer {
         g.drawLine(x0 + x, y0 + y, x0 + x, y0 + y);
       }
     }
+    Rectangle plot = new Rectangle(x0, y0, w, h);
+    PlotRenderTheme.drawGrid(g, plot, 8, 4);
+    PlotRenderTheme.drawLabel(g, x0 + 4, y0 + 14, "Y: Frequency [Hz]");
+    PlotRenderTheme.drawXAxisLabel(g, plot, "Time [s; older → newer]");
+    PlotRenderTheme.drawLabel(g, x0 + w - 132, y0 + 14, "Color: relative magnitude [-]");
   }
 
   private static void drawDiagnosis(Graphics2D g, Rectangle panel, DiagnosisSnapshot diagnosis) {
@@ -318,6 +325,8 @@ public final class DocImageRenderer {
       PlotRenderTheme.drawPlotBackground(g, W, H, plot);
       PlotRenderTheme.drawGrid(g, plot, 10, 8);
       PlotRenderTheme.drawTitle(g, 10, 16, "Waveform (triggered)");
+      PlotRenderTheme.drawLabel(g, 10, 50, "Y: Amplitude [-1..1]");
+      PlotRenderTheme.drawXAxisLabel(g, plot, "Sample index");
 
       float[] samples = view.samplesView();
       int n = samples.length;
@@ -377,6 +386,8 @@ public final class DocImageRenderer {
       PlotRenderTheme.drawPlotBackground(g, W, H, plot);
       PlotRenderTheme.drawGrid(g, plot, 10, 8);
       PlotRenderTheme.drawTitle(g, 10, 16, "Spectrum (averaged + peak hold)");
+      PlotRenderTheme.drawLabel(g, 10, 50, "Y: magnitude [dB rel. peak]");
+      PlotRenderTheme.drawXAxisLabel(g, plot, "Frequency [Hz]");
 
       float[] live = avg.averageView();
       float[] held = peak.peaks();
@@ -411,7 +422,7 @@ public final class DocImageRenderer {
 
       g.setColor(PlotRenderTheme.TEXT_MUTED);
       g.setFont(PlotRenderTheme.LABEL_FONT);
-      g.drawString("solid: averaged live spectrum   dashed: peak hold", 10, 32);
+      g.drawString("Legend: blue averaged live spectrum; orange peak hold", 10, 32);
     } finally {
       g.dispose();
     }
@@ -529,6 +540,8 @@ public final class DocImageRenderer {
     PlotRenderTheme.drawPlotBackground(g, plot.width, plot.height, plot);
     PlotRenderTheme.drawGrid(g, plot, 10, 8);
     PlotRenderTheme.drawTitle(g, plot.x + 8, plot.y + 16, title);
+    PlotRenderTheme.drawLabel(g, plot.x + 8, plot.y + 50, "Y: magnitude [dB rel. peak]");
+    PlotRenderTheme.drawXAxisLabel(g, plot, "Frequency [Hz]");
     float[] mag = snap.magnitudesView();
     int bins = mag.length;
     float max = 1e-6f;
