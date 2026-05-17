@@ -36,8 +36,13 @@ Still experimental:
 
 ## Practical microphone setup
 
-- Use a synchronized multi-channel interface; independent USB microphones usually drift and need
-  calibration before TDOA is meaningful.
+- Use a synchronized multi-channel interface when possible — this is the **currently supported**
+  hardware path. A research-grade low-cost alternative using a set of stereo USB microphones with
+  known local baselines plus an ultrasonic reference beacon for inter-device offset, drift and
+  cycle-slip estimation is described in
+  [Physics and latency limits](physics-and-latency-limits.md#independent-usb-microphones-and-ultrasonic-reference-beacon-calibration);
+  it is an **experimental proposal that requires external processing and is not implemented in the
+  current plugin**.
 - Start with 2D arrays on a rigid frame and known coordinates in meters.
 - Keep microphone spacing large enough for measurable delay but below room-reflection dominance.
 - Record calibration clicks or chirps to estimate channel polarity, gain and sample offsets.
@@ -51,6 +56,10 @@ For long recordings, sample-clock drift must be measured or bounded. The current
 stores nominal timestamps only; it does not compensate for drift, USB buffering jitter or
 per-channel latency. Real microphone rigs should capture calibration impulses before and after the
 experiment and reject data when drift exceeds the localization error budget.
+
+See [Physics and latency limits](physics-and-latency-limits.md) for the hard physical limits,
+consumer-hardware constraints, ultrasonic reference-beacon calibration, calibration-reducible errors
+and AR-display implications behind these requirements.
 
 ## DSP concepts
 
@@ -98,6 +107,7 @@ They are UI-agnostic and can drive Swing panels, web dashboards or offline noteb
 ## Limitations and non-goals
 
 - No species classifier or production mosquito tracker is implemented.
+- No guaranteed exact AR overlay is implied; display-time predictions remain model-dependent.
 - 2D geometry is supported first; 3D arrays are future work.
 - GCC-PHAT, TDOA and beamforming are tested on synthetic delayed/noisy signals but remain
   experimental. Reflections, microphone mismatch, non-point sources and multiple insects can create
@@ -106,6 +116,8 @@ They are UI-agnostic and can drive Swing panels, web dashboards or offline noteb
   aggregation. It does not decide automatically which insect a frequency peak belongs to.
 - No GPU, distributed processing or real-time scheduler integration is included.
 - No Python bridge is added; future interoperability should remain behind stable interfaces.
+- Uncertainty should be surfaced explicitly in debugging/calibration workflows and should not be
+  hidden behind false point precision when latency or tracking confidence is poor.
 
 ## Package boundaries
 
@@ -130,4 +142,3 @@ They are UI-agnostic and can drive Swing panels, web dashboards or offline noteb
 See the [`research/`](research/README.md) folder for the paper outline,
 reproducible experiments, evaluation metrics, demo scenarios, hardware setup
 notes and JSON simulation datasets.
-

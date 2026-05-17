@@ -75,7 +75,10 @@ tracker as a trigger source therefore inherits the synchronization concerns
 from [`../synchronization.md`](../synchronization.md) and from
 [`hardware/microphone-array-setup.md`](hardware/microphone-array-setup.md):
 
-- the microphone array must share a single sample clock;
+- the microphone array needs a shared sample clock; a calibrated virtual time
+  base (e.g. an ultrasonic reference beacon, see
+  [`../physics-and-latency-limits.md`](../physics-and-latency-limits.md#independent-usb-microphones-and-ultrasonic-reference-beacon-calibration))
+  is an experimental/future approach and is **not** provided by the current codebase;
 - the trigger-issuing component must know its own latency to the external
   device with sufficient precision;
 - if the two clocks drift, calibration impulses (or a periodic resync signal)

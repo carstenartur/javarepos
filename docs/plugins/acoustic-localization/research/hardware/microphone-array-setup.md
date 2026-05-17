@@ -29,8 +29,15 @@ experiments.
 ## Hardware checklist
 
 - **Synchronous capture device.** Use one multichannel audio interface with a
-  single shared clock. Independent USB microphones drift and break TDOA before
-  any other source of error.
+  single shared clock for precise TDOA — this is the only synchronization path
+  supported by the current plugin. An **experimental external proposal** for
+  low-cost setups uses three stereo USB microphones (treated as locally
+  synchronized pairs) with an ultrasonic reference beacon to estimate
+  inter-device delay offset, clock drift and cycle slips; see
+  [`../../physics-and-latency-limits.md`](../../physics-and-latency-limits.md#independent-usb-microphones-and-ultrasonic-reference-beacon-calibration).
+  A 35–45 kHz beacon requires a capture chain that passes that band and a host
+  sample rate of 96 kHz or higher (Nyquist), and beacon-based correction is
+  **not implemented** in the current codebase.
 - **Rigid frame.** Mount all microphones on a single rigid board; submillimetre
   position errors already swamp the integer-sample resolution of the current
   TDOA implementation.
