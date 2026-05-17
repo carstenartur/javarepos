@@ -259,6 +259,12 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
     PlotRenderTheme.drawXAxisLabel(g, plotBounds, "Time [frames; older → newer]");
   }
 
+  /**
+   * Builds left/middle/right time tick labels for the visible spectrogram history.
+   *
+   * @param history rolling spectrogram history; may be empty during startup
+   * @return relative seconds labels when frame indices are available, otherwise frame-count labels
+   */
   private String[] spectrogramTimeLabels(SpectrogramHistory history) {
     if (history == null || history.size() <= 1) {
       return new String[] {"0", "0", "0"};

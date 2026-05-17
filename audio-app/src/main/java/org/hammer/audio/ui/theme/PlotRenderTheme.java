@@ -143,7 +143,14 @@ public final class PlotRenderTheme {
     }
   }
 
-  /** Draws bottom X-axis ticks at normalized positions in {@code [0, 1]}. */
+  /**
+   * Draws bottom X-axis ticks at normalized positions in {@code [0, 1]}.
+   *
+   * @param g2 graphics context to draw into
+   * @param plotBounds plot rectangle whose bottom edge receives the ticks
+   * @param positions normalized left-to-right tick positions
+   * @param labels tick labels, one per position
+   */
   public static void drawXTicks(
       Graphics2D g2, Rectangle plotBounds, double[] positions, String[] labels) {
     validateTicks(positions, labels);
@@ -161,7 +168,14 @@ public final class PlotRenderTheme {
     }
   }
 
-  /** Draws left Y-axis ticks at normalized top-to-bottom positions in {@code [0, 1]}. */
+  /**
+   * Draws left Y-axis ticks at normalized top-to-bottom positions in {@code [0, 1]}.
+   *
+   * @param g2 graphics context to draw into
+   * @param plotBounds plot rectangle whose left edge receives the ticks
+   * @param positions normalized top-to-bottom tick positions
+   * @param labels tick labels, one per position
+   */
   public static void drawYTicks(
       Graphics2D g2, Rectangle plotBounds, double[] positions, String[] labels) {
     validateTicks(positions, labels);

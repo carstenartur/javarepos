@@ -254,6 +254,14 @@ public final class WaveformPanel extends JPanel {
     drawLevelOverlay(g2, plotBounds);
   }
 
+  /**
+   * Maps legacy full-panel X coordinates into the current plot bounds.
+   *
+   * @param source full-panel X coordinates from {@link WaveformModel}
+   * @param count number of coordinates to transform
+   * @param plotBounds target plot area
+   * @return scaled X coordinates inside {@code plotBounds}
+   */
   private int[] scaleXPoints(int[] source, int count, Rectangle plotBounds) {
     int[] scaled = new int[count];
     int sourceWidth = Math.max(1, getWidth() - 1);
@@ -264,6 +272,14 @@ public final class WaveformPanel extends JPanel {
     return scaled;
   }
 
+  /**
+   * Maps legacy full-panel Y coordinates into the current plot bounds.
+   *
+   * @param source full-panel Y coordinates from {@link WaveformModel}
+   * @param count number of coordinates to transform
+   * @param plotBounds target plot area
+   * @return scaled Y coordinates inside {@code plotBounds}
+   */
   private int[] scaleYPoints(int[] source, int count, Rectangle plotBounds) {
     int[] scaled = new int[count];
     int sourceHeight = Math.max(1, getHeight() - 1);
