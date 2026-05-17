@@ -39,9 +39,14 @@ Observed JaCoCo line coverage after the baseline run:
 | `audio-core`                  |        69.56% |
 | `audio-plugin-api`            |       100.00% |
 | `audio-geometry`              |        61.05% |
+| `audio-acquisition`           |     no report |
 | `audio-dsp`                   |        78.65% |
 | `audio-app`                   |        29.96% |
 | `audio-experimental-acoustic` |        86.03% |
+
+`audio-acquisition` is included in the Maven reactor and JaCoCo configuration, but the baseline run
+did not produce a module JaCoCo XML/HTML report for it because there was no test execution data in
+that module.
 
 The 5% JaCoCo floor is deliberately low because its purpose is to prove the gate and prevent
 coverage from disappearing, not to claim comprehensive test coverage.
