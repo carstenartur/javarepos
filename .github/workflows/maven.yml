@@ -190,6 +190,7 @@ jobs:
         import html
         import json
         import pathlib
+        import re
         import shutil
         import urllib.parse
         import xml.etree.ElementTree as ET
@@ -286,16 +287,17 @@ jobs:
           if module_path.startswith("./"):
             module_path = module_path[2:]
           module_name = module_path if module_path else "root"
-          destination = coverage_dir / module_name
+          safe_module_name = re.sub(r"[^A-Za-z0-9._-]", "_", module_name)
+          destination = coverage_dir / safe_module_name
           if destination.exists():
             shutil.rmtree(destination)
           shutil.copytree(jacoco_dir, destination)
-          copied_modules.append(module_name)
+          copied_modules.append((module_name, safe_module_name))
 
         if copied_modules:
           links = "\n".join(
-              f'<li><a href="{urllib.parse.quote(name)}/index.html">{html.escape(name)}</a></li>'
-              for name in sorted(copied_modules)
+              f'<li><a href="{urllib.parse.quote(safe_name)}/index.html">{html.escape(name)}</a></li>'
+              for name, safe_name in sorted(copied_modules)
           )
           (coverage_dir / "index.html").write_text(
               (
