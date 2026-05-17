@@ -1,7 +1,6 @@
 package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -217,9 +216,16 @@ public final class TrackingPipeline {
     if (frequencyTracks.size() <= FREQUENCY_TRACK_MAX_ACTIVE) {
       return;
     }
-    frequencyTracks.sort(Comparator.comparingLong(track -> track.lastTouchedFrameIndex));
-    int excessCount = frequencyTracks.size() - FREQUENCY_TRACK_MAX_ACTIVE;
-    frequencyTracks.subList(0, excessCount).clear();
+    while (frequencyTracks.size() > FREQUENCY_TRACK_MAX_ACTIVE) {
+      int oldestIndex = 0;
+      for (int i = 1; i < frequencyTracks.size(); i++) {
+        if (frequencyTracks.get(i).lastTouchedFrameIndex
+            < frequencyTracks.get(oldestIndex).lastTouchedFrameIndex) {
+          oldestIndex = i;
+        }
+      }
+      frequencyTracks.remove(oldestIndex);
+    }
   }
 
   /** Frequency reference state matched by nearest observed frequency with per-frame exclusivity. */
