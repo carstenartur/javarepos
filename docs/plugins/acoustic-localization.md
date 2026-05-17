@@ -177,3 +177,4 @@ timing-precision math. The detailed microphone setup discussion is in
 - add plugin settings (microphone geometry, frequency band, TDOA method);
 - richer experiment workflows and visualizations contributed via the plugin API;
 - optional heatmap / confidence display contributed as additional views.
+

@@ -97,6 +97,8 @@ public final class VelocityReconstructor {
           weightedVelocity.plus(direction.scale(radial.radialVelocityMetersPerSecond() * weight));
       totalWeight += weight;
     }
-    return totalWeight > 0.0 ? Vector3.from(weightedVelocity.scale(1.0 / totalWeight)) : Vector3.ZERO;
+    return totalWeight > 0.0
+        ? Vector3.from(weightedVelocity.scale(1.0 / totalWeight))
+        : Vector3.ZERO;
   }
 }

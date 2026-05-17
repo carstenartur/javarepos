@@ -43,11 +43,7 @@ public final class SimpleMultiSensorDopplerEstimator implements MultiSensorDoppl
       rawWeights.add(rawWeight(peak));
       estimates.add(
           new RadialVelocityEstimate(
-              peak.channel(),
-              peak.frequencyHz(),
-              observation.referenceFrequencyHz(),
-              radial,
-              0.0));
+              peak.channel(), peak.frequencyHz(), observation.referenceFrequencyHz(), radial, 0.0));
     }
     estimates = normalizeWeights(estimates, rawWeights);
     if (estimates.size() < 3 || outlierThresholdMetersPerSecond == 0.0) {
