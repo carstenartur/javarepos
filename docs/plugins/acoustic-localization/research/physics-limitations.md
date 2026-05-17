@@ -49,7 +49,7 @@ than a few bins cannot be reliably separated without sub-bin interpolation
 
 Doppler accuracy inherits the same limit: a velocity that shifts the observed
 frequency by less than one bin is, in the absence of parabolic refinement,
-indistinguishable from zero motion. The doppler-resolution discussion in
+indistinguishable from zero motion. The Doppler-resolution discussion in
 [`../README.md`](../README.md#frequency-resolution-requirements-for-doppler-estimation)
 expands on this.
 

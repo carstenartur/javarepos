@@ -90,7 +90,10 @@ Both are exercised by `SourceTrackerTest` and
 
 Variance of the per-microphone radial-velocity estimates produced by
 `SimpleMultiSensorDopplerEstimator` for the same emitter and frame, computed
-over the set of microphones `M`:
+over the set of microphones `M` (pseudocode notation: `radialVelocityFor(m, e, t)`
+denotes the per-microphone radial-velocity reading that the multi-sensor
+estimator consumes for that emitter and frame, not a literal method on the
+public API):
 
 ```text
 var_v_r(e, t) = Var_{m ∈ M}( radialVelocityFor(m, e, t) )
