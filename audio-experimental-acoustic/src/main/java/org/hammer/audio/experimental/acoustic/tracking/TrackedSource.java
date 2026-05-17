@@ -1,8 +1,8 @@
 package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.Objects;
-import org.hammer.audio.experimental.acoustic.doppler.Vector3;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 
 /**
  * One acoustic source tracked over time.
@@ -18,7 +18,7 @@ public record TrackedSource(
     double observedFrequencyHz,
     Vector2 positionMeters,
     Vector2 velocityMetersPerSecond,
-    Vector3 velocity,
+    Vector3 velocityMetersPerSecond3d,
     double radialVelocityMetersPerSecond,
     double frequencyVarianceHzSquared,
     double confidence,
@@ -38,7 +38,7 @@ public record TrackedSource(
     }
     Objects.requireNonNull(positionMeters, "positionMeters");
     Objects.requireNonNull(velocityMetersPerSecond, "velocityMetersPerSecond");
-    Objects.requireNonNull(velocity, "velocity");
+    Objects.requireNonNull(velocityMetersPerSecond3d, "velocityMetersPerSecond3d");
     if (!Double.isFinite(radialVelocityMetersPerSecond)) {
       throw new IllegalArgumentException("radialVelocityMetersPerSecond must be finite");
     }

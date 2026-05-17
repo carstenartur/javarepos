@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.hammer.audio.acquisition.Microphone;
 import org.hammer.audio.acquisition.MicrophoneArray;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 
 /** Reconstructs a global velocity vector from microphone radial velocities and array geometry. */
 public final class VelocityReconstructor {

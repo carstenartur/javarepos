@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import org.hammer.audio.experimental.acoustic.doppler.Vector3;
+import org.hammer.audio.geometry.Vector3;
 import org.hammer.audio.geometry.Vector2;
 
 /**
@@ -153,8 +153,8 @@ public final class SourceTracker {
         track.observedFrequencyHz = observation.observedFrequencyHz();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
-        track.velocityMetersPerSecond =
-            blendVelocity(track.filter.velocity(), observation.velocity());
+        track.fusedVelocityMetersPerSecond3d =
+            blendVelocity(track.filter.velocity(), observation.velocityMetersPerSecond3d());
         track.lastUpdatedFrameIndex = frameIndex;
         track.consecutiveMissedFrames = 0;
         track.observationCount++;
@@ -176,7 +176,7 @@ public final class SourceTracker {
         track.consecutiveMissedFrames = 0;
         track.observationCount = 1;
         track.confidence = confidenceGain;
-        track.velocityMetersPerSecond = observation.velocity();
+        track.fusedVelocityMetersPerSecond3d = observation.velocityMetersPerSecond3d();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
         tracks.add(track);
@@ -212,8 +212,8 @@ public final class SourceTracker {
               track.frequencyHz,
               track.observedFrequencyHz,
               track.filter.position(),
-              track.velocityMetersPerSecond.xy(),
-              track.velocityMetersPerSecond,
+              track.fusedVelocityMetersPerSecond3d.xy(),
+              track.fusedVelocityMetersPerSecond3d,
               track.radialVelocityMetersPerSecond,
               track.frequencyVarianceHzSquared,
               track.confidence,
@@ -261,7 +261,7 @@ public final class SourceTracker {
       double frequencyHz,
       double observedFrequencyHz,
       Vector2 position,
-      Vector3 velocity,
+      Vector3 velocityMetersPerSecond3d,
       double radialVelocityMetersPerSecond,
       double frequencyVarianceHzSquared) {
 
@@ -279,7 +279,7 @@ public final class SourceTracker {
         throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
       }
       Objects.requireNonNull(position, "position");
-      Objects.requireNonNull(velocity, "velocity");
+      Objects.requireNonNull(velocityMetersPerSecond3d, "velocityMetersPerSecond3d");
       if (!Double.isFinite(radialVelocityMetersPerSecond)) {
         throw new IllegalArgumentException("radialVelocityMetersPerSecond must be finite");
       }
@@ -295,7 +295,7 @@ public final class SourceTracker {
     double frequencyHz;
     double observedFrequencyHz;
     Kalman2D filter;
-    Vector3 velocityMetersPerSecond = Vector3.ZERO;
+    Vector3 fusedVelocityMetersPerSecond3d = Vector3.ZERO;
     double radialVelocityMetersPerSecond;
     double frequencyVarianceHzSquared;
     long lastUpdatedFrameIndex;

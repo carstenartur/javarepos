@@ -123,7 +123,7 @@ timing-precision math. The detailed microphone setup discussion is in
 - room reflections and noise can dominate the target signal;
 - multiple weak sources are difficult to separate;
 - accurate localization requires calibrated geometry and synchronization.
-- unstable source frequencies (for example, insect wingbeat modulation,) can masquerade as Doppler
+- unstable source frequencies (for example, insect wingbeat modulation) can masquerade as Doppler
   shift;
 - multipath reflections can create contradictory per-microphone radial velocities;
 - very small velocities may fall below FFT frequency resolution for short frames or low SNR.
@@ -134,4 +134,3 @@ timing-precision math. The detailed microphone setup discussion is in
 - add plugin settings (microphone geometry, frequency band, TDOA method);
 - richer experiment workflows and visualizations contributed via the plugin API;
 - optional heatmap / confidence display contributed as additional views.
-

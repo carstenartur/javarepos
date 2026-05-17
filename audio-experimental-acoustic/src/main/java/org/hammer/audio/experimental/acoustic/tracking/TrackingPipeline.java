@@ -1,10 +1,11 @@
 package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.hammer.audio.acquisition.MicrophoneArray;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.experimental.acoustic.DelayAndSumBeamformer;
@@ -14,7 +15,7 @@ import org.hammer.audio.experimental.acoustic.doppler.MultiSensorDopplerEstimato
 import org.hammer.audio.experimental.acoustic.doppler.RadialVelocityEstimate;
 import org.hammer.audio.experimental.acoustic.doppler.SimpleMultiSensorDopplerEstimator;
 import org.hammer.audio.experimental.acoustic.doppler.SourceObservation;
-import org.hammer.audio.experimental.acoustic.doppler.Vector3;
+import org.hammer.audio.geometry.Vector3;
 import org.hammer.audio.experimental.acoustic.doppler.VelocityReconstructor;
 import org.hammer.audio.geometry.Vector2;
 
@@ -42,9 +43,11 @@ import org.hammer.audio.geometry.Vector2;
  */
 public final class TrackingPipeline {
 
-  private static final double FREQUENCY_TRACK_BUCKET_HZ = 20.0;
+  private static final double FREQUENCY_TRACK_MATCH_TOLERANCE_HZ = 25.0;
   private static final int FREQUENCY_TRACK_HISTORY_FRAMES = 8;
   private static final double FREQUENCY_TRACK_SMOOTHING_ALPHA = 0.2;
+  private static final long FREQUENCY_TRACK_MAX_IDLE_FRAMES = 32L;
+  private static final int FREQUENCY_TRACK_MAX_ACTIVE = 64;
 
   private final MultiPeakDetector peakDetector;
   private final FrequencyClusterer clusterer;
@@ -55,7 +58,8 @@ public final class TrackingPipeline {
   private final VelocityReconstructor velocityReconstructor;
   private final List<Vector2> candidateGrid;
   private final FrameSchedule schedule;
-  private final Map<Integer, FrequencyTrack> frequencyTracks = new HashMap<>();
+  private final List<PipelineFrequencyTrack> frequencyTracks = new ArrayList<>();
+  private int nextFrequencyTrackId;
 
   /** Configure a pipeline. {@code schedule} may be {@code null} to disable budget reporting. */
   public TrackingPipeline(
@@ -115,8 +119,10 @@ public final class TrackingPipeline {
     long startNanos = System.nanoTime();
     List<List<DetectedPeak>> perChannel = peakDetector.detectAllChannels(block);
     List<FrequencyCluster> clusters = clusterer.clusterPerChannel(perChannel);
+    evictStaleFrequencyTracks(block.frameIndex());
 
     List<SourceTracker.Observation> observations = new ArrayList<>(clusters.size());
+    Set<Integer> usedFrequencyTracks = new HashSet<>();
     for (FrequencyCluster cluster : clusters) {
       // Run TDOA across all pairs purely for consistency reporting; the beamformer is the
       // primary localizer. Future stages can use these estimates as additional constraints.
@@ -126,8 +132,11 @@ public final class TrackingPipeline {
         }
       }
       DelayAndSumBeamformer.BeamformingPoint best = beamformer.best(block, array, candidateGrid);
-      FrequencyTrack frequencyTrack = frequencyTrackFor(cluster.centerFrequencyHz());
+      PipelineFrequencyTrack pipelineFrequencyTrack =
+          frequencyTrackFor(cluster.centerFrequencyHz(), block.frameIndex(), usedFrequencyTracks);
+      FrequencyTrack frequencyTrack = pipelineFrequencyTrack.track;
       double stableFrequency = frequencyTrack.update(cluster.centerFrequencyHz());
+      pipelineFrequencyTrack.lastObservedFrequencyHz = cluster.centerFrequencyHz();
       SourceObservation sourceObservation =
           new SourceObservation(
               cluster.centerFrequencyHz(), stableFrequency, best.positionMeters(), cluster.peaks());
@@ -162,6 +171,7 @@ public final class TrackingPipeline {
   public void reset() {
     tracker.reset();
     frequencyTracks.clear();
+    nextFrequencyTrackId = 0;
   }
 
   /** Frame schedule the pipeline was configured against, or {@code null} when unspecified. */
@@ -169,13 +179,67 @@ public final class TrackingPipeline {
     return schedule;
   }
 
-  private FrequencyTrack frequencyTrackFor(double frequencyHz) {
-    // Keep Doppler reference tracks aligned with the 20-40 Hz clustering tolerances used by the
-    // bundled scenarios while allowing small Doppler shifts to remain in the same bucket.
-    int key = (int) Math.round(frequencyHz / FREQUENCY_TRACK_BUCKET_HZ);
-    return frequencyTracks.computeIfAbsent(
-        key,
-        ignored ->
-            new FrequencyTrack(FREQUENCY_TRACK_HISTORY_FRAMES, FREQUENCY_TRACK_SMOOTHING_ALPHA));
+  private PipelineFrequencyTrack frequencyTrackFor(
+      double frequencyHz, long frameIndex, Set<Integer> usedFrequencyTrackIds) {
+    PipelineFrequencyTrack best = null;
+    double bestDistance = FREQUENCY_TRACK_MATCH_TOLERANCE_HZ;
+    for (PipelineFrequencyTrack candidate : frequencyTracks) {
+      if (usedFrequencyTrackIds.contains(candidate.id)) {
+        continue;
+      }
+      double distance = Math.abs(candidate.lastObservedFrequencyHz - frequencyHz);
+      if (distance <= bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+    if (best == null) {
+      best =
+          new PipelineFrequencyTrack(
+              nextFrequencyTrackId++,
+              new FrequencyTrack(
+                  FREQUENCY_TRACK_HISTORY_FRAMES, FREQUENCY_TRACK_SMOOTHING_ALPHA),
+              frequencyHz,
+              frameIndex);
+      frequencyTracks.add(best);
+      trimFrequencyTrackCapacity();
+    }
+    best.lastTouchedFrameIndex = frameIndex;
+    usedFrequencyTrackIds.add(best.id);
+    return best;
+  }
+
+  private void evictStaleFrequencyTracks(long frameIndex) {
+    frequencyTracks.removeIf(
+        track -> frameIndex - track.lastTouchedFrameIndex > FREQUENCY_TRACK_MAX_IDLE_FRAMES);
+  }
+
+  private void trimFrequencyTrackCapacity() {
+    if (frequencyTracks.size() <= FREQUENCY_TRACK_MAX_ACTIVE) {
+      return;
+    }
+    frequencyTracks.sort(Comparator.comparingLong(track -> track.lastTouchedFrameIndex));
+    while (frequencyTracks.size() > FREQUENCY_TRACK_MAX_ACTIVE) {
+      frequencyTracks.remove(0);
+    }
+  }
+
+  /** Frequency reference state matched by nearest observed frequency with per-frame exclusivity. */
+  private static final class PipelineFrequencyTrack {
+    final int id;
+    final FrequencyTrack track;
+    double lastObservedFrequencyHz;
+    long lastTouchedFrameIndex;
+
+    PipelineFrequencyTrack(
+        int id,
+        FrequencyTrack track,
+        double lastObservedFrequencyHz,
+        long lastTouchedFrameIndex) {
+      this.id = id;
+      this.track = track;
+      this.lastObservedFrequencyHz = lastObservedFrequencyHz;
+      this.lastTouchedFrameIndex = lastTouchedFrameIndex;
+    }
   }
 }

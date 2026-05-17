@@ -1,8 +1,6 @@
-package org.hammer.audio.experimental.acoustic.doppler;
+package org.hammer.audio.geometry;
 
-import org.hammer.audio.geometry.Vector2;
-
-/** Immutable three-dimensional velocity vector used by Doppler tracking. */
+/** Immutable three-dimensional velocity vector in meters or meters per second. */
 public record Vector3(double x, double y, double z) {
 
   /** Zero vector. */

@@ -9,6 +9,7 @@ import org.hammer.audio.acquisition.Microphone;
 import org.hammer.audio.acquisition.MicrophoneArray;
 import org.hammer.audio.experimental.acoustic.tracking.DetectedPeak;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 import org.junit.jupiter.api.Test;
 
 class DopplerEstimatorTest {
