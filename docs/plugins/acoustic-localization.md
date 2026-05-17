@@ -40,3 +40,4 @@ is **not** a production mosquito detector, species classifier or validated track
 - [Synchronization requirements](acoustic-localization/synchronization.md)
 - [Tracking pipeline](acoustic-localization/tracking.md)
 - [Research notes and datasets](acoustic-localization/research/README.md)
+
