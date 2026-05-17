@@ -42,6 +42,8 @@ import org.hammer.audio.geometry.Vector2;
  */
 public final class TrackingPipeline {
 
+  private static final double FREQUENCY_TRACK_BUCKET_HZ = 20.0;
+
   private final MultiPeakDetector peakDetector;
   private final FrequencyClusterer clusterer;
   private final TdoaEstimator tdoaEstimator;
@@ -166,7 +168,7 @@ public final class TrackingPipeline {
   }
 
   private FrequencyTrack frequencyTrackFor(double frequencyHz) {
-    int key = (int) Math.round(frequencyHz / 20.0);
+    int key = (int) Math.round(frequencyHz / FREQUENCY_TRACK_BUCKET_HZ);
     return frequencyTracks.computeIfAbsent(key, ignored -> new FrequencyTrack(8, 0.2));
   }
 }

@@ -140,10 +140,10 @@ public final class SourceTracker {
     for (Track track : tracks) {
       track.filter.predict(dt);
       track.consecutiveMissedFrames++;
-      track.updatedThisFrame = false;
     }
 
-    boolean[] taken = new boolean[tracks.size()];
+    int existingTrackCount = tracks.size();
+    boolean[] taken = new boolean[existingTrackCount];
     for (Observation observation : observations) {
       int matched = findClosestTrack(observation.frequencyHz(), taken);
       if (matched >= 0) {
@@ -159,7 +159,6 @@ public final class SourceTracker {
         track.consecutiveMissedFrames = 0;
         track.observationCount++;
         track.confidence = Math.min(1.0, track.confidence * confidenceDecay + confidenceGain);
-        track.updatedThisFrame = true;
         taken[matched] = true;
       } else {
         Track track = new Track();
@@ -180,16 +179,14 @@ public final class SourceTracker {
         track.velocityMetersPerSecond = observation.velocity();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
-        track.updatedThisFrame = true;
         tracks.add(track);
       }
     }
     // Decay confidence for missed tracks.
-    for (Track track : tracks) {
-      if (track.updatedThisFrame) {
-        continue;
+    for (int i = 0; i < existingTrackCount; i++) {
+      if (!taken[i]) {
+        tracks.get(i).confidence *= confidenceDecay;
       }
-      track.confidence *= confidenceDecay;
     }
     // Drop stale tracks.
     Iterator<Track> iterator = tracks.iterator();
@@ -305,6 +302,5 @@ public final class SourceTracker {
     int consecutiveMissedFrames;
     int observationCount;
     double confidence;
-    boolean updatedThisFrame;
   }
 }
