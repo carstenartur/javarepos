@@ -1,8 +1,10 @@
 # Audio Analyzer
 
-[![Java CI with Maven](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml/badge.svg)](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml)
-[![codecov](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
-[![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
+[![Java CI with Maven](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml)
+[![Coverage](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
+[![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/github/license/carstenartur/javarepos)](LICENSE)
+[![SBOM](https://img.shields.io/badge/SBOM-CycloneDX-informational?logo=owasp)](https://github.com/carstenartur/javarepos/dependency-graph/sbom)
 
 **Audio Analyzer** is a Java 21 / Swing **audio and DSP laboratory**. It is useful for
 repeatable signal demos, audio-analysis experiments, UI visualization and plugin research. It is
