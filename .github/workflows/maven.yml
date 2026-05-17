@@ -68,7 +68,7 @@ jobs:
     
     - name: Generate Surefire HTML report
       if: always()
-      run: mvn -B surefire-report:report
+      run: mvn -B surefire-report:report -Daggregate=true
       continue-on-error: true
     
     - name: Upload Surefire HTML report
@@ -187,6 +187,7 @@ jobs:
       run: |
         python3 - <<'PY'
         import glob
+        import hashlib
         import html
         import json
         import pathlib
@@ -200,9 +201,48 @@ jobs:
         tests_dir.mkdir(parents=True, exist_ok=True)
         coverage_dir.mkdir(parents=True, exist_ok=True)
 
-        surefire_html = pathlib.Path("target/reports/surefire.html")
-        if surefire_html.exists():
-          shutil.copy2(surefire_html, tests_dir / "surefire-report.html")
+        surefire_candidates = [
+            pathlib.Path("target/reports/surefire.html"),
+            pathlib.Path("target/site/surefire-report.html"),
+        ]
+        surefire_candidates.extend(
+            pathlib.Path(path)
+            for path in sorted(glob.glob("**/target/reports/surefire.html", recursive=True))
+        )
+        surefire_candidates.extend(
+            pathlib.Path(path)
+            for path in sorted(glob.glob("**/target/site/surefire-report.html", recursive=True))
+        )
+        surefire_candidates = [path for path in surefire_candidates if path.exists()]
+
+        if surefire_candidates:
+          preferred_report = surefire_candidates[0]
+          if preferred_report.resolve() != (tests_dir / "surefire-report.html").resolve():
+            shutil.copy2(preferred_report, tests_dir / "surefire-report.html")
+
+          module_links = []
+          for report_path in surefire_candidates:
+            if report_path == preferred_report:
+              continue
+            report_dir_name = report_path.parent.parent.parent.name
+            safe_report_dir = re.sub(r"[^A-Za-z0-9._-]", "_", report_dir_name or "root")
+            destination_dir = tests_dir / safe_report_dir
+            destination_dir.mkdir(parents=True, exist_ok=True)
+            destination_file = destination_dir / "surefire-report.html"
+            shutil.copy2(report_path, destination_file)
+            module_links.append((report_dir_name, safe_report_dir))
+
+          if module_links:
+            links = "\n".join(
+                f'<li><a href="{urllib.parse.quote(path)}/surefire-report.html">{html.escape(name)}</a></li>'
+                for name, path in sorted(module_links)
+            )
+            (tests_dir / "index.html").write_text(
+                "<!doctype html><html><head><meta charset=\"utf-8\"><title>Surefire reports</title></head>"
+                "<body><h1>Surefire reports</h1><ul>"
+                f'<li><a href="surefire-report.html">aggregate</a></li>{links}</ul></body></html>',
+                encoding="utf-8",
+            )
         else:
           (tests_dir / "surefire-report.html").write_text(
               "<html><body><h1>Surefire report not available</h1></body></html>",
@@ -214,14 +254,19 @@ jobs:
             + glob.glob("**/target/failsafe-reports/TEST-*.xml", recursive=True)
         )
         if test_files:
-          total_tests = total_failures = total_errors = 0
+          total_tests = total_failures = total_errors = total_skipped = 0
           for path in test_files:
-            root = ET.parse(path).getroot()
+            try:
+              root = ET.parse(path).getroot()
+            except ET.ParseError as exc:
+              print(f"Skipping malformed test report {path}: {exc}")
+              continue
             total_tests += int(root.get("tests", 0))
             total_failures += int(root.get("failures", 0))
             total_errors += int(root.get("errors", 0))
+            total_skipped += int(root.get("skipped", 0))
           failed = total_failures + total_errors
-          passed = max(total_tests - failed, 0)
+          passed = max(total_tests - failed - total_skipped, 0)
           if failed > 0:
             tests_message = f"{failed}/{total_tests} failed"
             tests_color = "red"
@@ -282,12 +327,17 @@ jobs:
         )
 
         copied_modules = []
+        used_coverage_dirs = set()
         for jacoco_dir in glob.glob("**/target/site/jacoco", recursive=True):
           jacoco_path = pathlib.Path(jacoco_dir)
           module_parts = jacoco_path.parts[:-3]
           module_name = "/".join(module_parts) if module_parts else "root"
           # Keep names filesystem- and URL-safe for published coverage subdirectories.
           safe_module_name = re.sub(r"[^A-Za-z0-9._-]", "_", module_name)
+          if safe_module_name in used_coverage_dirs:
+            hash_suffix = hashlib.sha1(module_name.encode("utf-8")).hexdigest()[:8]
+            safe_module_name = f"{safe_module_name}-{hash_suffix}"
+          used_coverage_dirs.add(safe_module_name)
           destination = coverage_dir / safe_module_name
           if destination.exists():
             shutil.rmtree(destination)
@@ -325,29 +375,17 @@ jobs:
         if-no-files-found: ignore
         retention-days: 30
 
-    - name: Deploy test report to GitHub Pages
+    - name: Deploy reports to GitHub Pages
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: target/gh-pages/tests
-        destination_dir: tests
+        publish_dir: target/gh-pages
+        destination_dir: .
         keep_files: true
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com'
-        commit_message: 'Deploy Surefire test report ${{ github.sha }}'
-
-    - name: Deploy coverage report to GitHub Pages
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: target/gh-pages/coverage
-        destination_dir: coverage
-        keep_files: true
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-        commit_message: 'Deploy JaCoCo coverage report ${{ github.sha }}'
+        commit_message: 'Deploy test and coverage reports ${{ github.sha }}'
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
 #    - name: Update dependency graph
