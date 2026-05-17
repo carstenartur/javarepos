@@ -23,6 +23,9 @@ class AudioAnalyzerPluginApiTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> new PluginDescriptor("id", "name", "", "desc", null, false));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new PluginDescriptor("id", "name", "1.0", " ", null, false));
   }
 
   @Test

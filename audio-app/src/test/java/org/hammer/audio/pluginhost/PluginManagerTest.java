@@ -38,13 +38,13 @@ class PluginManagerTest {
         metaInfDir.resolve("org.hammer.audio.plugin.AudioAnalyzerPlugin"),
         TestPlugin.class.getName() + System.lineSeparator(),
         StandardCharsets.UTF_8);
-    URLClassLoader loader =
-        new URLClassLoader(new URL[] {tmp.toUri().toURL()}, getClass().getClassLoader());
-    PluginRegistry registry = new PluginManager(loader).loadPlugins();
-    boolean foundTestPlugin =
-        registry.plugins().stream().anyMatch(p -> "test-plugin".equals(p.descriptor().id()));
-    assertTrue(foundTestPlugin, () -> "test plugin not discovered: " + registry.plugins());
-    loader.close();
+    try (URLClassLoader loader =
+        new URLClassLoader(new URL[] {tmp.toUri().toURL()}, getClass().getClassLoader())) {
+      PluginRegistry registry = new PluginManager(loader).loadPlugins();
+      boolean foundTestPlugin =
+          registry.plugins().stream().anyMatch(p -> "test-plugin".equals(p.descriptor().id()));
+      assertTrue(foundTestPlugin, () -> "test plugin not discovered: " + registry.plugins());
+    }
   }
 
   @Test
@@ -55,15 +55,14 @@ class PluginManagerTest {
         metaInfDir.resolve("org.hammer.audio.plugin.AudioAnalyzerPlugin"),
         FailingPlugin.class.getName() + System.lineSeparator(),
         StandardCharsets.UTF_8);
-    URLClassLoader loader =
-        new URLClassLoader(new URL[] {tmp.toUri().toURL()}, getClass().getClassLoader());
-    PluginRegistry registry = new PluginManager(loader).loadPlugins();
-    boolean isolated =
-        registry.failures().stream()
-            .anyMatch(r -> r.descriptor().id().equals("failed:" + FailingPlugin.class.getName()));
-    assertTrue(isolated, () -> "failure not isolated: " + registry.failures());
-    // Other (working) plugins on the parent classpath must still be loadable alongside it.
-    loader.close();
+    try (URLClassLoader loader =
+        new URLClassLoader(new URL[] {tmp.toUri().toURL()}, getClass().getClassLoader())) {
+      PluginRegistry registry = new PluginManager(loader).loadPlugins();
+      boolean isolated =
+          registry.failures().stream()
+              .anyMatch(r -> r.descriptor().id().equals("failed:" + FailingPlugin.class.getName()));
+      assertTrue(isolated, () -> "failure not isolated: " + registry.failures());
+    }
   }
 
   @Test

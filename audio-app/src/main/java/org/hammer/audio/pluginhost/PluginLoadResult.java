@@ -32,6 +32,18 @@ public final class PluginLoadResult {
     return new PluginLoadResult(plugin.descriptor(), plugin, null);
   }
 
+  /**
+   * Construct a successful load result reusing a previously evaluated descriptor.
+   *
+   * <p>This avoids invoking {@link AudioAnalyzerPlugin#descriptor()} more than once per plugin
+   * during discovery.
+   */
+  public static PluginLoadResult success(AudioAnalyzerPlugin plugin, PluginDescriptor descriptor) {
+    Objects.requireNonNull(plugin, "plugin");
+    Objects.requireNonNull(descriptor, "descriptor");
+    return new PluginLoadResult(descriptor, plugin, null);
+  }
+
   /** Construct a failure result with a synthetic descriptor identifying the failing class. */
   public static PluginLoadResult failure(String providerClassName, Throwable cause) {
     Objects.requireNonNull(providerClassName, "providerClassName");

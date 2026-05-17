@@ -58,7 +58,7 @@ public final class PluginMenuBuilder {
       return menu;
     }
     for (AudioAnalyzerPlugin plugin : plugins) {
-      menu.add(buildPluginSubmenu(parent, plugin));
+      menu.add(safeBuildPluginSubmenu(parent, plugin));
     }
     if (!registry.failures().isEmpty()) {
       menu.addSeparator();
@@ -72,6 +72,33 @@ public final class PluginMenuBuilder {
       menu.add(failed);
     }
     return menu;
+  }
+
+  private JMenu safeBuildPluginSubmenu(Frame parent, AudioAnalyzerPlugin plugin) {
+    try {
+      return buildPluginSubmenu(parent, plugin);
+    } catch (RuntimeException ex) {
+      String label = safePluginLabel(plugin);
+      LOGGER.log(Level.WARNING, "Plugin submenu for " + label + " failed to build", ex);
+      JMenu fallback = new JMenu(label + " (unavailable)");
+      JMenuItem error = new JMenuItem("Plugin failed to initialize");
+      error.setEnabled(false);
+      error.setToolTipText(ex.toString());
+      fallback.add(error);
+      return fallback;
+    }
+  }
+
+  private static String safePluginLabel(AudioAnalyzerPlugin plugin) {
+    try {
+      PluginDescriptor descriptor = plugin.descriptor();
+      if (descriptor != null) {
+        return descriptor.name();
+      }
+    } catch (RuntimeException ignored) {
+      // fall through to class-name based label
+    }
+    return plugin.getClass().getSimpleName();
   }
 
   private JMenu buildPluginSubmenu(Frame parent, AudioAnalyzerPlugin plugin) {
@@ -152,6 +179,7 @@ public final class PluginMenuBuilder {
     JScrollPane scroll = new JScrollPane(text);
     scroll.setPreferredSize(new Dimension(480, 240));
     JDialog dialog = new JDialog(parent, d.name(), false);
+    dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     dialog.getContentPane().add(new JLabel("Plugin information"), BorderLayout.NORTH);
     dialog.getContentPane().add(scroll, BorderLayout.CENTER);
     dialog.pack();

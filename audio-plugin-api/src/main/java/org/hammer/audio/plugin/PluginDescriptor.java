@@ -40,5 +40,8 @@ public record PluginDescriptor(
     if (version.isBlank()) {
       throw new IllegalArgumentException("version must not be blank");
     }
+    if (description.isBlank()) {
+      throw new IllegalArgumentException("description must not be blank");
+    }
   }
 }

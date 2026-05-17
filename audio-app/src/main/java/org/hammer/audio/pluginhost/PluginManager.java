@@ -1,6 +1,7 @@
 package org.hammer.audio.pluginhost;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceConfigurationError;
@@ -8,6 +9,7 @@ import java.util.ServiceLoader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.hammer.audio.plugin.AudioAnalyzerPlugin;
+import org.hammer.audio.plugin.PluginDescriptor;
 
 /**
  * Discovers and loads {@link AudioAnalyzerPlugin} implementations via {@link ServiceLoader}.
@@ -44,19 +46,31 @@ public final class PluginManager {
     List<PluginLoadResult> results = new ArrayList<>();
     ServiceLoader<AudioAnalyzerPlugin> loader =
         ServiceLoader.load(AudioAnalyzerPlugin.class, classLoader);
-    for (ServiceLoader.Provider<AudioAnalyzerPlugin> provider : loader.stream().toList()) {
-      String providerClassName = safeProviderName(provider);
+    Iterator<ServiceLoader.Provider<AudioAnalyzerPlugin>> providers;
+    try {
+      providers = loader.stream().iterator();
+    } catch (ServiceConfigurationError ex) {
+      LOGGER.log(Level.WARNING, "Plugin service discovery failed", ex);
+      results.add(PluginLoadResult.failure("<discovery>", ex));
+      return new PluginRegistry(results);
+    }
+    while (true) {
+      String providerClassName = "<unknown>";
       try {
+        if (!providers.hasNext()) {
+          break;
+        }
+        ServiceLoader.Provider<AudioAnalyzerPlugin> provider = providers.next();
+        providerClassName = safeProviderName(provider);
         AudioAnalyzerPlugin plugin = provider.get();
-        // Force descriptor evaluation to surface validation failures here.
-        Objects.requireNonNull(plugin.descriptor(), "descriptor");
-        results.add(PluginLoadResult.success(plugin));
+        // Force descriptor evaluation once and reuse it for validation, registration and logging
+        // so a flaky descriptor() implementation is exercised exactly once per plugin.
+        PluginDescriptor descriptor = Objects.requireNonNull(plugin.descriptor(), "descriptor");
+        results.add(PluginLoadResult.success(plugin, descriptor));
         LOGGER.log(
             Level.INFO,
             "Loaded plugin: {0} ({1} {2})",
-            new Object[] {
-              plugin.descriptor().id(), plugin.descriptor().name(), plugin.descriptor().version()
-            });
+            new Object[] {descriptor.id(), descriptor.name(), descriptor.version()});
       } catch (ServiceConfigurationError | RuntimeException ex) {
         LOGGER.log(Level.WARNING, "Failed to load plugin " + providerClassName, ex);
         results.add(PluginLoadResult.failure(providerClassName, ex));
