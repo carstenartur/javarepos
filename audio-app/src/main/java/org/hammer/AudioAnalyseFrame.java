@@ -58,6 +58,8 @@ import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.localization.StereoDelayAnalyzer;
 import org.hammer.audio.localization.StereoDelaySnapshot;
 import org.hammer.audio.localization.StereoDelayStatus;
+import org.hammer.audio.pluginhost.PluginManager;
+import org.hammer.audio.pluginhost.PluginMenuBuilder;
 import org.hammer.audio.ui.theme.UiTheme;
 
 /**
@@ -371,6 +373,9 @@ public class AudioAnalyseFrame extends JFrame {
     mnFile.add(mntmCompare);
 
     menuBar.add(Box.createGlue());
+
+    JMenu mnPlugins = new PluginMenuBuilder(new PluginManager().loadPlugins()).buildMenu(this);
+    menuBar.add(mnPlugins);
 
     JMenu mnHelp = new JMenu("Help");
     menuBar.add(mnHelp);

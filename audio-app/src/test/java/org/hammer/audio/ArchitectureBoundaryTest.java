@@ -67,30 +67,108 @@ class ArchitectureBoundaryTest {
     for (String module : STABLE_MODULES) {
       String pom = Files.readString(REPOSITORY_ROOT.resolve(module).resolve("pom.xml"));
       if (pom.contains("<artifactId>audio-app</artifactId>")
-          || pom.contains("<artifactId>audio-experimental-acoustic</artifactId>")) {
-        violations.add(module + " must not depend on app or experimental modules");
+          || pom.contains("<artifactId>audio-experimental-acoustic</artifactId>")
+          || pom.contains("<artifactId>audio-plugin-api</artifactId>")) {
+        violations.add(module + " must not depend on app, plugin-api or concrete plugin modules");
       }
     }
     String appPom = Files.readString(REPOSITORY_ROOT.resolve("audio-app/pom.xml"));
-    if (appPom.contains("<artifactId>audio-experimental-acoustic</artifactId>")) {
-      violations.add("audio-app must not require audio-experimental-acoustic");
+    // The host application may pull in a concrete plugin JAR only at runtime scope so the
+    // ServiceLoader can discover it; it must never compile against plugin code.
+    if (compileScopeDependencies(appPom).contains("audio-experimental-acoustic")) {
+      violations.add(
+          "audio-app must not have a compile-scope dependency on audio-experimental-acoustic");
     }
     String experimentalPom =
         Files.readString(REPOSITORY_ROOT.resolve("audio-experimental-acoustic/pom.xml"));
+    Set<String> allowedExperimentalDeps =
+        Set.of(
+            "audio-core", "audio-geometry", "audio-acquisition", "audio-dsp", "audio-plugin-api");
     for (String artifactId : dependencyArtifactIds(experimentalPom)) {
-      if (artifactId.startsWith("audio-") && !stableArtifactIds().contains(artifactId)) {
+      if (artifactId.startsWith("audio-") && !allowedExperimentalDeps.contains(artifactId)) {
         violations.add("audio-experimental-acoustic has non-stable dependency: " + artifactId);
+      }
+    }
+    String pluginApiPom = Files.readString(REPOSITORY_ROOT.resolve("audio-plugin-api/pom.xml"));
+    for (String artifactId : dependencyArtifactIds(pluginApiPom)) {
+      if (artifactId.startsWith("audio-")) {
+        violations.add("audio-plugin-api must not depend on audio-* modules: " + artifactId);
       }
     }
     assertNoViolations(violations);
   }
 
-  private static Path mainJava(String module) {
-    return REPOSITORY_ROOT.resolve(module).resolve("src/main/java");
+  @Test
+  void appSourceDoesNotImportConcretePluginPackages() throws IOException {
+    List<String> violations = new ArrayList<>();
+    try (Stream<Path> files = Files.walk(mainJava("audio-app"))) {
+      files
+          .filter(path -> path.toString().endsWith(".java"))
+          .forEach(
+              path ->
+                  importLines(path).stream()
+                      .forEach(
+                          line -> {
+                            String trimmed = line.trim();
+                            if (trimmed.startsWith("import org.hammer.audio.experimental.")) {
+                              violations.add(path + ": " + trimmed);
+                            }
+                          }));
+    }
+    assertNoViolations(violations);
   }
 
-  private static Set<String> stableArtifactIds() {
-    return Set.of("audio-core", "audio-geometry", "audio-acquisition", "audio-dsp");
+  @Test
+  void pluginApiDoesNotImportHostOrConcretePluginPackages() throws IOException {
+    List<String> violations = new ArrayList<>();
+    try (Stream<Path> files = Files.walk(mainJava("audio-plugin-api"))) {
+      files
+          .filter(path -> path.toString().endsWith(".java"))
+          .forEach(
+              path ->
+                  importLines(path).stream()
+                      .forEach(
+                          line -> {
+                            String trimmed = line.trim();
+                            if (trimmed.startsWith("import org.hammer.audio.experimental.")
+                                || trimmed.startsWith("import org.hammer.audio.pluginhost.")
+                                || trimmed.matches("import org\\.hammer\\.(?!audio\\.).*")) {
+                              violations.add(path + ": " + trimmed);
+                            }
+                          }));
+    }
+    assertNoViolations(violations);
+  }
+
+  private static Set<String> compileScopeDependencies(String pom) {
+    Set<String> compileDeps = new java.util.LinkedHashSet<>();
+    boolean inDependency = false;
+    String artifactId = null;
+    String scope = null;
+    for (String line : pom.lines().toList()) {
+      String trimmed = line.trim();
+      if ("<dependency>".equals(trimmed)) {
+        inDependency = true;
+        artifactId = null;
+        scope = null;
+      } else if ("</dependency>".equals(trimmed)) {
+        if (inDependency && artifactId != null && (scope == null || "compile".equals(scope))) {
+          compileDeps.add(artifactId);
+        }
+        inDependency = false;
+      } else if (inDependency
+          && trimmed.startsWith("<artifactId>")
+          && trimmed.endsWith("</artifactId>")) {
+        artifactId = trimmed.replace("<artifactId>", "").replace("</artifactId>", "");
+      } else if (inDependency && trimmed.startsWith("<scope>") && trimmed.endsWith("</scope>")) {
+        scope = trimmed.replace("<scope>", "").replace("</scope>", "");
+      }
+    }
+    return compileDeps;
+  }
+
+  private static Path mainJava(String module) {
+    return REPOSITORY_ROOT.resolve(module).resolve("src/main/java");
   }
 
   private static List<String> dependencyArtifactIds(String pom) {
