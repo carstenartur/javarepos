@@ -1,51 +1,77 @@
 # Quality Gates & Coverage
 
-This page describes the project's current quality gates and the planned path to harden them.
+This page describes the quality checks that are actually enforced today and the checks that remain
+report-only. It intentionally avoids claiming hard gates that are not present in Maven or CI.
 
-## Current Gates
+## Current gates
 
-|      Gate      |                            Configuration                            |                    Behavior                     |
-|----------------|---------------------------------------------------------------------|-------------------------------------------------|
-| **JaCoCo**     | `prepare-agent` + `report` only (no `check` execution configured)   | Generates reports; does **not** fail the build. |
-| **Checkstyle** | `checkstyle.xml`, severity = `warning`                              | Reports only — `failOnViolation=false`.         |
-| **SpotBugs**   | `effort=Max`, `threshold=Low`, exclusions in `spotbugs-exclude.xml` | Reports only — `failOnError=false`.             |
-| **PMD**        | `pmd-ruleset.xml`                                                   | Reports only — `failOnViolation=false`.         |
+|          Gate           |                                      Configuration                                       |                                    Fails build/CI?                                    |
+|-------------------------|------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| Java version            | Maven Enforcer requires Java `[21,)`                                                     | **Yes**, in `mvn verify`                                                              |
+| Unit tests              | Surefire, `java.awt.headless=true`                                                       | **Yes**, in `mvn verify`                                                              |
+| Spotless                | Java, POM and Markdown format check                                                      | **Yes**, in `mvn verify`                                                              |
+| Architecture boundaries | JUnit test in `audio-app`                                                                | **Yes**, in `mvn verify`                                                              |
+| JaCoCo                  | `prepare-agent`, `report`, `check`; `BUNDLE` line coverage minimum `0.05`                | **Yes**, in `mvn verify`                                                              |
+| Checkstyle              | `checkstyle.xml`, severity `warning`, `failOnViolation=false`                            | Report-only locally; **CI fails only if counts exceed `quality-baseline.properties`** |
+| PMD                     | `pmd-ruleset.xml`, `failOnViolation=false`                                               | Report-only locally; **CI fails only if counts exceed `quality-baseline.properties`** |
+| SpotBugs                | `effort=Max`, `threshold=Low`, exclusions in `spotbugs-exclude.xml`, `failOnError=false` | Report-only locally; **CI fails only if counts exceed `quality-baseline.properties`** |
+| Codecov upload          | `codecov/codecov-action`, `fail_ci_if_error=false`                                       | **No**; upload failures are not a quality gate                                        |
+| CodeQL                  | GitHub workflow with explicit Maven package build                                        | **Yes** when the CodeQL workflow runs                                                 |
 
-All four gates are currently advisory: they generate reports but do not break the build. Earlier
-revisions of this document claimed a 5% JaCoCo `BUNDLE` line-coverage minimum; no such
-`jacoco:check` execution is configured in the POM today. Introducing that floor (and tightening
-the others) is tracked under "Hardening Roadmap" below.
+## Baseline captured during this pass
 
-Reports after `mvn verify`:
-
-- **Checkstyle**: `target/checkstyle-result.xml`
-- **SpotBugs**:  `target/spotbugsXml.xml`
-- **PMD**:      `target/pmd.xml`
-- **Coverage**: `target/site/jacoco/index.html`
-
-## Hardening Roadmap
-
-The intent is to introduce gates in three steps so that builds stay green during the transition.
-
-1. **Block new violations only.** Wire Checkstyle / SpotBugs / PMD to a baseline of currently-known findings; fail only when a PR introduces a *new* finding.
-2. **Block high-severity findings.** Once new-violation gating is stable, switch SpotBugs / PMD to fail on high-severity issues. Set Checkstyle `failOnViolation=true` for the rules listed in `checkstyle.xml` at severity `error`.
-3. **Introduce and raise coverage.** Add a `jacoco:check` execution with a `BUNDLE` line-coverage minimum and lift it in steps: **5% → 10% → 20% → 30%**, accompanied by new tests (see below).
-
-## Target Areas for Increased Coverage
-
-Focus tests on these areas to reach the higher coverage tiers:
-
-1. **`org.hammer.audio.capture.SampleDecoder`** — 8/16-bit, signed/unsigned, big/little-endian, partial-buffer fallback paths.
-2. **`AudioCaptureServiceImpl` capture loop** — verify the worker-owned `datas` byte buffer is reused across reads, exercise partial buffer fills, and validate that `AudioBlock` publication, `latestBlock` updates and legacy `WaveformModel` rendering stay consistent under reconfiguration.
-3. **`AudioRingBuffer`** — `offer` / `offerOverwrite` behaviour at the boundary, `drainTo` ordering, SPSC stress under contention.
-4. **`org.hammer.audio.ui.WaveformRenderer`** — boundary conditions (`panelWidth=1`, single-point input), even distribution of x-points and y-scaling at signal extremes.
-5. **DSP / analyzers** — `Fft` against known impulses / sinusoids, `SpectrumAnalyzer` window/length combinations, `StereoDelayAnalyzer` rejection paths, `SpectrogramAnalyzer` history rollover, `DiagnosisAnalyzer` rule activation thresholds.
-6. **Thread safety** — concurrent `setDivisor()` / `recomputeLayout()`, snapshot consistency under concurrent worker writes, ring-buffer SPSC invariants.
-
-Run tests and inspect coverage:
+Baseline command:
 
 ```bash
-mvn clean test
-# Open target/site/jacoco/index.html
+JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64 ./mvnw -B clean verify
 ```
+
+Result: exit code 0.
+
+Static-analysis findings are intentionally not all fixed in this pass. CI compares the current XML
+report counts with `quality-baseline.properties` and fails if a module introduces additional
+Checkstyle, PMD or SpotBugs findings above that baseline.
+
+Observed JaCoCo line coverage after the baseline run:
+
+|            Module             | Line coverage |
+|-------------------------------|--------------:|
+| `audio-core`                  |        69.56% |
+| `audio-plugin-api`            |       100.00% |
+| `audio-geometry`              |        61.05% |
+| `audio-dsp`                   |        78.65% |
+| `audio-app`                   |        29.96% |
+| `audio-experimental-acoustic` |        86.03% |
+
+The 5% JaCoCo floor is deliberately low because its purpose is to prove the gate and prevent
+coverage from disappearing, not to claim comprehensive test coverage.
+
+## Report locations after `mvn verify`
+
+- Checkstyle: `*/target/checkstyle-result.xml`
+- PMD: `*/target/pmd.xml`
+- SpotBugs: `*/target/spotbugsXml.xml`
+- JaCoCo HTML: `*/target/site/jacoco/index.html`
+- JaCoCo XML: `*/target/site/jacoco/jacoco.xml`
+
+## Hardening roadmap
+
+1. Reduce the committed Checkstyle/PMD/SpotBugs baselines by fixing existing findings module by
+   module.
+2. Switch high-confidence Checkstyle rules to `failOnViolation=true` once the baseline is small
+   enough that local failures are actionable.
+3. Raise JaCoCo line coverage in small steps: **5% → 10% → 20% → 30%**, backed by tests for behavior
+   rather than coverage-only assertions.
+4. Consider severity-filtered hard gates for SpotBugs and PMD once current findings are triaged.
+
+## Target areas for increased coverage
+
+- `SampleDecoder` format and partial-buffer paths.
+- `AudioRingBuffer` boundary and SPSC stress behavior.
+- `WaveformRenderer`, trigger and spectrum display-state edge cases.
+- `SpectrumAnalyzer`, `StereoDelayAnalyzer`, `SpectrogramAnalyzer` and `DiagnosisAnalyzer` rejection
+  and threshold paths.
+- Recording/replay and evidence-bundle assembly.
+- `SampleClock` drift/jitter assumptions: currently documented as a limitation and should become a
+  focused test or tracked issue before real synchronized-array claims are made.
 

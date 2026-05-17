@@ -1,84 +1,45 @@
 # Roadmap
 
-Suggested next feature phases for Audio Analyzer. Completed foundations such as audio device
-selection, FFT/spectrum view, basic CSV/PNG export and deterministic demo input are now treated as
-current capabilities rather than roadmap items.
+This roadmap lists open next steps. Completed foundations such as FFT/spectrum, spectrogram,
+diagnosis, evidence export, recording/replay, A/B comparison, trigger and spectrum peak-hold are
+current capabilities and are documented under [docs/features/](docs/features/README.md).
 
-> **Status note.** Earlier roadmap phases for a spectrogram/waterfall view, rule-based noise
-> diagnosis and an evidence-export bundle have landed and now ship as part of the application
-> (`SpectrogramAnalyzer` / `SpectrogramPanel`, `DiagnosisAnalyzer` / `DiagnosisPanel`,
-> `EvidenceBundleExporter`). Phases A (oscilloscope trigger + peak hold / averaging), B (recording
-> and replay) and C (A/B comparison and report generation) have all landed too — they ship today
-> and are kept here for context but are no longer open work. See
-> [docs/features/](docs/features/) for the per-feature documentation.
+## Product hardening
 
-## ✅ Done — spectrogram / waterfall
+- Continue reducing Checkstyle, PMD and SpotBugs findings below the committed CI baseline.
+- Raise JaCoCo coverage thresholds gradually after adding behavior-focused tests.
+- Add a lightweight documentation link check if it can run without network access.
+- Keep the README screenshot workflow reproducible as the Swing dashboard evolves.
 
-- Time-frequency spectrogram is implemented in `audio-dsp` (`SpectrogramAnalyzer`,
-  `SpectrogramFrame`, `SpectrogramHistory`) and rendered in the Swing UI by `SpectrogramPanel`.
-- Reuses the existing FFT path for consistency with the spectrum panel.
+## UI and ergonomics
 
-## ✅ Done — initial noise diagnosis rules
+- Exercise the main dashboard at common desktop sizes and HiDPI scale factors.
+- Add focused layout tests for measurement and diagnosis panels when adding controls.
+- Review long labels/translations before they are added to fixed-width controls.
 
-- Transparent rule-based analyzer in `audio-dsp` (`DiagnosisAnalyzer`, `DiagnosisFinding`,
-  `DiagnosisSeverity`, `DiagnosisType`, `DiagnosisSnapshot`) surfaced by `DiagnosisPanel`.
-- Rules consume existing measurement / spectrum / stereo-delay snapshots; their wording and
-  confidence calibration remain a follow-up area.
+## Architecture
 
-## ✅ Done — evidence export bundle (initial)
+- Resolve the current `org.hammer.audio` split package before any JPMS migration.
+- Decide whether `DemoSignalType` belongs in a stable shared API package or an app-specific package.
+- Keep plugin contracts in `audio-plugin-api`; avoid compile-time app dependencies on concrete
+  plugins.
 
-- `EvidenceBundleExporter` and `EvidenceData` assemble a bundle of measurement CSV, spectrum
-  image, spectrogram, stereo-delay and diagnosis context. Quick CSV/PNG exports are unchanged.
-- Bundle metadata, reproducibility hints and richer report formatting are still open.
+## Recording, export and comparison
 
-## ✅ Done — Phase A: Triggered oscilloscope + peak hold / averaging
-
-- Oscilloscope-style waveform trigger (level, slope, holdoff, auto/normal mode) shipped as
-  `WaveformTrigger` (`audio-dsp`) and wired into `WaveformPanel`. Controllable from the **File**
-  menu of the main window. See [docs/features/oscilloscope-trigger.md](docs/features/oscilloscope-trigger.md).
-- Spectrum peak hold and exponential averaging shipped as `PeakHoldSpectrum` and `SpectrumAverager`
-  with `SpectrumDisplayState`. Controllable from the **File** menu. See
-  [docs/features/peak-hold-and-averaging.md](docs/features/peak-hold-and-averaging.md).
-- Pause / freeze behavior on the waveform panel is preserved and works alongside the trigger.
-
-## ✅ Done — Phase B: Recording / replay
-
-- Binary `.aar` recording format (`AudioBlockRecordingFormat`, `AudioBlockRecordingWriter`,
-  `AudioBlockRecordingReader` in `audio-dsp`) records normalized `AudioBlock` streams with their
-  format header, frame index and timestamp metadata.
-- `RecordingTap` (in `audio-app`) captures the active session into a file; `RecordedAudioCaptureService`
-  implements the regular `AudioCaptureService` interface so replay behaves identically to live
-  capture for every downstream panel. See
-  [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md).
-- All file I/O lives outside the core DSP / analysis packages.
-
-## ✅ Done — Phase C: A/B comparison and report generation
-
-- `RecordingComparator` replays two recordings through the standard analyzer stack and produces a
-  `ComparisonReport`; `MarkdownComparisonReportRenderer` writes the report as Markdown suitable
-  for QA notes or bug tickets. See [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
-- The same machinery is reusable from CI / batch workflows with no Swing dependency.
+- Add richer evidence-bundle metadata and reproducibility hints.
+- Expand A/B comparison reports with configurable thresholds for regression use cases.
+- Add replay-driven integration tests around end-to-end model publication.
 
 ## Experimental acoustic localization
 
-The `audio-experimental-acoustic` module hosts research code (wingbeat tracking, GCC-PHAT/TDOA,
-delay-and-sum beamforming, 2D room simulation). Open research items are tracked in the
-[plugin README](docs/plugins/acoustic-localization/README.md#future-research-directions);
-this module is intentionally not promoted to a production feature on this roadmap.
+The `audio-experimental-acoustic` module remains a research plugin, not a production feature. Open
+research work is tracked in the [plugin details](docs/plugins/acoustic-localization/README.md#future-research-directions),
+including multi-source separation, sub-sample GCC-PHAT interpolation, calibrated 3D geometry and a
+benchmark corpus with real and synthetic recordings.
 
-## Testing
+## Timing and synchronization
 
-- Add focused unit tests for new analysis rules, recording/replay serialization and report/export
-  assembly as each phase lands.
-- Add integration tests around replay-driven end-to-end model publication when recording/replay is
-  implemented.
-
-## Quality Gates
-
-Tracked in [`docs/quality.md`](docs/quality.md):
-
-- Wire Checkstyle / SpotBugs / PMD to fail PRs that introduce *new* findings against a baseline.
-- Then block high-severity SpotBugs / PMD findings.
-- Introduce and then raise a JaCoCo line-coverage gate in steps: 5% → 10% → 20% → 30%.
-  (No coverage gate is enforced today; only reports are generated.)
+- Turn the documented `SampleClock` drift/jitter limitation into an executable test or tracked issue.
+- Add calibration-data examples for synchronized microphone arrays before making stronger real-world
+  localization claims.
 

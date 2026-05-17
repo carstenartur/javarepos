@@ -64,19 +64,23 @@ Spotless formats Java sources, `pom.xml`, and Markdown files. An `.editorconfig`
 GitHub Actions runs the build on every push and pull request to `master`:
 
 - **Build/Test** ([`maven.yml`](../.github/workflows/maven.yml)) on Java 21 with Maven dependency caching.
-- **Static analysis**: Checkstyle, SpotBugs, PMD (reports uploaded as artifacts).
-- **Coverage**: JaCoCo report uploaded to [Codecov](https://codecov.io/gh/carstenartur/javarepos).
-- **Security scanning**: CodeQL ([`codeql.yml`](../.github/workflows/codeql.yml)).
+- **Static analysis**: Checkstyle, SpotBugs, PMD reports uploaded as artifacts; CI fails only when
+  report counts exceed `quality-baseline.properties`.
+- **Coverage**: JaCoCo report plus a 5% bundle line-coverage check; reports are uploaded to
+  [Codecov](https://codecov.io/gh/carstenartur/javarepos), but Codecov upload itself is not a hard
+  gate.
+- **Security scanning**: CodeQL ([`codeql.yml`](../.github/workflows/codeql.yml)) with an explicit
+  Maven package build.
 
 Test artifacts uploaded by the workflow:
 
-|                       Artifact                       |                  Contents                  |
-|------------------------------------------------------|--------------------------------------------|
-| `junit-xml`                                          | Surefire JUnit XML reports                 |
-| `surefire-raw`                                       | Raw `.txt` console output and thread dumps |
-| `surefire-html`                                      | HTML test summary (when generated)         |
-| `jacoco-report`                                      | JaCoCo HTML coverage report                |
-| `checkstyle-report`, `spotbugs-report`, `pmd-report` | Static analysis XML output                 |
+|                       Artifact                       |                         Contents                         |
+|------------------------------------------------------|----------------------------------------------------------|
+| `junit-xml`                                          | Surefire JUnit XML reports                               |
+| `surefire-raw`                                       | Raw `.txt` console output and thread dumps               |
+| `surefire-html`                                      | HTML test summary (when generated)                       |
+| `jacoco-report`                                      | JaCoCo HTML coverage report                              |
+| `checkstyle-report`, `spotbugs-report`, `pmd-report` | Static analysis XML output used by the CI baseline check |
 
 ## Headless Testing
 
@@ -94,6 +98,19 @@ Testing tips:
 - Use `SwingUtilities.invokeAndWait()` for actions that must run on the EDT.
 - Mock `AudioCaptureService` with Mockito to isolate UI logic from real audio hardware.
 - Verify method invocations (e.g. `verify(svc).recomputeLayout(width, height)`) instead of pixel output.
+
+## Documentation screenshots
+
+The README and feature screenshots are generated headlessly by `DocImageRenderer` after a package or
+verify build:
+
+```bash
+java -cp "audio-app/target/audio-app-0.0.1-SNAPSHOT.jar:audio-app/target/lib/*" \
+  org.hammer.tools.DocImageRenderer docs/images
+```
+
+The command writes `docs/images/screenshot.png` and feature images under `docs/images/features/`.
+On Windows, use `;` instead of `:` in the classpath.
 
 ## JMH Benchmarks
 

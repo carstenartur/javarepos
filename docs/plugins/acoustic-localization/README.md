@@ -1,7 +1,8 @@
-# Acoustic localization plugin
+# Acoustic localization plugin details
 
-This package is an experimental research subsystem for real-time localization and tracking of small
-flying sound sources such as mosquitoes. It is not a production mosquito detector.
+This detail page expands the [plugin entry page](../acoustic-localization.md). The package is an
+experimental research subsystem for real-time localization and tracking of weak or insect-like sound
+sources. It is not a production mosquito detector.
 
 ## Pipeline overview
 
@@ -31,7 +32,7 @@ Still experimental:
 
 - insect/species identification, robust multi-insect tracking and real-world calibration workflows;
 - sub-sample delay estimation, probabilistic data association and room impulse-response modelling;
-- production UI integration for acoustic heatmaps.
+- additional plugin-contributed heatmap/confidence visualizations.
 
 ## Practical microphone setup
 
@@ -117,16 +118,6 @@ They are UI-agnostic and can drive Swing panels, web dashboards or offline noteb
 - `ArchitectureBoundaryTest` enforces that stable audio packages do not import
   `org.hammer.audio.experimental.*`, and that DSP/acquisition/geometry do not depend on UI/app
   packages.
-
-## Merge-readiness checklist
-
-- [ ] GitHub Java CI green after required workflow approval.
-- [ ] GitHub CodeQL green after required workflow approval.
-- [x] Local `JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64 ./mvnw clean verify` passes.
-- [x] Architecture boundary test present.
-- [x] Core/stable packages do not import `org.hammer.audio.experimental.*`.
-- [x] Plugin docs describe setup, synchronization, acoustics, limitations and boundaries.
-- [x] Limitations are explicit; this is not presented as a finished mosquito tracker.
 
 ## Future research directions
 
