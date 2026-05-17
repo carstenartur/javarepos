@@ -9,6 +9,8 @@ import org.hammer.audio.experimental.acoustic.tracking.DetectedPeak;
 /** Multi-microphone Doppler estimator with median absolute-deviation outlier rejection. */
 public final class SimpleMultiSensorDopplerEstimator implements MultiSensorDopplerEstimator {
 
+  private static final double MAD_OUTLIER_MULTIPLIER = 3.0;
+
   private final DopplerEstimator dopplerEstimator;
   private final double outlierThresholdMetersPerSecond;
 
@@ -57,7 +59,7 @@ public final class SimpleMultiSensorDopplerEstimator implements MultiSensorDoppl
             estimates.stream()
                 .mapToDouble(e -> Math.abs(e.radialVelocityMetersPerSecond() - median))
                 .toArray());
-    double threshold = Math.max(outlierThresholdMetersPerSecond, 3.0 * mad);
+    double threshold = Math.max(outlierThresholdMetersPerSecond, MAD_OUTLIER_MULTIPLIER * mad);
     List<RadialVelocityEstimate> filtered = new ArrayList<>();
     for (RadialVelocityEstimate estimate : estimates) {
       if (Math.abs(estimate.radialVelocityMetersPerSecond() - median) <= threshold) {

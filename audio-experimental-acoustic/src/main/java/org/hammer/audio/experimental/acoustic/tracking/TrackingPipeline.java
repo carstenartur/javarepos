@@ -43,6 +43,8 @@ import org.hammer.audio.geometry.Vector2;
 public final class TrackingPipeline {
 
   private static final double FREQUENCY_TRACK_BUCKET_HZ = 20.0;
+  private static final int FREQUENCY_TRACK_HISTORY_FRAMES = 8;
+  private static final double FREQUENCY_TRACK_SMOOTHING_ALPHA = 0.2;
 
   private final MultiPeakDetector peakDetector;
   private final FrequencyClusterer clusterer;
@@ -168,7 +170,12 @@ public final class TrackingPipeline {
   }
 
   private FrequencyTrack frequencyTrackFor(double frequencyHz) {
+    // Keep Doppler reference tracks aligned with the 20-40 Hz clustering tolerances used by the
+    // bundled scenarios while allowing small Doppler shifts to remain in the same bucket.
     int key = (int) Math.round(frequencyHz / FREQUENCY_TRACK_BUCKET_HZ);
-    return frequencyTracks.computeIfAbsent(key, ignored -> new FrequencyTrack(8, 0.2));
+    return frequencyTracks.computeIfAbsent(
+        key,
+        ignored ->
+            new FrequencyTrack(FREQUENCY_TRACK_HISTORY_FRAMES, FREQUENCY_TRACK_SMOOTHING_ALPHA));
   }
 }

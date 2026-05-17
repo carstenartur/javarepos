@@ -42,7 +42,7 @@ Experimental.
 The legacy `MosquitoLocalizationPipeline` is still provided for one-shot per-frame
 analyses; new work should use `TrackingPipeline`.
 
-## Doppler-based velocity estimation
+## Doppler based velocity estimation
 
 The tracking pipeline stabilizes each detected source frequency over a bounded multi-frame
 `FrequencyTrack` before computing Doppler velocity. For low source speeds relative to the speed of
@@ -123,7 +123,7 @@ timing-precision math. The detailed microphone setup discussion is in
 - room reflections and noise can dominate the target signal;
 - multiple weak sources are difficult to separate;
 - accurate localization requires calibrated geometry and synchronization.
-- unstable source frequencies (for example insect wingbeat modulation) can masquerade as Doppler
+- unstable source frequencies (for example, insect wingbeat modulation,) can masquerade as Doppler
   shift;
 - multipath reflections can create contradictory per-microphone radial velocities;
 - very small velocities may fall below FFT frequency resolution for short frames or low SNR.
