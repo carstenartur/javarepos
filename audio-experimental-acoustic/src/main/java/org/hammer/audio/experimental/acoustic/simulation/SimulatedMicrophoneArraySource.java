@@ -102,9 +102,16 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
             new Vector2(room.widthMeters() - emitterPosition.x(), emitterPosition.y());
         double reflectedDistance = Math.max(0.01, microphonePosition.distanceTo(reflected));
         double reflectedTravel = reflectedDistance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
+        Vector2 reflectedVelocity =
+            new Vector2(
+                -emitter.velocityMetersPerSecond().x(), emitter.velocityMetersPerSecond().y());
+        double reflectedObservedFrequency =
+            observedFrequencyAt(
+                reflected, reflectedVelocity, emitter.frequencyHz(), microphonePosition);
         sample +=
             room.reflectionGain()
-                * emitter.sampleAt(receiverTimeSeconds - reflectedTravel, observedFrequency)
+                * emitter.sampleAt(
+                    receiverTimeSeconds - reflectedTravel, reflectedObservedFrequency)
                 / reflectedDistance;
       }
     }
@@ -117,9 +124,21 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
   public static double observedFrequencyAt(
       SoundEmitter2D emitter, Vector2 microphonePosition, double receiverTimeSeconds) {
     Vector2 emitterPosition = emitter.positionAt(receiverTimeSeconds);
-    Vector2 sourceToMicrophone = microphonePosition.minus(emitterPosition).normalized();
-    double radialTowardMicrophone = emitter.velocityMetersPerSecond().dot(sourceToMicrophone);
-    return emitter.frequencyHz()
+    return observedFrequencyAt(
+        emitterPosition,
+        emitter.velocityMetersPerSecond(),
+        emitter.frequencyHz(),
+        microphonePosition);
+  }
+
+  private static double observedFrequencyAt(
+      Vector2 sourcePosition,
+      Vector2 sourceVelocity,
+      double sourceFrequencyHz,
+      Vector2 microphonePosition) {
+    Vector2 sourceToMicrophone = microphonePosition.minus(sourcePosition).normalized();
+    double radialTowardMicrophone = sourceVelocity.dot(sourceToMicrophone);
+    return sourceFrequencyHz
         * (1.0 + radialTowardMicrophone / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND);
   }
 }

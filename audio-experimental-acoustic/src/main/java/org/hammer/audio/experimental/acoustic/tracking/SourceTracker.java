@@ -190,7 +190,6 @@ public final class SourceTracker {
         continue;
       }
       track.confidence *= confidenceDecay;
-      track.velocityMetersPerSecond = Vector3.from(track.filter.velocity());
     }
     // Drop stale tracks.
     Iterator<Track> iterator = tracks.iterator();
