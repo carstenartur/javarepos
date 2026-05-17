@@ -172,7 +172,14 @@ error rather than producing a misleading time base.
 
 Independent USB stereo microphones can still be useful in experiments if the setup contains a known
 ultrasonic reference beacon. The beacon can be a fixed ultrasonic source at a known position, for
-example a 35-45 kHz sine, multitone, chirp or coded source.
+example a 35–45 kHz sine, multitone, chirp or coded source. Note that this band is **above the
+Nyquist limit of typical 44.1/48 kHz consumer capture**: a 40 kHz beacon requires a host sample
+rate strictly greater than 80 kHz, in practice 96 kHz or 192 kHz, plus a microphone path that
+actually passes the band (see the
+[Hardware feasibility](#hardware-feasibility-ultrasonic-bandwidth-and-sample-rate) subsection
+above). If only a 44.1/48 kHz capture chain is available, the beacon must instead be placed in the
+audible / near-ultrasonic band that the chain demonstrably passes (for example a 15–20 kHz tone),
+at the cost of shorter carrier wavelength resolution and worse separation from program material.
 
 Each microphone observes the same reference signal. By tracking the beacon's phase and frequency
 over time, the system can estimate:
@@ -376,8 +383,11 @@ audited and repeated.
    changes and rotations that break line-of-sight.
 5. **Continuously unwrap phase and count cycles** during the movement, accumulating both the
    integer cycle count `N` and the wrapped phase `Δphi`.
-6. **Estimate radial velocity** from the phase/frequency trend (`v_r ≈ -(c / f) * df_observed`).
-   Cross-check it against the user's expected motion profile.
+6. **Estimate radial velocity** from the phase/frequency trend. With `Δf = f_observed - f_emitted`
+   (the observed Doppler offset of the beacon carrier from its nominal frequency `f`, not a
+   time-derivative), `v_r ≈ -(c / f) * Δf`. See the
+   [Doppler sign convention and scope](#doppler-sign-convention-and-scope) subsection for the full
+   sign convention. Cross-check the estimate against the user's expected motion profile.
 7. **Detect dropouts** (SNR loss, USB buffer discontinuity, occlusion) and **interpolate phase and
    frequency** through them using the velocity/acceleration motion model.
 8. **Re-lock after the dropout** and verify that the reconstructed cycle count is plausible:

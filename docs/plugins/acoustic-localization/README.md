@@ -36,9 +36,13 @@ Still experimental:
 
 ## Practical microphone setup
 
-- Use a synchronized multi-channel interface when possible. A practical low-cost experimental
-  alternative is a set of stereo USB microphones with known local baselines plus an ultrasonic
-  reference beacon for inter-device offset, drift and cycle-slip estimation.
+- Use a synchronized multi-channel interface when possible — this is the **currently supported**
+  hardware path. A research-grade low-cost alternative using a set of stereo USB microphones with
+  known local baselines plus an ultrasonic reference beacon for inter-device offset, drift and
+  cycle-slip estimation is described in
+  [Physics and latency limits](physics-and-latency-limits.md#independent-usb-microphones-and-ultrasonic-reference-beacon-calibration);
+  it is an **experimental proposal that requires external processing and is not implemented in the
+  current plugin**.
 - Start with 2D arrays on a rigid frame and known coordinates in meters.
 - Keep microphone spacing large enough for measurable delay but below room-reflection dominance.
 - Record calibration clicks or chirps to estimate channel polarity, gain and sample offsets.

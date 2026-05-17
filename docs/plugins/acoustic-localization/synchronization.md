@@ -6,12 +6,13 @@ sample-accurate alignment of the channels feeding it. This document captures the
 synchronization assumptions the plugin makes and the practical implications for hardware
 selection.
 
-## Preferred: a shared sample clock
+## Required for the supported pipeline: a shared sample clock
 
-Precise passive TDOA is best served by microphones sharing a single sample clock. The plugin assumes
-that frame `n` on channel A and frame `n` on channel B are captured at the same instant unless an
-experimental calibration workflow explicitly estimates and corrects inter-device timing. Sources
-that satisfy the shared-clock requirement include:
+Precise passive TDOA in the **currently implemented** plugin pipeline requires microphones sharing
+a single sample clock. The plugin assumes that frame `n` on channel A and frame `n` on channel B
+are captured at the same instant: `SampleClock` only stores nominal timestamps and the codebase
+does not yet implement inter-device offset, drift or cycle-slip correction. Sources that satisfy
+the shared-clock requirement include:
 
 - a single multi-channel audio interface (Focusrite Scarlett, RME Babyface, MOTU M-series,
   Behringer UMC, etc.) where every input is sampled from the same crystal;
@@ -22,7 +23,7 @@ that satisfy the shared-clock requirement include:
 In all cases the host audio framework must deliver the channels as a single multi-channel
 stream so that the platform receives one `AudioBlock` per frame with `channels = N`.
 
-## Independent USB microphones with reference-beacon calibration
+## Independent USB microphones with reference-beacon calibration (experimental, not implemented)
 
 USB microphones each contain their own crystal and ADC. Even nominally identical devices
 drift relative to each other at typical rates of a few PPM (parts per million), which
@@ -34,14 +35,20 @@ accumulates to:
 
 For passive TDOA, arbitrary independent USB microphones therefore need explicit calibration before
 their relative timing can be trusted. They remain useful for non-TDOA demos (frequency tracking on a
-single channel, sample-rate calibration of the simulator), and they can be used experimentally for
-TDOA when an ultrasonic reference beacon, drift estimation and residual-error checks are part of the
-workflow.
+single channel, sample-rate calibration of the simulator). A research-grade workflow using an
+ultrasonic reference beacon, drift estimation and residual-error checks is described in
+[Physics and latency limits — Independent USB microphones and ultrasonic reference-beacon
+calibration](physics-and-latency-limits.md#independent-usb-microphones-and-ultrasonic-reference-beacon-calibration),
+but it is an **external/future research workflow**: the current codebase does not implement
+beacon detection, virtual-time-base reconstruction or cycle-slip handling, so it cannot today
+replace a shared-clock interface for TDOA in the plugin pipeline.
 
-A practical low-cost experimental setup is three stereo USB microphones rather than six independent
-mono USB microphones. Treat each stereo device as a locally synchronized pair, arrange the three
-pairs with known positions and different baseline orientations, and use an ultrasonic reference
-beacon to estimate inter-device delay offset, clock drift and cycle slips between the USB devices.
+A practical low-cost experimental setup proposed for that external workflow is three stereo USB
+microphones rather than six independent mono USB microphones: each stereo device is treated as a
+locally synchronized pair, the three pairs are arranged with known positions and different baseline
+orientations, and an ultrasonic reference beacon is used to estimate inter-device delay offset,
+clock drift and cycle slips between the USB devices. Until such estimation is implemented and
+validated, USB-only setups should be considered demonstration-grade.
 
 See [Physics and latency limits](physics-and-latency-limits.md) for the underlying path-difference,
 ultrasonic reference-beacon calibration, drift, ambiguity and AR-latency bounds that motivate this
