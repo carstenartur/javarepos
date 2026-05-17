@@ -109,6 +109,28 @@ Independent USB microphones are a poor default for passive precision TDOA, but t
 controlled experiments when an ultrasonic reference beacon provides a continuously observed timing
 reference.
 
+### Scientific framing: beacon-aided carrier-phase synchronization
+
+The proposed USB approach is **not** ordinary passive TDOA. It is an experimental *beacon-aided
+carrier-phase synchronization* method for asynchronous low-cost acoustic arrays. Conceptually it is
+closer to GNSS carrier-phase processing or PLL-aided ranging than to a classical multi-channel
+microphone interface.
+
+The method combines:
+
+- an ultrasonic reference beacon at a known position;
+- carrier-phase tracking of the beacon on every microphone;
+- explicit cycle-count and cycle-slip handling;
+- Doppler/frequency tracking of the beacon and of the target signal;
+- a smooth-motion model (constant velocity/acceleration, or filtered);
+- residual-error checks against the motion model and geometry;
+- optional user-guided recalibration when residuals exceed the error budget.
+
+Treating the problem as beacon-aided synchronization, rather than as passive TDOA on raw USB
+streams, is what makes the low-cost setup tractable. It also bounds the claims that can be made:
+the beacon corrects time and (within ambiguity) geometry, but target localization still inherits all
+of the usual SNR, bandwidth, reflection and array-geometry limits described elsewhere on this page.
+
 ### Baseline problem
 
 Independent USB microphones usually do not share a hardware sample clock. For passive TDOA this
@@ -159,6 +181,62 @@ Calibrate and record:
 This is still an experimental alternative, not a replacement for shared-clock capture. The beacon
 helps align the USB devices over time, while the stereo baselines provide redundant local direction
 information.
+
+### Geometry sketch: three stereo USB microphones with reference beacon
+
+The sketch below shows the preferred low-cost layout. Three stereo USB microphones are placed at
+known positions in the room with deliberately different baseline orientations, and a fixed
+ultrasonic beacon `B` sits at a known reference position. Arrows indicate the guided calibration
+movement: the user starts near the beacon (to acquire phase lock) and moves each microphone
+smoothly toward its intended position on or near the wall before the target source is observed.
+
+```text
+y
+^
+|           +---------------------------- wall ----------------------------+
+|           |                                                              |
+|           |  S3L === S3R     (stereo 3, baseline ~ x-axis)               |
+|           |   ^                                                          |
+|           |   |  guided calibration arrow                                |
+|           |   |                                                          |
+|           |   |                            T (optional target source)    |
+|           |   |                            *                             |
+|           |   |                                                          |
+|           |   |        S2L                                               |
+|           |   |         \                                                |
+|           |   |          \   (stereo 2, baseline ~ diagonal)            |
+|           |   |           S2R                                            |
+|           |   |          ^                                               |
+|           |   |          |  guided calibration arrow                     |
+|           |   |          |                                               |
+|           |   |       B (ultrasonic reference beacon, known position)    |
+|           |   |          |                                               |
+|           |   |          v  guided calibration arrow                     |
+|           |   |          |                                               |
+|           |   |          S1L                                             |
+|           |   |          ||  (stereo 1, baseline ~ y-axis)               |
+|           |   |          S1R                                             |
+|           |   |                                                          |
+|           +--------------------------------------------------------------+
++----------------------------------------------------------------------> x
+```
+
+Legend:
+
+- `B` — ultrasonic reference beacon at known position `(xB, yB, zB)`.
+- `S1L / S1R`, `S2L / S2R`, `S3L / S3R` — left/right capsules of stereo USB microphones 1..3.
+- Each `SiL === SiR` segment is the **local synchronized baseline** of stereo device `i`, with
+  known capsule positions, baseline vector `bi` and intra-device delay model.
+- The three baselines `b1, b2, b3` are intentionally oriented along different room directions
+  (here roughly y, diagonal, and x) to give complementary direction information.
+- Arrows indicate the **guided calibration movement** from the beacon/reference position toward the
+  intended placement of each stereo device, used to unwrap carrier phase and resolve the integer
+  cycle count.
+- `T` — optional target source (for example a flying insect). It is observed during the tracking
+  phase, after calibration has established the virtual time base.
+
+The actual geometry must be measured in metres and stored alongside the timing model; the sketch is
+illustrative only.
 
 ### Carrier-phase tracking
 
@@ -222,6 +300,122 @@ flowchart LR
 The quality check is essential. If residual offset, drift or cycle-slip uncertainty exceeds the
 localization error budget, the system should reject the calibration or mark the localization output
 as demonstration-grade only.
+
+### Practical calibration workflow
+
+The following step-by-step protocol turns the pipeline above into a reproducible procedure. Each
+step should be logged together with timestamps and quality metrics so the calibration can be
+audited and repeated.
+
+1. **Place or activate the ultrasonic beacon** at a measured, known position. Record beacon
+   position, waveform (single sine, multitone, chirp, code) and nominal carrier frequency.
+2. **Place each microphone near a reference position** (typically close to the beacon, in clean
+   line-of-sight) and acquire phase lock on the beacon carrier.
+3. **Estimate phase, carrier frequency and SNR** per channel. Reject calibration if the beacon SNR
+   is below a configured threshold or if the carrier frequency disagrees with the nominal beacon
+   frequency by more than the tracker bandwidth.
+4. **Move the microphone smoothly** from the reference position toward its intended room position,
+   following the guided calibration arrow shown in the geometry sketch. Avoid abrupt direction
+   changes and rotations that break line-of-sight.
+5. **Continuously unwrap phase and count cycles** during the movement, accumulating both the
+   integer cycle count `N` and the wrapped phase `Δphi`.
+6. **Estimate radial velocity** from the phase/frequency trend (`v_r ≈ -(c / f) * df_observed`).
+   Cross-check it against the user's expected motion profile.
+7. **Detect dropouts** (SNR loss, USB buffer discontinuity, occlusion) and **interpolate phase and
+   frequency** through them using the velocity/acceleration motion model.
+8. **Re-lock after the dropout** and verify that the reconstructed cycle count is plausible:
+   the post-dropout phase, frequency and accumulated path length must be consistent with the
+   pre-dropout trajectory within a configured tolerance.
+9. **Store the final calibration state** per device: microphone capsule positions, baseline
+   vector and intra-device delay, inter-device offset and drift parameters, residual cycle-slip
+   uncertainty, and the timestamps that anchor the virtual time base.
+10. **Reject or repeat the calibration** if any residual exceeds the localization error budget,
+    if the reconstructed trajectory is inconsistent, or if the operator notices an unmodelled
+    event (door, fan, reflection). The UI should explicitly prompt the user to repeat the
+    calibration movement in that case.
+
+Only after a successful calibration does the system enter the tracking phase for the actual target
+source.
+
+### Failure modes and mitigations
+
+The table below lists the most common failure modes observed in beacon-aided carrier-phase
+synchronization for low-cost USB arrays, together with their typical symptom and a recommended
+mitigation. The mitigations are not mutually exclusive and several should usually be combined.
+
+|                  Failure mode                   |                          Symptom                          |                                                 Mitigation                                                 |
+|-------------------------------------------------|-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| Cycle slip                                      | Sudden integer-wavelength jump in path-length estimate    | Detect via residual against motion model; correct integer count; fall back to coded/multi-frequency beacon |
+| Beacon multipath                                | Stable but biased phase; ghost peaks in delay estimate    | Use directional beacon; absorbing room treatment; multi-frequency consistency check                        |
+| Low beacon SNR                                  | Noisy phase, frequent unlocks, large phase variance       | Increase beacon level; narrower tracking bandwidth; reject calibration below SNR threshold                 |
+| Too abrupt user movement                        | Motion model residual spikes; loss of lock                | Slow guided movement; constrain velocity/acceleration; warn and request repeat                             |
+| USB buffering discontinuity                     | Stepwise time offset; phase jump unrelated to motion      | Detect via discontinuity in beacon phase; reset offset; rely on coded beacon for re-acquisition            |
+| Multiple plausible cycle counts after dropout   | Ambiguous reconstruction; several trajectories fit        | Use Doppler trend and multi-frequency beacon to disambiguate; reject if still ambiguous                    |
+| Target signal confused with beacon              | Beacon tracker locks onto target harmonic                 | Keep beacon outside target band; band-pass before tracking; verify carrier frequency                       |
+| Beacon outside microphone bandwidth             | No or attenuated beacon energy in the captured spectrum   | Verify microphone frequency response; pick beacon frequency in usable band; warn at startup                |
+| Stereo device internally not sample-synchronous | Intra-device delay drifts; baseline geometry inconsistent | Measure intra-device delay; treat each capsule as separate device with its own offset                      |
+| Temperature-dependent speed-of-sound error      | Slow systematic bias in path-length estimates             | Log ambient temperature; recompute `c` from temperature; recalibrate periodically                          |
+
+### Beacon vs target signal, calibration vs tracking phase
+
+To avoid confusion in implementation and documentation, four roles must be kept conceptually
+separate:
+
+- **Reference beacon signal.** A known ultrasonic waveform (sine, multitone, chirp, code) emitted
+  from a known position. Its only purpose is to feed the carrier-phase / cycle-slip / drift
+  estimator and to construct the virtual time base.
+- **Target / insect signal.** The actual signal of interest. It is generally weak, broadband or
+  modulated, and its position and motion are *unknown*. It is the quantity the user wants to
+  localize.
+- **Calibration phase.** The interval during which the operator follows the guided calibration
+  movement so the system can lock onto the beacon, unwrap phase, resolve cycle ambiguity, and
+  estimate inter-device offset, drift and intra-device delay. No target-localization output should
+  be reported during this phase.
+- **Tracking phase.** The interval after a successful calibration during which the beacon is still
+  observed (for continuous drift correction) and the target signal is processed against the
+  corrected virtual time base to produce TDOA, beamforming and localization estimates.
+
+The beacon constructs the timing and geometric correction. It does **not** improve target SNR,
+target bandwidth, room reflections or array geometry. Target localization quality therefore still
+depends on the same physical limits described earlier on this page; the beacon only removes (within
+its own residual error) the synchronization handicap of independent USB devices.
+
+### References and background
+
+The techniques used here are adapted from several mature fields. The list below is intentionally
+short and topical; it points at canonical entry points rather than at a comprehensive bibliography.
+
+- Carrier-phase tracking and phase unwrapping — see general DSP textbooks, e.g. Oppenheim &
+  Schafer, *Discrete-Time Signal Processing*; Proakis & Manolakis, *Digital Signal Processing*.
+- PLL/FLL carrier tracking — Best, *Phase-Locked Loops: Design, Simulation, and Applications*;
+  Gardner, *Phaselock Techniques*.
+- Cycle-slip detection and integer ambiguity — Misra & Enge, *Global Positioning System: Signals,
+  Measurements, and Performance*; Teunissen's LAMBDA method for GNSS integer ambiguity resolution.
+- GNSS / RTK carrier-phase ambiguity resolution — Kaplan & Hegarty, *Understanding GPS/GNSS:
+  Principles and Applications*; IGS and RTKLIB documentation as practical references.
+- Multi-frequency phase ranging — classical electronic distance measurement (EDM) literature; for
+  acoustic analogues see ultrasonic ranging papers using two-tone or chirp methods.
+- Asynchronous microphone-array calibration — research literature on self-calibrating distributed
+  microphone arrays and wireless acoustic sensor networks, e.g. work by Plinge, Gannot, Bertrand
+  and collaborators in IEEE Signal Processing Magazine special issues on distributed arrays.
+- TDOA and GCC-PHAT — Knapp & Carter, "The Generalized Correlation Method for Estimation of Time
+  Delay," IEEE Trans. ASSP, 1976; Brandstein & Ward (eds.), *Microphone Arrays: Signal Processing
+  Techniques and Applications*.
+- Doppler velocity estimation — Skolnik, *Introduction to Radar Systems*; standard sonar texts for
+  the acoustic case.
+
+Online encyclopaedic entries (Wikipedia: "Phase-locked loop", "Carrier recovery",
+"Real Time Kinematic", "Time difference of arrival", "Generalized cross-correlation",
+"Doppler effect") are convenient starting points before reaching for the primary literature.
+
+### Status and scope
+
+Shared-clock multi-channel audio interfaces remain the preferred hardware for **precise** passive
+TDOA. The beacon-aided carrier-phase synchronization approach described above is promising for
+research and for guided low-cost experiments, but it is **not** a guaranteed production solution.
+Until residual offset, drift and cycle-slip uncertainty have been characterized for a specific
+hardware combination, results obtained with USB stereo microphones plus an ultrasonic beacon should
+be treated as experimental and labelled accordingly in any user-facing output.
 
 ## Shared-clock multi-channel interfaces as preferred hardware
 
