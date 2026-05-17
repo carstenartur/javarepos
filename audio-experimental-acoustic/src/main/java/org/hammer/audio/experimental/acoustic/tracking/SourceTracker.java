@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import org.hammer.audio.experimental.acoustic.doppler.Vector3;
 import org.hammer.audio.geometry.Vector2;
 
 /**
@@ -31,6 +32,7 @@ public final class SourceTracker {
   private final double initialVelocityVariance;
   private final double confidenceDecay;
   private final double confidenceGain;
+  private final double dopplerVelocityWeight;
 
   private final List<Track> tracks = new ArrayList<>();
   private int nextId;
@@ -59,6 +61,31 @@ public final class SourceTracker {
       double initialVelocityVariance,
       double confidenceDecay,
       double confidenceGain) {
+    this(
+        frequencyMatchHz,
+        missingFramesToDrop,
+        processNoiseDensity,
+        measurementNoiseVariance,
+        initialPositionVariance,
+        initialVelocityVariance,
+        confidenceDecay,
+        confidenceGain,
+        0.35);
+  }
+
+  /**
+   * Construct a tracker with explicit smoothing parameters and a Doppler/position velocity blend.
+   */
+  public SourceTracker(
+      double frequencyMatchHz,
+      int missingFramesToDrop,
+      double processNoiseDensity,
+      double measurementNoiseVariance,
+      double initialPositionVariance,
+      double initialVelocityVariance,
+      double confidenceDecay,
+      double confidenceGain,
+      double dopplerVelocityWeight) {
     if (!(frequencyMatchHz > 0.0) || !Double.isFinite(frequencyMatchHz)) {
       throw new IllegalArgumentException("frequencyMatchHz must be finite and > 0");
     }
@@ -71,6 +98,11 @@ public final class SourceTracker {
     if (!Double.isFinite(confidenceGain) || confidenceGain < 0.0 || confidenceGain > 1.0) {
       throw new IllegalArgumentException("confidenceGain must be in [0,1]");
     }
+    if (!Double.isFinite(dopplerVelocityWeight)
+        || dopplerVelocityWeight < 0.0
+        || dopplerVelocityWeight > 1.0) {
+      throw new IllegalArgumentException("dopplerVelocityWeight must be in [0,1]");
+    }
     this.frequencyMatchHz = frequencyMatchHz;
     this.missingFramesToDrop = missingFramesToDrop;
     this.processNoiseDensity = processNoiseDensity;
@@ -79,6 +111,7 @@ public final class SourceTracker {
     this.initialVelocityVariance = initialVelocityVariance;
     this.confidenceDecay = confidenceDecay;
     this.confidenceGain = confidenceGain;
+    this.dopplerVelocityWeight = dopplerVelocityWeight;
   }
 
   /** Default configuration suitable for typical insect-source experiments. */
@@ -116,6 +149,10 @@ public final class SourceTracker {
         Track track = tracks.get(matched);
         track.filter.update(observation.position());
         track.frequencyHz = observation.frequencyHz();
+        track.observedFrequencyHz = observation.observedFrequencyHz();
+        track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
+        track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
+        track.velocityMetersPerSecond = blendVelocity(track.filter.velocity(), observation.velocity());
         track.lastUpdatedFrameIndex = frameIndex;
         track.consecutiveMissedFrames = 0;
         track.observationCount++;
@@ -125,6 +162,7 @@ public final class SourceTracker {
         Track track = new Track();
         track.id = nextId++;
         track.frequencyHz = observation.frequencyHz();
+        track.observedFrequencyHz = observation.observedFrequencyHz();
         track.filter =
             new Kalman2D(
                 observation.position(),
@@ -136,6 +174,9 @@ public final class SourceTracker {
         track.consecutiveMissedFrames = 0;
         track.observationCount = 1;
         track.confidence = confidenceGain;
+        track.velocityMetersPerSecond = observation.velocity();
+        track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
+        track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
         tracks.add(track);
       }
     }
@@ -146,6 +187,7 @@ public final class SourceTracker {
       }
       Track track = tracks.get(i);
       track.confidence *= confidenceDecay;
+      track.velocityMetersPerSecond = Vector3.from(track.filter.velocity());
     }
     // Drop stale tracks.
     Iterator<Track> iterator = tracks.iterator();
@@ -169,8 +211,12 @@ public final class SourceTracker {
           new TrackedSource(
               track.id,
               track.frequencyHz,
+              track.observedFrequencyHz,
               track.filter.position(),
-              track.filter.velocity(),
+              track.velocityMetersPerSecond.xy(),
+              track.velocityMetersPerSecond,
+              track.radialVelocityMetersPerSecond,
+              track.frequencyVarianceHzSquared,
               track.confidence,
               track.lastUpdatedFrameIndex,
               track.observationCount));
@@ -204,15 +250,41 @@ public final class SourceTracker {
     return best;
   }
 
+  private Vector3 blendVelocity(Vector2 positionDeltaVelocity, Vector3 dopplerVelocity) {
+    Vector3 positional = Vector3.from(positionDeltaVelocity);
+    return positional.scale(1.0 - dopplerVelocityWeight).plus(dopplerVelocity.scale(dopplerVelocityWeight));
+  }
+
   /** One frame observation: cluster frequency + localized 2D position. */
-  public record Observation(double frequencyHz, Vector2 position) {
+  public record Observation(
+      double frequencyHz,
+      double observedFrequencyHz,
+      Vector2 position,
+      Vector3 velocity,
+      double radialVelocityMetersPerSecond,
+      double frequencyVarianceHzSquared) {
+
+    /** Create an observation without Doppler data. */
+    public Observation(double frequencyHz, Vector2 position) {
+      this(frequencyHz, frequencyHz, position, Vector3.ZERO, 0.0, 0.0);
+    }
 
     /** Validate fields. */
     public Observation {
       if (!Double.isFinite(frequencyHz) || frequencyHz < 0.0) {
         throw new IllegalArgumentException("frequencyHz must be finite and >= 0");
       }
+      if (!Double.isFinite(observedFrequencyHz) || observedFrequencyHz < 0.0) {
+        throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
+      }
       Objects.requireNonNull(position, "position");
+      Objects.requireNonNull(velocity, "velocity");
+      if (!Double.isFinite(radialVelocityMetersPerSecond)) {
+        throw new IllegalArgumentException("radialVelocityMetersPerSecond must be finite");
+      }
+      if (!Double.isFinite(frequencyVarianceHzSquared) || frequencyVarianceHzSquared < 0.0) {
+        throw new IllegalArgumentException("frequencyVarianceHzSquared must be finite and >= 0");
+      }
     }
   }
 
@@ -220,7 +292,11 @@ public final class SourceTracker {
   private static final class Track {
     int id;
     double frequencyHz;
+    double observedFrequencyHz;
     Kalman2D filter;
+    Vector3 velocityMetersPerSecond = Vector3.ZERO;
+    double radialVelocityMetersPerSecond;
+    double frequencyVarianceHzSquared;
     long lastUpdatedFrameIndex;
     int consecutiveMissedFrames;
     int observationCount;

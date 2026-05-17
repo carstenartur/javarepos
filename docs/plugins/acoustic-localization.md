@@ -26,17 +26,68 @@ Experimental.
 - TDOA / GCC-PHAT based localization experiments (`CrossCorrelationTdoaEstimator`,
   `GccPhatTdoaEstimator`);
 - delay-and-sum beamforming (`DelayAndSumBeamformer`);
+- Doppler velocity estimation (`DopplerEstimator`, `SimpleDopplerEstimator`),
+  per-microphone fusion (`MultiSensorDopplerEstimator`) and geometry-aware velocity
+  reconstruction (`VelocityReconstructor`);
 - microphone-array visualization and 2D source-position overview panel contributed via the
   plugin API;
 - coherent real-time multi-source tracking via `TrackingPipeline`, `SourceTracker` and
   `Kalman2D` — see [`tracking.md`](acoustic-localization/tracking.md) for the pipeline
   design;
 - reproducible validation scenarios via `SimulationScenarios` (single source, two close
-  frequencies, noisy room, moving source, reflected environment);
+  frequencies, noisy room, moving source, moving toward the array, moving across the array, two
+  moving sources, reflected environment);
 - bounded per-frame real-time budget (`FrameSchedule`, `ProcessingBudget`).
 
 The legacy `MosquitoLocalizationPipeline` is still provided for one-shot per-frame
 analyses; new work should use `TrackingPipeline`.
+
+## Doppler-based velocity estimation
+
+The tracking pipeline stabilizes each detected source frequency over a bounded multi-frame
+`FrequencyTrack` before computing Doppler velocity. For low source speeds relative to the speed of
+sound it uses the small-velocity approximation:
+
+```text
+v_r ~= c * (f_observed - f_reference) / f_reference
+```
+
+`c` is configurable and defaults to 343 m/s. `f_reference` is the stabilized base-frequency
+estimate, while `f_observed` is the current per-frame peak frequency. Positive radial velocity is
+treated as motion toward the microphone, matching the sign of a positive frequency shift in the
+plugin's simulator and reconstructor.
+
+Per-microphone frequency peaks produce individual radial velocities. The default multi-sensor
+estimator applies median absolute-deviation outlier rejection, then `VelocityReconstructor` solves a
+weighted least-squares system from the microphone line-of-sight vectors to estimate a global
+horizontal velocity vector. If the geometry is under-constrained, it falls back to the strongest
+available radial direction.
+
+## Combining Doppler and TDOA
+
+The processing order is explicit:
+
+1. audio frame input;
+2. FFT peak detection;
+3. cross-channel frequency clustering;
+4. frequency stabilization;
+5. TDOA consistency estimation;
+6. delay-and-sum position estimation;
+7. Doppler radial-velocity estimation and multi-sensor fusion;
+8. source tracking.
+
+TDOA and beamforming provide direction/position, Doppler provides radial motion, and the
+`SourceTracker` blends Doppler-derived velocity with frame-to-frame position changes from its
+Kalman filter. Each `TrackedSource` exposes stable frequency, observed frequency, position, 2D/3D
+velocity, radial velocity, confidence and frequency-variance metrics for visualization.
+
+## Validation metrics
+
+Simulation and tests track:
+
+- frequency stability over time (`FrequencyTrack.variance()`);
+- Doppler error against known synthetic source velocity;
+- reconstructed velocity-vector error from multi-microphone radial observations.
 
 ## UI integration
 
@@ -72,6 +123,10 @@ timing-precision math. The detailed microphone setup discussion is in
 - room reflections and noise can dominate the target signal;
 - multiple weak sources are difficult to separate;
 - accurate localization requires calibrated geometry and synchronization.
+- unstable source frequencies (for example insect wingbeat modulation) can masquerade as Doppler
+  shift;
+- multipath reflections can create contradictory per-microphone radial velocities;
+- very small velocities may fall below FFT frequency resolution for short frames or low SNR.
 
 ## Roadmap
 
@@ -79,4 +134,3 @@ timing-precision math. The detailed microphone setup discussion is in
 - add plugin settings (microphone geometry, frequency band, TDOA method);
 - richer experiment workflows and visualizations contributed via the plugin API;
 - optional heatmap / confidence display contributed as additional views.
-

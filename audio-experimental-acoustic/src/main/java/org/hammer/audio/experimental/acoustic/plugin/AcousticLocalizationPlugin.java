@@ -51,8 +51,11 @@ public final class AcousticLocalizationPlugin implements AudioAnalyzerPlugin {
             "gcc-phat-tdoa",
             "Frequency-domain GCC-PHAT TDOA estimator robust against narrow-band signals."),
         contribution(
-            "delay-and-sum-beamformer",
-            "Delay-and-sum beamformer producing a 2D heatmap over a candidate grid."),
+             "delay-and-sum-beamformer",
+             "Delay-and-sum beamformer producing a 2D heatmap over a candidate grid."),
+        contribution(
+            "doppler-velocity-tracking",
+            "Doppler-based radial velocity estimation fused with multi-frame source tracking."),
         contribution(
             "mosquito-localization-pipeline",
             "Orchestrates frequency tracking, TDOA estimation and beamforming into a snapshot."));
@@ -131,8 +134,9 @@ public final class AcousticLocalizationPlugin implements AudioAnalyzerPlugin {
 
         The plugin provides experimental wingbeat frequency tracking, GCC-PHAT /
         cross-correlation TDOA estimators, delay-and-sum beamforming and a 2D
-        room simulator. See docs/plugins/acoustic-localization.md for details
-        and limitations.
+        room simulator. The tracking pipeline also estimates Doppler radial
+        velocity, frequency shift and a smoothed velocity vector per source.
+        See docs/plugins/acoustic-localization.md for details and limitations.
 
         Plugin-specific views, analyzers and demo signals are loaded dynamically
         by the host through the audio-plugin-api ServiceLoader contract; the

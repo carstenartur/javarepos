@@ -1,6 +1,7 @@
 package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.Objects;
+import org.hammer.audio.experimental.acoustic.doppler.Vector3;
 import org.hammer.audio.geometry.Vector2;
 
 /**
@@ -14,8 +15,12 @@ import org.hammer.audio.geometry.Vector2;
 public record TrackedSource(
     int id,
     double frequencyHz,
+    double observedFrequencyHz,
     Vector2 positionMeters,
     Vector2 velocityMetersPerSecond,
+    Vector3 velocity,
+    double radialVelocityMetersPerSecond,
+    double frequencyVarianceHzSquared,
     double confidence,
     long lastUpdatedFrameIndex,
     int observationCount) {
@@ -28,8 +33,18 @@ public record TrackedSource(
     if (!Double.isFinite(frequencyHz) || frequencyHz < 0.0) {
       throw new IllegalArgumentException("frequencyHz must be finite and >= 0");
     }
+    if (!Double.isFinite(observedFrequencyHz) || observedFrequencyHz < 0.0) {
+      throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
+    }
     Objects.requireNonNull(positionMeters, "positionMeters");
     Objects.requireNonNull(velocityMetersPerSecond, "velocityMetersPerSecond");
+    Objects.requireNonNull(velocity, "velocity");
+    if (!Double.isFinite(radialVelocityMetersPerSecond)) {
+      throw new IllegalArgumentException("radialVelocityMetersPerSecond must be finite");
+    }
+    if (!Double.isFinite(frequencyVarianceHzSquared) || frequencyVarianceHzSquared < 0.0) {
+      throw new IllegalArgumentException("frequencyVarianceHzSquared must be finite and >= 0");
+    }
     if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
       throw new IllegalArgumentException("confidence must be finite and in [0,1]");
     }

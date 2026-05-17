@@ -55,6 +55,18 @@ class SimulatedMicrophoneArraySourceTest {
   }
 
   @Test
+  void movingEmitterProducesDopplerShiftTowardMicrophone() {
+    SoundEmitter2D emitter =
+        new SoundEmitter2D(new Vector2(1.0, 0.0), new Vector2(-1.0, 0.0), 686.0, 0.1);
+
+    double observed =
+        SimulatedMicrophoneArraySource.observedFrequencyAt(emitter, new Vector2(0.0, 0.0), 0.0);
+
+    assertTrue(observed > emitter.frequencyHz());
+    assertEquals(688.0, observed, 0.01);
+  }
+
+  @Test
   void multipleEmittersContributeDifferentSignalThanSingleEmitter() {
     MicrophoneArray array = array();
     SimulatedMicrophoneArraySource single = source(array, 1L, movingEmitter(), room(0.0, 0.0));

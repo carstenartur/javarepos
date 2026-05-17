@@ -94,7 +94,8 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
       Vector2 emitterPosition = emitter.positionAt(receiverTimeSeconds);
       double distance = Math.max(0.01, microphonePosition.distanceTo(emitterPosition));
       double travelSeconds = distance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
-      sample += emitter.sampleAt(receiverTimeSeconds - travelSeconds) / distance;
+      double observedFrequency = observedFrequencyAt(emitter, microphonePosition, receiverTimeSeconds);
+      sample += emitter.sampleAt(receiverTimeSeconds - travelSeconds, observedFrequency) / distance;
       if (room.reflectionGain() > 0.0) {
         Vector2 reflected =
             new Vector2(room.widthMeters() - emitterPosition.x(), emitterPosition.y());
@@ -102,10 +103,20 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
         double reflectedTravel = reflectedDistance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
         sample +=
             room.reflectionGain()
-                * emitter.sampleAt(receiverTimeSeconds - reflectedTravel)
+                * emitter.sampleAt(receiverTimeSeconds - reflectedTravel, observedFrequency)
                 / reflectedDistance;
       }
     }
     return Math.max(-1.0, Math.min(1.0, sample));
+  }
+
+  /** Doppler-shifted frequency at a microphone; positive radial velocity means motion toward mic. */
+  public static double observedFrequencyAt(
+      SoundEmitter2D emitter, Vector2 microphonePosition, double receiverTimeSeconds) {
+    Vector2 emitterPosition = emitter.positionAt(receiverTimeSeconds);
+    Vector2 sourceToMicrophone = microphonePosition.minus(emitterPosition).normalized();
+    double radialTowardMicrophone = emitter.velocityMetersPerSecond().dot(sourceToMicrophone);
+    return emitter.frequencyHz()
+        * (1.0 + radialTowardMicrophone / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND);
   }
 }

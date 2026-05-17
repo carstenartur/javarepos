@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import org.hammer.audio.experimental.acoustic.doppler.Vector3;
 import org.hammer.audio.experimental.acoustic.tracking.SourceTracker.Observation;
 import org.hammer.audio.geometry.Vector2;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,24 @@ class SourceTrackerTest {
         tracker.update(0, 0.0, List.of(new Observation(800.0, new Vector2(0.0, 0.0))));
     assertEquals(1, tracks.size());
     assertEquals(0, tracks.get(0).id(), "ids restart from 0 after reset");
+  }
+
+  @Test
+  void storesDopplerVelocityAndObservedFrequency() {
+    SourceTracker tracker = new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+
+    List<TrackedSource> tracks =
+        tracker.update(
+            0,
+            0.0,
+            List.of(
+                new Observation(
+                    600.0, 604.0, new Vector2(1.0, 1.0), new Vector3(0.5, -0.25, 0.0), 2.0, 0.5)));
+
+    assertEquals(604.0, tracks.get(0).observedFrequencyHz());
+    assertEquals(2.0, tracks.get(0).radialVelocityMetersPerSecond());
+    assertEquals(0.5, tracks.get(0).velocity().x());
+    assertEquals(-0.25, tracks.get(0).velocityMetersPerSecond().y());
   }
 
   @Test

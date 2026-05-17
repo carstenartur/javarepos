@@ -1,12 +1,21 @@
 package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.hammer.audio.acquisition.MicrophoneArray;
 import org.hammer.audio.core.AudioBlock;
 import org.hammer.audio.experimental.acoustic.DelayAndSumBeamformer;
 import org.hammer.audio.experimental.acoustic.TdoaEstimator;
+import org.hammer.audio.experimental.acoustic.doppler.FrequencyTrack;
+import org.hammer.audio.experimental.acoustic.doppler.MultiSensorDopplerEstimator;
+import org.hammer.audio.experimental.acoustic.doppler.RadialVelocityEstimate;
+import org.hammer.audio.experimental.acoustic.doppler.SimpleMultiSensorDopplerEstimator;
+import org.hammer.audio.experimental.acoustic.doppler.SourceObservation;
+import org.hammer.audio.experimental.acoustic.doppler.Vector3;
+import org.hammer.audio.experimental.acoustic.doppler.VelocityReconstructor;
 import org.hammer.audio.geometry.Vector2;
 
 /**
@@ -38,8 +47,11 @@ public final class TrackingPipeline {
   private final TdoaEstimator tdoaEstimator;
   private final DelayAndSumBeamformer beamformer;
   private final SourceTracker tracker;
+  private final MultiSensorDopplerEstimator dopplerEstimator;
+  private final VelocityReconstructor velocityReconstructor;
   private final List<Vector2> candidateGrid;
   private final FrameSchedule schedule;
+  private final Map<Integer, FrequencyTrack> frequencyTracks = new HashMap<>();
 
   /** Configure a pipeline. {@code schedule} may be {@code null} to disable budget reporting. */
   public TrackingPipeline(
@@ -50,11 +62,37 @@ public final class TrackingPipeline {
       SourceTracker tracker,
       List<Vector2> candidateGrid,
       FrameSchedule schedule) {
+    this(
+        peakDetector,
+        clusterer,
+        tdoaEstimator,
+        beamformer,
+        tracker,
+        SimpleMultiSensorDopplerEstimator.withDefaults(),
+        new VelocityReconstructor(),
+        candidateGrid,
+        schedule);
+  }
+
+  /** Configure a pipeline with explicit Doppler components. */
+  public TrackingPipeline(
+      MultiPeakDetector peakDetector,
+      FrequencyClusterer clusterer,
+      TdoaEstimator tdoaEstimator,
+      DelayAndSumBeamformer beamformer,
+      SourceTracker tracker,
+      MultiSensorDopplerEstimator dopplerEstimator,
+      VelocityReconstructor velocityReconstructor,
+      List<Vector2> candidateGrid,
+      FrameSchedule schedule) {
     this.peakDetector = Objects.requireNonNull(peakDetector, "peakDetector");
     this.clusterer = Objects.requireNonNull(clusterer, "clusterer");
     this.tdoaEstimator = Objects.requireNonNull(tdoaEstimator, "tdoaEstimator");
     this.beamformer = Objects.requireNonNull(beamformer, "beamformer");
     this.tracker = Objects.requireNonNull(tracker, "tracker");
+    this.dopplerEstimator = Objects.requireNonNull(dopplerEstimator, "dopplerEstimator");
+    this.velocityReconstructor =
+        Objects.requireNonNull(velocityReconstructor, "velocityReconstructor");
     Objects.requireNonNull(candidateGrid, "candidateGrid");
     if (candidateGrid.isEmpty()) {
       throw new IllegalArgumentException("candidateGrid must not be empty");
@@ -84,8 +122,24 @@ public final class TrackingPipeline {
         }
       }
       DelayAndSumBeamformer.BeamformingPoint best = beamformer.best(block, array, candidateGrid);
+      FrequencyTrack frequencyTrack = frequencyTrackFor(cluster.centerFrequencyHz());
+      double stableFrequency = frequencyTrack.update(cluster.centerFrequencyHz());
+      SourceObservation sourceObservation =
+          new SourceObservation(
+              cluster.centerFrequencyHz(), stableFrequency, best.positionMeters(), cluster.peaks());
+      List<RadialVelocityEstimate> radialVelocities =
+          dopplerEstimator.estimateRadialVelocities(sourceObservation);
+      Vector3 velocity =
+          velocityReconstructor.reconstruct(radialVelocities, array, best.positionMeters());
+      double radialVelocity = velocityReconstructor.fusedRadialVelocity(radialVelocities);
       observations.add(
-          new SourceTracker.Observation(cluster.centerFrequencyHz(), best.positionMeters()));
+          new SourceTracker.Observation(
+              stableFrequency,
+              cluster.centerFrequencyHz(),
+              best.positionMeters(),
+              velocity,
+              radialVelocity,
+              frequencyTrack.variance()));
     }
 
     double timestampSeconds = block.timestampNanos() / 1.0e9;
@@ -103,10 +157,16 @@ public final class TrackingPipeline {
   /** Reset internal tracking state. */
   public void reset() {
     tracker.reset();
+    frequencyTracks.clear();
   }
 
   /** Frame schedule the pipeline was configured against, or {@code null} when unspecified. */
   public FrameSchedule schedule() {
     return schedule;
+  }
+
+  private FrequencyTrack frequencyTrackFor(double frequencyHz) {
+    int key = (int) Math.round(frequencyHz / 20.0);
+    return frequencyTracks.computeIfAbsent(key, ignored -> new FrequencyTrack(8, 0.2));
   }
 }
