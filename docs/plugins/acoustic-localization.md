@@ -21,13 +21,22 @@ Experimental.
 ## Provided functionality
 
 - insect-like demo signal presets;
-- frequency tracking workflow (`WingbeatFrequencyTracker`);
+- per-channel multi-peak frequency detection (`MultiPeakDetector`) and stable cross-channel
+  frequency clustering (`FrequencyClusterer`);
 - TDOA / GCC-PHAT based localization experiments (`CrossCorrelationTdoaEstimator`,
   `GccPhatTdoaEstimator`);
 - delay-and-sum beamforming (`DelayAndSumBeamformer`);
 - microphone-array visualization and 2D source-position overview panel contributed via the
   plugin API;
-- experiment-oriented orchestration through `MosquitoLocalizationPipeline`.
+- coherent real-time multi-source tracking via `TrackingPipeline`, `SourceTracker` and
+  `Kalman2D` — see [`tracking.md`](acoustic-localization/tracking.md) for the pipeline
+  design;
+- reproducible validation scenarios via `SimulationScenarios` (single source, two close
+  frequencies, noisy room, moving source, reflected environment);
+- bounded per-frame real-time budget (`FrameSchedule`, `ProcessingBudget`).
+
+The legacy `MosquitoLocalizationPipeline` is still provided for one-shot per-frame
+analyses; new work should use `TrackingPipeline`.
 
 ## UI integration
 
@@ -49,10 +58,11 @@ visualizations and experiment logic remain inside this plugin.
 
 ## Hardware notes
 
-TDOA-based localization requires synchronized channels. Unsynchronized USB microphones are
-useful for demonstrations but not reliable for precise localization. See
-[`docs/plugins/acoustic-localization/README.md`](acoustic-localization/README.md) for the
-detailed microphone setup and synchronization discussion.
+TDOA-based localization requires a single shared sample clock across all microphones; see
+the dedicated [synchronization document](acoustic-localization/synchronization.md) for the
+mandatory requirements, the limitations of independent USB microphones and the per-array
+timing-precision math. The detailed microphone setup discussion is in
+[`docs/plugins/acoustic-localization/README.md`](acoustic-localization/README.md).
 
 ## Limitations
 
