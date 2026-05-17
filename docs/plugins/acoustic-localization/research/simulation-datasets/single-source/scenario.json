@@ -1,0 +1,34 @@
+{
+  "name": "single-source",
+  "description": "One stationary 600 Hz tone at (1.5, 1.0) in an anechoic 3x2 m room. Matches SimulationScenarios.singleSource().",
+  "room": {
+    "widthMeters": 3.0,
+    "heightMeters": 2.0,
+    "reflectionGain": 0.0,
+    "noiseAmplitude": 0.0
+  },
+  "array": {
+    "sampleRateHz": 16000,
+    "microphones": [
+      { "id": "m0", "channel": 0, "position": [1.35, 0.0] },
+      { "id": "m1", "channel": 1, "position": [1.65, 0.0] },
+      { "id": "m2", "channel": 2, "position": [1.35, 0.3] },
+      { "id": "m3", "channel": 3, "position": [1.65, 0.3] }
+    ]
+  },
+  "emitters": [
+    {
+      "id": "e0",
+      "position": [1.5, 1.0],
+      "velocity": [0.0, 0.0],
+      "frequencyHz": 600.0,
+      "amplitude": 0.5
+    }
+  ],
+  "durationSeconds": 0.5,
+  "randomSeed": 1,
+  "groundTruth": {
+    "trajectory": "linear",
+    "expectedTrackCount": 1
+  }
+}
