@@ -283,10 +283,10 @@ jobs:
 
         copied_modules = []
         for jacoco_dir in glob.glob("**/target/site/jacoco", recursive=True):
-          module_path = jacoco_dir.split("/target/site/jacoco")[0]
-          if module_path.startswith("./"):
-            module_path = module_path[2:]
-          module_name = module_path if module_path else "root"
+          jacoco_path = pathlib.Path(jacoco_dir)
+          module_parts = jacoco_path.parts[:-3]
+          module_name = "/".join(module_parts) if module_parts else "root"
+          # Keep names filesystem- and URL-safe for published coverage subdirectories.
           safe_module_name = re.sub(r"[^A-Za-z0-9._-]", "_", module_name)
           destination = coverage_dir / safe_module_name
           if destination.exists():
