@@ -24,6 +24,10 @@ import org.hammer.audio.ui.theme.PlotRenderTheme;
 public final class WaveformPanel extends JPanel {
 
   private static final Logger LOGGER = Logger.getLogger(WaveformPanel.class.getName());
+  private static final int LEFT_MARGIN = 48;
+  private static final int RIGHT_MARGIN = 12;
+  private static final int TOP_MARGIN = 20;
+  private static final int BOTTOM_MARGIN = 34;
 
   private AudioCaptureService audioCaptureService;
   private transient WaveformModel frozenModel;
@@ -173,12 +177,21 @@ public final class WaveformPanel extends JPanel {
     if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
       LOGGER.fine("paintComponent called");
     }
-    Rectangle plotBounds = new Rectangle(0, 0, Math.max(1, getWidth()), Math.max(1, getHeight()));
+    int width = Math.max(1, getWidth());
+    int height = Math.max(1, getHeight());
+    Rectangle plotBounds =
+        new Rectangle(
+            LEFT_MARGIN,
+            TOP_MARGIN,
+            Math.max(1, width - LEFT_MARGIN - RIGHT_MARGIN),
+            Math.max(1, height - TOP_MARGIN - BOTTOM_MARGIN));
     PlotRenderTheme.drawPlotBackground(g2, getWidth(), getHeight(), plotBounds);
     PlotRenderTheme.drawGrid(g2, plotBounds, 10, 8);
     PlotRenderTheme.drawTitle(g2, 10, 16, triggerEnabled ? "Waveform (triggered)" : "Waveform");
-    PlotRenderTheme.drawLabel(g2, 10, getHeight() - 8, "Sample index");
-    PlotRenderTheme.drawLabel(g2, 10, 32, "Amplitude [-1..1]");
+    PlotRenderTheme.drawXAxisLabel(g2, plotBounds, "Sample index");
+    PlotRenderTheme.drawYAxisLabel(g2, plotBounds, "Amplitude [-1..1]");
+    PlotRenderTheme.drawYTicks(
+        g2, plotBounds, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"+1", "0", "-1"});
 
     if (audioCaptureService == null) {
       LOGGER.warning("paintComponent: audioCaptureService is null");
@@ -210,32 +223,55 @@ public final class WaveformPanel extends JPanel {
     int rightRenderPoints = Math.min(xCount, channel1Points);
 
     if (channel0Points > 1 && xCount > 1) {
+      int[] scaledX = scaleXPoints(xPoints, leftRenderPoints, plotBounds);
+      int[] scaledY = scaleYPoints(yPoints[0], leftRenderPoints, plotBounds);
       g2.setColor(PlotRenderTheme.WAVEFORM_LEFT);
       g2.setStroke(PlotRenderTheme.TRACE_STROKE);
-      g2.drawPolyline(xPoints, yPoints[0], leftRenderPoints);
+      g2.drawPolyline(scaledX, scaledY, leftRenderPoints);
     }
 
     if (channel1Points > 1 && xCount > 1) {
+      int[] scaledX = scaleXPoints(xPoints, rightRenderPoints, plotBounds);
+      int[] scaledY = scaleYPoints(yPoints[1], rightRenderPoints, plotBounds);
       g2.setColor(PlotRenderTheme.WAVEFORM_RIGHT);
       g2.setStroke(PlotRenderTheme.THIN_TRACE_STROKE);
-      g2.drawPolyline(xPoints, yPoints[1], rightRenderPoints);
+      g2.drawPolyline(scaledX, scaledY, rightRenderPoints);
     }
 
-    int centerY = getHeight() / 2;
+    int centerY = plotBounds.y + plotBounds.height / 2;
     g2.setColor(PlotRenderTheme.CENTER_LINE);
     g2.setStroke(PlotRenderTheme.AXIS_STROKE);
-    g2.drawLine(0, centerY, getWidth() - 1, centerY);
+    g2.drawLine(plotBounds.x, centerY, plotBounds.x + plotBounds.width - 1, centerY);
 
-    int tickEveryNSample = model.getTickEveryNSample();
-    if (tickEveryNSample > 0) {
-      for (int i = 0; i < points; i += tickEveryNSample) {
-        if (i < xCount) {
-          g2.drawLine(xPoints[i], centerY - 3, xPoints[i], centerY + 3);
-        }
-      }
-    }
+    PlotRenderTheme.drawXTicks(
+        g2,
+        plotBounds,
+        new double[] {0.0d, 0.5d, 1.0d},
+        new String[] {
+          "0", Integer.toString(Math.max(0, points / 2)), Integer.toString(points - 1)
+        });
 
     drawLevelOverlay(g2, plotBounds);
+  }
+
+  private int[] scaleXPoints(int[] source, int count, Rectangle plotBounds) {
+    int[] scaled = new int[count];
+    int sourceWidth = Math.max(1, getWidth() - 1);
+    for (int i = 0; i < count; i++) {
+      double normalized = Math.max(0.0d, Math.min(1.0d, source[i] / (double) sourceWidth));
+      scaled[i] = plotBounds.x + (int) Math.round(normalized * (plotBounds.width - 1));
+    }
+    return scaled;
+  }
+
+  private int[] scaleYPoints(int[] source, int count, Rectangle plotBounds) {
+    int[] scaled = new int[count];
+    int sourceHeight = Math.max(1, getHeight() - 1);
+    for (int i = 0; i < count; i++) {
+      double normalized = Math.max(0.0d, Math.min(1.0d, source[i] / (double) sourceHeight));
+      scaled[i] = plotBounds.y + (int) Math.round(normalized * (plotBounds.height - 1));
+    }
+    return scaled;
   }
 
   /**
@@ -300,6 +336,11 @@ public final class WaveformPanel extends JPanel {
     g2.setFont(PlotRenderTheme.LABEL_FONT);
     g2.setColor(PlotRenderTheme.TEXT_MUTED);
     g2.drawString(status, plotBounds.x + 10, plotBounds.y + 32);
+    PlotRenderTheme.drawXTicks(
+        g2,
+        plotBounds,
+        new double[] {0.0d, 0.5d, 1.0d},
+        new String[] {"0", Integer.toString(n / 2), Integer.toString(n - 1)});
     return true;
   }
 

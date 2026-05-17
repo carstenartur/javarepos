@@ -177,10 +177,22 @@ public final class DocImageRenderer {
     PlotRenderTheme.drawPlotBackground(g, plot.width, plot.height, plot);
     PlotRenderTheme.drawGrid(g, plot, 16, 8);
     PlotRenderTheme.drawTitle(g, plot.x + 12, plot.y + 22, "Waveform — reproducible 440 Hz sine");
-    PlotRenderTheme.drawLabel(g, plot.x + 12, plot.y + 62, "Y: Amplitude [-1..1]");
+    PlotRenderTheme.drawYAxisLabel(g, plot, "Amplitude [-1..1]");
+    PlotRenderTheme.drawYTicks(
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"+1", "0", "-1"});
     PlotRenderTheme.drawXAxisLabel(g, plot, "Time [ms]");
     float[] samples = block.channelView(0);
     int visible = Math.min(samples.length, DASHBOARD_WAVEFORM_VISIBLE_SAMPLES);
+    double durationMs = 1000.0d * Math.max(0, visible - 1) / MONO_44K.sampleRate();
+    PlotRenderTheme.drawXTicks(
+        g,
+        plot,
+        new double[] {0.0d, 0.5d, 1.0d},
+        new String[] {
+          "0 ms",
+          String.format(Locale.ROOT, "%.1f ms", durationMs / 2.0d),
+          String.format(Locale.ROOT, "%.1f ms", durationMs)
+        });
     int centerY = plot.y + plot.height / 2;
     int amplitude = plot.height / 2 - 38;
     Path2D path = new Path2D.Float();
@@ -255,7 +267,11 @@ public final class DocImageRenderer {
     }
     Rectangle plot = new Rectangle(x0, y0, w, h);
     PlotRenderTheme.drawGrid(g, plot, 8, 4);
-    PlotRenderTheme.drawLabel(g, x0 + 4, y0 + 14, "Y: Frequency [Hz]");
+    PlotRenderTheme.drawYAxisLabel(g, plot, "Frequency [Hz]");
+    PlotRenderTheme.drawYTicks(
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"22.1 kHz", "11.0 kHz", "0 Hz"});
+    PlotRenderTheme.drawXTicks(
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0.0 s", "0.5 s", "1.0 s"});
     PlotRenderTheme.drawXAxisLabel(g, plot, "Time [s; older → newer]");
     PlotRenderTheme.drawLabel(g, x0 + w - 132, y0 + 14, "Color: relative magnitude [-]");
   }
@@ -321,26 +337,28 @@ public final class DocImageRenderer {
     Graphics2D g = img.createGraphics();
     try {
       applyHints(g);
-      Rectangle plot = new Rectangle(0, 0, W, H);
+      Rectangle plot = new Rectangle(48, 24, W - 64, H - 58);
       PlotRenderTheme.drawPlotBackground(g, W, H, plot);
       PlotRenderTheme.drawGrid(g, plot, 10, 8);
-      PlotRenderTheme.drawTitle(g, 10, 16, "Waveform (triggered)");
-      PlotRenderTheme.drawLabel(g, 10, 50, "Y: Amplitude [-1..1]");
+      PlotRenderTheme.drawTitle(g, plot.x, 16, "Waveform (triggered)");
+      PlotRenderTheme.drawYAxisLabel(g, plot, "Amplitude [-1..1]");
+      PlotRenderTheme.drawYTicks(
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"+1", "0", "-1"});
       PlotRenderTheme.drawXAxisLabel(g, plot, "Sample index");
 
       float[] samples = view.samplesView();
       int n = samples.length;
-      int centerY = H / 2;
-      int amplitude = H / 2 - 8;
+      int centerY = plot.y + plot.height / 2;
+      int amplitude = plot.height / 2 - 8;
       int[] xs = new int[n];
       int[] ys = new int[n];
       for (int i = 0; i < n; i++) {
-        xs[i] = (int) ((long) i * (W - 1) / Math.max(1, n - 1));
+        xs[i] = plot.x + (int) ((long) i * (plot.width - 1) / Math.max(1, n - 1));
         ys[i] = centerY - (int) (Math.max(-1f, Math.min(1f, samples[i])) * amplitude);
       }
       g.setColor(PlotRenderTheme.CENTER_LINE);
       g.setStroke(PlotRenderTheme.AXIS_STROKE);
-      g.drawLine(0, centerY, W - 1, centerY);
+      g.drawLine(plot.x, centerY, plot.x + plot.width - 1, centerY);
 
       g.setColor(PlotRenderTheme.WAVEFORM_LEFT);
       g.setStroke(PlotRenderTheme.TRACE_STROKE);
@@ -353,8 +371,13 @@ public final class DocImageRenderer {
               Locale.ROOT,
               "Trig: FIRED  Slope: rising  Level: %+.2f  view=1024 samples",
               view.level()),
-          10,
+          plot.x,
           32);
+      PlotRenderTheme.drawXTicks(
+          g,
+          plot,
+          new double[] {0.0d, 0.5d, 1.0d},
+          new String[] {"0", Integer.toString(n / 2), Integer.toString(n - 1)});
     } finally {
       g.dispose();
     }
@@ -382,11 +405,15 @@ public final class DocImageRenderer {
     Graphics2D g = img.createGraphics();
     try {
       applyHints(g);
-      Rectangle plot = new Rectangle(0, 0, W, H);
+      Rectangle plot = new Rectangle(52, 24, W - 68, H - 58);
       PlotRenderTheme.drawPlotBackground(g, W, H, plot);
       PlotRenderTheme.drawGrid(g, plot, 10, 8);
-      PlotRenderTheme.drawTitle(g, 10, 16, "Spectrum (averaged + peak hold)");
-      PlotRenderTheme.drawLabel(g, 10, 50, "Y: magnitude [dB rel. peak]");
+      PlotRenderTheme.drawTitle(g, plot.x, 16, "Spectrum (averaged + peak hold)");
+      PlotRenderTheme.drawYAxisLabel(g, plot, "Magnitude [dB rel. peak]");
+      PlotRenderTheme.drawYTicks(
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0 dB", "-40 dB", "-80 dB"});
+      PlotRenderTheme.drawXTicks(
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0 Hz", "11025 Hz", "22050 Hz"});
       PlotRenderTheme.drawXAxisLabel(g, plot, "Frequency [Hz]");
 
       float[] live = avg.averageView();
@@ -403,13 +430,13 @@ public final class DocImageRenderer {
           maxMag = Math.abs(v);
         }
       }
-      int floor = H - 24;
-      int top = 36;
+      int floor = plot.y + plot.height - 1;
+      int top = plot.y + 36;
       int[] xs = new int[bins];
       int[] ysLive = new int[bins];
       int[] ysPeak = new int[bins];
       for (int i = 0; i < bins; i++) {
-        xs[i] = (int) ((long) i * (W - 1) / Math.max(1, bins - 1));
+        xs[i] = plot.x + (int) ((long) i * (plot.width - 1) / Math.max(1, bins - 1));
         ysLive[i] = floor - (int) ((Math.abs(live[i]) / maxMag) * (floor - top));
         ysPeak[i] = floor - (int) ((Math.abs(held[i]) / maxMag) * (floor - top));
       }
@@ -422,7 +449,7 @@ public final class DocImageRenderer {
 
       g.setColor(PlotRenderTheme.TEXT_MUTED);
       g.setFont(PlotRenderTheme.LABEL_FONT);
-      g.drawString("Legend: blue averaged live spectrum, orange peak hold", 10, 32);
+      g.drawString("Legend: blue averaged live spectrum, orange peak hold", plot.x, 32);
     } finally {
       g.dispose();
     }
@@ -520,8 +547,8 @@ public final class DocImageRenderer {
       g.setColor(PlotRenderTheme.PANEL_BACKGROUND);
       g.fillRect(0, 0, W, H);
       int halfW = W / 2 - 4;
-      Rectangle leftPlot = new Rectangle(0, 0, halfW, H);
-      Rectangle rightPlot = new Rectangle(halfW + 8, 0, halfW, H);
+      Rectangle leftPlot = new Rectangle(44, 24, halfW - 56, H - 58);
+      Rectangle rightPlot = new Rectangle(halfW + 52, 24, halfW - 56, H - 58);
 
       drawSpectrumPanel(g, leftPlot, sa, "A — 440 Hz", PlotRenderTheme.SPECTRUM_LINE);
       drawSpectrumPanel(g, rightPlot, sb, "B — 880 Hz", PlotRenderTheme.WAVEFORM_RIGHT);
@@ -537,10 +564,15 @@ public final class DocImageRenderer {
 
   private static void drawSpectrumPanel(
       Graphics2D g, Rectangle plot, SpectrumSnapshot snap, String title, Color color) {
-    PlotRenderTheme.drawPlotBackground(g, plot.width, plot.height, plot);
+    g.setColor(PlotRenderTheme.PLOT_BACKGROUND);
+    g.fillRect(plot.x, plot.y, plot.width, plot.height);
     PlotRenderTheme.drawGrid(g, plot, 10, 8);
     PlotRenderTheme.drawTitle(g, plot.x + 8, plot.y + 16, title);
-    PlotRenderTheme.drawLabel(g, plot.x + 8, plot.y + 50, "Y: magnitude [dB rel. peak]");
+    PlotRenderTheme.drawYAxisLabel(g, plot, "Magnitude [dB rel. peak]");
+    PlotRenderTheme.drawYTicks(
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0 dB", "-40 dB", "-80 dB"});
+    PlotRenderTheme.drawXTicks(
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0 Hz", "11025 Hz", "22050 Hz"});
     PlotRenderTheme.drawXAxisLabel(g, plot, "Frequency [Hz]");
     float[] mag = snap.magnitudesView();
     int bins = mag.length;
@@ -550,7 +582,7 @@ public final class DocImageRenderer {
         max = Math.abs(v);
       }
     }
-    int floor = plot.y + plot.height - 24;
+    int floor = plot.y + plot.height - 1;
     int top = plot.y + 36;
     int[] xs = new int[bins];
     int[] ys = new int[bins];
