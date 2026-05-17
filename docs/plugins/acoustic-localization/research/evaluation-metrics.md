@@ -225,3 +225,4 @@ decay(Δ) = positionVariance_after_predict(Δ) / positionVariance_at_t
   process-noise growth.
 - See [`predictive-tracking.md`](predictive-tracking.md) for how this is used to
   pick a usable horizon.
+

@@ -18,6 +18,10 @@ documentation stays grounded in code that compiles and is exercised by tests.
 | [`experiments.md`](experiments.md)                                         | Reproducible evaluation scenarios, each mapped to a `SimulationScenarios` entry in the `audio-experimental-acoustic` module.    |
 | [`evaluation-metrics.md`](evaluation-metrics.md)                           | Definitions of the metrics used by tests and demos, aligned with `TrackingSnapshot` / `AcousticLocalizationSnapshot`.           |
 | [`demo-scenarios.md`](demo-scenarios.md)                                   | Demos that can be shown live using the Swing plugin and `AcousticDebugFrame`.                                                   |
+| [`predictive-tracking.md`](predictive-tracking.md)                         | Exploratory notes on future-position estimation, latency compensation and confidence-aware prediction.                          |
+| [`event-driven-sensing.md`](event-driven-sensing.md)                       | Generic architecture sketch for using the tracker as a trigger source for an external capture system.                           |
+| [`research-questions.md`](research-questions.md)                           | Open research questions guiding future experiments.                                                                             |
+| [`physics-limitations.md`](physics-limitations.md)                         | Physical and engineering bounds that constrain every claim in this folder.                                                      |
 | [`hardware/microphone-array-setup.md`](hardware/microphone-array-setup.md) | Practical setup notes for real microphone rigs, complementing the simulator.                                                    |
 | [`simulation-datasets/README.md`](simulation-datasets/README.md)           | JSON scenario descriptors with ground truth, derived from `SimulationScenarios`, for benchmark scripts and external evaluation. |
 
@@ -40,4 +44,20 @@ documentation stays grounded in code that compiles and is exercised by tests.
 - Ground-truth datasets live under [`simulation-datasets/`](simulation-datasets/) as
   JSON so that external benchmark scripts can consume them without depending on the
   Java code.
+
+## Explicit non-goals
+
+The work documented in this folder focuses on **localization, tracking,
+prediction, synchronization, low-cost sensing and experimental DSP systems**.
+It explicitly does **not** aim to:
+
+- affect biological behaviour;
+- manipulate animals, insects or any other living subject;
+- create acoustic weapons or any device intended to harm;
+- provide pest-control systems or repellents.
+
+If a future contribution wants to apply this codebase to one of those domains,
+that contribution belongs in a separate project with its own ethical review;
+the acoustic subproject here remains a generic measurement and tracking
+platform.
 

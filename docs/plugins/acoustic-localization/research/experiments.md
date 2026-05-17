@@ -219,3 +219,106 @@ hardware setup described in
 - model mismatch: per-frequency-band gain / phase discrepancy between simulator
   output and recorded array data.
 
+---
+
+## Experiment K — Future-position extrapolation (future)
+
+### Goal
+
+Evaluate how accurately a track can be extrapolated into the future at the
+nominal horizons used by [`predictive-tracking.md`](predictive-tracking.md):
+10 ms, 50 ms, 100 ms, 250 ms.
+
+### Setup
+
+- Scenarios: `movingSource()`, `movingTowardArray()`, `movingAcrossArray()`,
+  `twoMovingSources()`.
+- For each frame `t`, snapshot the matched `TrackedSource` and compute both:
+  - the constant-velocity prediction
+    `track.positionMeters() + Δ · track.velocityMetersPerSecond()`;
+  - a `Kalman2D.predict(Δ)` step on a copy of the filter state.
+
+### Metrics
+
+- *future-position prediction error* per horizon, from
+  [`evaluation-metrics.md`](evaluation-metrics.md);
+- *prediction drift over time*: slope of error versus horizon.
+
+### Status
+
+Future work — requires the benchmark harness described in
+[`predictive-tracking.md`](predictive-tracking.md).
+
+---
+
+## Experiment L — Latency compensation (future)
+
+### Goal
+
+Quantify how much of the per-frame processing latency
+(`TrackingSnapshot.processingNanos()`) can be hidden by extrapolating the
+tracker output forward by exactly that latency.
+
+### Setup
+
+- Scenario: any moving-source scenario.
+- Compare the realised position at time `t + processingNanos / 1e9` against
+  the predicted position issued at frame `t`.
+
+### Metrics
+
+- mean and 95th percentile of *future-position prediction error* at
+  `Δ = processingNanos / 1e9`;
+- frame-to-frame stability of the predicted position (variance).
+
+### Status
+
+Future work — depends on Experiment K.
+
+---
+
+## Experiment M — Noisy trajectory prediction (future)
+
+### Goal
+
+Investigate how the noise floor degrades prediction quality, not only
+localization quality.
+
+### Setup
+
+- Baseline: `noisyRoom()` extended with a non-zero emitter velocity, or any
+  moving scenario combined with a swept `Room2D.noiseAmplitude`.
+
+### Metrics
+
+- *future-position prediction error* per `noiseAmplitude` value;
+- *confidence decay vs prediction horizon* per `noiseAmplitude` value.
+
+### Status
+
+Future work.
+
+---
+
+## Experiment N — Prediction stability during acceleration (future)
+
+### Goal
+
+Stress-test the constant-velocity assumption by introducing an emitter
+trajectory that is *not* constant-velocity (for example a piecewise-linear or
+sinusoidal motion).
+
+### Setup
+
+Requires extending `SoundEmitter2D` (or a wrapping scenario) with a richer
+trajectory model than the current constant-velocity record.
+
+### Metrics
+
+- *future-position prediction error* vs horizon during accelerating segments;
+- *prediction drift over time* compared against the constant-velocity baseline
+  in Experiment K.
+
+### Status
+
+Future work — requires a richer emitter trajectory API.

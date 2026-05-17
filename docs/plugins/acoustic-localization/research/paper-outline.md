@@ -163,6 +163,22 @@ combines at least two radial estimates and the array geometry into a 2D velocity
 vector by solving a least-squares system on the unit direction vectors from each
 microphone to the current source position.
 
+### 4.4 Predictive tracking
+
+For latency-sensitive consumers it may be useful to estimate where a source
+*will be* a short time `Δ` into the future rather than where it was at the most
+recent capture. The building blocks for this already exist inside the tracker:
+`Kalman2D.predict(Δ)` advances the internal state by `Δ`, and
+`TrackedSource.positionMeters()` / `velocityMetersPerSecond()` allow a
+constant-velocity extrapolation by external callers. A dedicated prediction
+surface, horizon-aware confidence reporting and a benchmark harness are not
+yet implemented and are tracked as exploratory work in
+[`predictive-tracking.md`](predictive-tracking.md) and
+[`event-driven-sensing.md`](event-driven-sensing.md). The dependent metrics
+*future-position prediction error*, *prediction drift over time*,
+*trigger timing error* and *confidence decay vs prediction horizon* are
+defined in [`evaluation-metrics.md`](evaluation-metrics.md).
+
 ---
 
 ## 5. Experimental setup
