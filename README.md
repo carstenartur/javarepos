@@ -138,8 +138,9 @@ audio-app                  -> audio-core, audio-dsp, audio-plugin-api
 
 ## Extensions and plugins
 
-Audio Analyzer supports optional plugins for domain-specific workflows. Plugins are
-discovered at runtime through the stable [`audio-plugin-api`](audio-plugin-api) module.
+Audio Analyzer supports optional plugins for domain-specific workflows. Plugins implement
+the stable [`audio-plugin-api`](audio-plugin-api) contracts and are discovered at runtime
+by the host application.
 
 Available plugin documentation:
 
