@@ -77,20 +77,22 @@ public final class AcousticLocalizationPlugin implements AudioAnalyzerPlugin {
         new MenuContribution() {
           @Override
           public String id() {
-            return "show-info";
+            return "log-info";
           }
 
           @Override
           public String label() {
-            return "About this plugin";
+            return "Log plugin info";
           }
 
           @Override
           public Runnable action() {
-            return () -> {
-              // No-op by default; the host renders documentation links separately. Keeping this
-              // here documents the contribution and lets users discover the plugin from the menu.
-            };
+            return () ->
+                java.util.logging.Logger.getLogger(AcousticLocalizationPlugin.class.getName())
+                    .info(
+                        () ->
+                            "Acoustic Localization plugin active: see "
+                                + DESCRIPTOR.documentationPath());
           }
         });
   }

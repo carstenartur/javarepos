@@ -3,9 +3,10 @@
  *
  * <p>This package defines the contracts that plugins implement to extend the host application with
  * additional analyses, demo signals, views and menu entries. The API intentionally does not depend
- * on Swing, JavaSound, or any concrete audio-analysis module. UI integration is performed by the
- * host through {@link org.hammer.audio.plugin.ViewContribution} which only requires a {@link
- * javax.swing.JComponent} factory; the API itself does not pull Swing into stable non-UI modules.
+ * on JavaSound or any concrete audio-analysis module ({@code audio-core}, {@code audio-dsp}, {@code
+ * audio-acquisition}, {@code audio-geometry}). {@link org.hammer.audio.plugin.ViewContribution}
+ * references {@link javax.swing.JComponent} from the JDK so the host can render plugin views
+ * generically; no third-party UI framework is bundled.
  *
  * <p>Plugins register their {@link org.hammer.audio.plugin.AudioAnalyzerPlugin} implementations via
  * the Java {@link java.util.ServiceLoader} mechanism, i.e. by adding a {@code

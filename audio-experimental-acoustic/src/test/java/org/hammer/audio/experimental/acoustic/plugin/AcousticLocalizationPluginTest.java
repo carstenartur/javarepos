@@ -3,6 +3,7 @@ package org.hammer.audio.experimental.acoustic.plugin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ServiceLoader;
@@ -50,7 +51,7 @@ class AcousticLocalizationPluginTest {
     JComponent second = view.componentFactory().get();
     assertNotNull(first);
     assertNotNull(second);
-    assertFalse(first == second, "factory must return fresh component instances");
+    assertNotSame(first, second, "factory must return fresh component instances");
   }
 
   @Test

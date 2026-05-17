@@ -2,6 +2,7 @@ package org.hammer.audio.plugin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -67,7 +68,7 @@ class AudioAnalyzerPluginApiTest {
         };
     assertEquals("hello", ((JLabel) view.componentFactory().get()).getText());
     // Two invocations must produce distinct instances.
-    assertFalse(view.componentFactory().get() == view.componentFactory().get());
+    assertNotSame(view.componentFactory().get(), view.componentFactory().get());
   }
 
   @Test
