@@ -3,8 +3,11 @@
 Live demos that can be shown using the `acoustic-localization` plugin loaded into
 `audio-app`. All demos use the deterministic scenarios from
 `SimulationScenarios` so they look the same on every machine and on CI. The UI
-side is the Swing `AcousticDebugFrame` and the panels contributed via the
-plugin API.
+side is the Swing overview `JPanel` that the plugin contributes via
+`AcousticLocalizationPlugin#viewContributions()` (created by
+`AcousticLocalizationPlugin::createOverviewPanel`); it consumes the immutable
+debug model `AcousticDebugFrame` (a record built from
+`AcousticLocalizationSnapshot`), not a JFrame.
 
 For each demo we list the scenario, what the operator should highlight on screen
 and the expected qualitative behaviour. Quantitative pass/fail belongs to
@@ -28,8 +31,8 @@ tracking from end to end.
 
 - microphone-array overview panel with the live source position;
 - the per-frame velocity vector reported by `VelocityReconstructor`;
-- the frequency shift between observed and reference frequency in
-  `AcousticDebugFrame`.
+- the frequency shift between observed and reference frequency, surfaced by the
+  overview panel from the `AcousticDebugFrame` record.
 
 ### Expected
 

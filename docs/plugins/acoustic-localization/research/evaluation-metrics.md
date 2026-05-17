@@ -21,11 +21,13 @@ immutable snapshots emitted by the tracking pipeline
 
 ## Localization error
 
-Distance between the estimated and the ground-truth source position for a given
-emitter `e` at frame `t`:
+For each frame `t`, a `TrackedSource` is first matched to a ground-truth emitter
+`e` (typically by nearest-frequency association). The localization error is then
+the Euclidean distance between the matched track's reported position and the
+ground-truth position:
 
 ```text
-err_loc(e, t) = ‖ TrackedSource.position(e, t) − GroundTruth.position(e, t) ‖₂
+err_loc(e, t) = ‖ track.positionMeters() − groundTruth.position(e, t) ‖₂
 ```
 
 - Unit: meters.
@@ -37,29 +39,35 @@ err_loc(e, t) = ‖ TrackedSource.position(e, t) − GroundTruth.position(e, t) 
 
 ## Velocity error
 
-Difference between the reconstructed and the actual emitter velocity:
+Difference between the reconstructed and the actual emitter velocity. Per
+matched `TrackedSource`, the velocity reported via
+`track.velocityMetersPerSecond()` is compared against the ground-truth velocity:
 
 ```text
-err_vel(e, t) = ‖ VelocityReconstructor.estimate(e, t) − GroundTruth.velocity(e, t) ‖₂
+err_vel(e, t) = ‖ track.velocityMetersPerSecond() − groundTruth.velocity(e, t) ‖₂
 ```
 
 - Unit: m/s.
-- Reconstructed velocity comes from fusing per-microphone radial estimates with
-  the current array geometry via `VelocityReconstructor`.
+- The track velocity itself is produced by the 2D Kalman filter and, when
+  enabled, fused with the per-microphone radial estimates by
+  `VelocityReconstructor`.
 
 ---
 
 ## Frequency stability
 
-Variance of the cluster frequency assigned to a tracked source over time:
+Variance over time of the frequency reported by a matched track:
 
 ```text
-var_f(e) = Var_t( FrequencyCluster.frequencyHz(e, t) )
+var_f(e) = Var_t( track.frequencyHz() )
 ```
 
 - Unit: Hz².
 - Low variance indicates stable tracking and a reliable Doppler baseline; large
   spikes typically point at peak-detector confusion under noise or reflections.
+- For diagnostics, individual snapshots also expose
+  `track.frequencyVarianceHzSquared()` which reflects the internal
+  `FrequencyTrack` variance.
 
 ---
 
@@ -81,13 +89,17 @@ Both are exercised by `SourceTrackerTest` and
 ## Doppler consistency
 
 Variance of the per-microphone radial-velocity estimates produced by
-`SimpleMultiSensorDopplerEstimator` for the same emitter and frame:
+`SimpleMultiSensorDopplerEstimator` for the same emitter and frame, computed
+over the set of microphones `M`:
 
 ```text
-var_v_r(e, t) = Var_m( RadialVelocityEstimate.radialVelocity(m, e, t) )
+var_v_r(e, t) = Var_{m ∈ M}( radialVelocityFor(m, e, t) )
 ```
 
 - Unit: (m/s)².
+- For consumers that only look at the tracked source, the related diagnostic
+  `track.radialVelocityStdDevMetersPerSecond()` already aggregates this spread
+  per frame.
 - Low variance indicates consistent multi-sensor fusion; spikes signal that one
   microphone disagrees, usually because of reflections or peak swaps.
 
@@ -95,11 +107,13 @@ var_v_r(e, t) = Var_m( RadialVelocityEstimate.radialVelocity(m, e, t) )
 
 ## Latency
 
-Wall-clock processing delay between audio acquisition and the corresponding
-tracker output:
+`TrackingSnapshot` reports the wall-clock processing time of the pipeline for
+each frame via `snapshot.processingNanos()`, together with the capture
+timestamp of the analysed audio block via `snapshot.sourceTimestampNanos()`.
+End-to-end latency at observation time `t_obs` is then:
 
 ```text
-latency(t) = TrackingSnapshot.wallClockNanos(t) − AudioBlock.arrivalNanos(t)
+latency(t) = t_obs − snapshot.sourceTimestampNanos() + snapshot.processingNanos()
 ```
 
 - Unit: milliseconds (after dividing by 1e6).
@@ -110,8 +124,8 @@ latency(t) = TrackingSnapshot.wallClockNanos(t) − AudioBlock.arrivalNanos(t)
 
 ## False localization rate
 
-Fraction of frames where the estimated position lies outside an acceptance disk
-around the ground-truth position:
+Fraction of frames where the matched track's position lies outside an
+acceptance disk around the ground-truth position:
 
 ```text
 flr(e) = | { t : err_loc(e, t) > R } | / N
@@ -129,3 +143,85 @@ dB. SNR is not yet reported directly by snapshots; it is computed by the
 benchmark harness from the configured emitter amplitude and
 `Room2D#noiseAmplitude`. SNR is the key control variable for the noise-stress
 experiment in [`experiments.md`](experiments.md).
+
+---
+
+## Future-position prediction error
+
+Difference between a predicted future position and the realised ground-truth
+position after a prediction horizon `Δ`. For a track observed at frame `t` and a
+horizon `Δ` seconds into the future:
+
+```text
+err_pred(e, t, Δ) = ‖ predict(track, Δ) − groundTruth.position(e, t + Δ) ‖₂
+```
+
+`predict(track, Δ)` may be:
+
+- the constant-velocity extrapolation
+  `track.positionMeters() + Δ · track.velocityMetersPerSecond()`; or
+- a `Kalman2D.predict(Δ)` step on a copy of the track's internal filter.
+
+Headline horizons used by the prediction experiments in
+[`experiments.md`](experiments.md): 10 ms, 50 ms, 100 ms, 250 ms.
+
+- Unit: meters.
+- Aggregations: mean and 95th percentile per horizon.
+- See [`predictive-tracking.md`](predictive-tracking.md) for the underlying
+  assumptions.
+
+---
+
+## Prediction drift over time
+
+Slope of `err_pred(e, t, Δ)` versus horizon `Δ`, evaluated at a fixed frame `t`:
+
+```text
+drift(e, t) ≈ d err_pred(e, t, Δ) / d Δ
+```
+
+- Unit: meters per second of horizon.
+- High drift indicates that the constant-velocity assumption breaks down quickly
+  for this scenario, typically because of acceleration or noisy tracking.
+
+---
+
+## Trigger timing error
+
+For event-driven sensing pipelines (see
+[`event-driven-sensing.md`](event-driven-sensing.md)), the trigger timing error
+is the wall-clock difference between the moment a predicted future event was
+scheduled to occur and the moment the realised event actually occurred:
+
+```text
+err_trigger = t_actual − t_predicted
+```
+
+- Unit: milliseconds.
+- Aggregations: mean, standard deviation, 95th percentile.
+- The metric is only meaningful when a ground-truth event time is available
+  (e.g. from the simulator or from a calibrated reference sensor).
+
+---
+
+## Confidence decay vs prediction horizon
+
+How the tracking-confidence proxy degrades as a function of prediction horizon.
+Two complementary observations:
+
+- the per-track `track.confidence()` value reported at frame `t`;
+- the position variance reported by the underlying filter, available via
+  `Kalman2D.positionVariance()` after a `predict(Δ)` step on a copy of the
+  track's filter state.
+
+A useful summary statistic is the ratio:
+
+```text
+decay(Δ) = positionVariance_after_predict(Δ) / positionVariance_at_t
+```
+
+- Decay close to 1 indicates that the prediction stays inside the current
+  uncertainty budget; large values indicate that the prediction is dominated by
+  process-noise growth.
+- See [`predictive-tracking.md`](predictive-tracking.md) for how this is used to
+  pick a usable horizon.

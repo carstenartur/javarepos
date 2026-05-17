@@ -25,7 +25,7 @@ simulation-datasets/
 │   └── scenario.json
 ├── moving-source/
 │   └── scenario.json
-├── dual-source/
+├── two-moving-sources/
 │   └── scenario.json
 └── noisy-room/
     └── scenario.json
@@ -72,7 +72,8 @@ Each `scenario.json` follows the schema documented below.
 
 ### Field notes
 
-- **`array.sampleRateHz`** mirrors `SimulationScenarios.SAMPLE_RATE` (16000).
+- **`array.sampleRateHz`** mirrors the 16 kHz sample rate used by
+  `SimulationScenarios` for all bundled scenarios.
 - **`emitters[].velocity`** is constant; trajectories are linear, computed by the
   scenario harness as `p(t) = p₀ + v · t`. Non-linear trajectories will get an
   explicit `trajectory` discriminator when introduced.
