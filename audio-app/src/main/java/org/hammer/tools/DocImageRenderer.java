@@ -422,7 +422,7 @@ public final class DocImageRenderer {
 
       g.setColor(PlotRenderTheme.TEXT_MUTED);
       g.setFont(PlotRenderTheme.LABEL_FONT);
-      g.drawString("Legend: blue averaged live spectrum; orange peak hold", 10, 32);
+      g.drawString("Legend: blue averaged live spectrum, orange peak hold", 10, 32);
     } finally {
       g.dispose();
     }

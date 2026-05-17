@@ -28,6 +28,7 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
   private static final long serialVersionUID = 1L;
   private static final int FFT_SIZE = 1024;
   private static final int HISTORY_FRAMES = 256;
+  // Leaves room for frequency tick labels and the rotated Y-axis title.
   private static final int LEFT_MARGIN = 52;
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;

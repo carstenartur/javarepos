@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 
 /** Shared plot colors, fonts and drawing helpers for Swing renderers. */
 public final class PlotRenderTheme {
@@ -115,7 +116,7 @@ public final class PlotRenderTheme {
     g2.drawString(label, x, y);
   }
 
-  /** Draws a centered X-axis label below the plot area. */
+  /** Draws a centered X-axis label in the bottom plot margin. */
   public static void drawXAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
     g2.setFont(LABEL_FONT);
     g2.setColor(TEXT_MUTED);
@@ -125,16 +126,20 @@ public final class PlotRenderTheme {
     g2.drawString(label, x, y);
   }
 
-  /** Draws a rotated Y-axis label to the left of the plot area. */
+  /** Draws a rotated Y-axis label in the left plot margin. */
   public static void drawYAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
     g2.setFont(LABEL_FONT);
     g2.setColor(TEXT_MUTED);
     int textWidth = g2.getFontMetrics().stringWidth(label);
     int x = Math.max(10, plotBounds.x - 34);
     int y = plotBounds.y + plotBounds.height / 2 + textWidth / 2;
-    g2.rotate(-Math.PI / 2.0, x, y);
-    g2.drawString(label, x, y);
-    g2.rotate(Math.PI / 2.0, x, y);
+    AffineTransform savedTransform = g2.getTransform();
+    try {
+      g2.rotate(-Math.PI / 2.0, x, y);
+      g2.drawString(label, x, y);
+    } finally {
+      g2.setTransform(savedTransform);
+    }
   }
 
   /** Converts linear magnitude to clipped dB FS display value. */
