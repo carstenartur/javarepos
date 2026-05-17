@@ -218,9 +218,8 @@ public final class TrackingPipeline {
       return;
     }
     frequencyTracks.sort(Comparator.comparingLong(track -> track.lastTouchedFrameIndex));
-    while (frequencyTracks.size() > FREQUENCY_TRACK_MAX_ACTIVE) {
-      frequencyTracks.remove(0);
-    }
+    int excessCount = frequencyTracks.size() - FREQUENCY_TRACK_MAX_ACTIVE;
+    frequencyTracks.subList(0, excessCount).clear();
   }
 
   /** Frequency reference state matched by nearest observed frequency with per-frame exclusivity. */
