@@ -120,8 +120,10 @@ latency(t) = t_obs − snapshot.sourceTimestampNanos() + snapshot.processingNano
 ```
 
 - Unit: milliseconds (after dividing by 1e6).
-- Budgeted per frame by `FrameSchedule` / `ProcessingBudget`; a frame that
-  exceeds its budget is logged and counted against this metric.
+- `FrameSchedule` / `ProcessingBudget` expose a per-frame deadline via
+  `ProcessingBudget#exceeded()`. The pipeline does not itself log or
+  accumulate deadline overruns today; benchmark harnesses that consume
+  `processingNanos()` are expected to count and report them.
 
 ---
 

@@ -3,11 +3,14 @@
 Live demos that can be shown using the `acoustic-localization` plugin loaded into
 `audio-app`. All demos use the deterministic scenarios from
 `SimulationScenarios` so they look the same on every machine and on CI. The UI
-side is the Swing overview `JPanel` that the plugin contributes via
-`AcousticLocalizationPlugin#viewContributions()` (created by
-`AcousticLocalizationPlugin::createOverviewPanel`); it consumes the immutable
-debug model `AcousticDebugFrame` (a record built from
-`AcousticLocalizationSnapshot`), not a JFrame.
+side is the static Swing overview `JPanel` that the plugin contributes via
+`AcousticLocalizationPlugin#viewContributions()` (built by
+`AcousticLocalizationPlugin::createOverviewPanel`); today this panel only
+displays an explanatory text block and does not render live tracker output.
+The immutable `AcousticDebugFrame` record (built from
+`AcousticLocalizationSnapshot`) is the intended consumer model for a richer
+live view, and is what a future demo renderer would read from — wiring it into
+the panel is future work.
 
 For each demo we list the scenario, what the operator should highlight on screen
 and the expected qualitative behaviour. Quantitative pass/fail belongs to

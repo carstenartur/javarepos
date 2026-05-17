@@ -19,9 +19,11 @@ The implementation is exposed as a `ServiceLoader`-discovered plugin
 evaluated using deterministic simulation scenarios bundled in
 `SimulationScenarios`. Experiments cover localization stability, velocity
 estimation accuracy, robustness under noise and behaviour under reflections and
-weak signals. Results from the deterministic simulator show that Doppler fusion
-improves temporal tracking stability for moving narrowband sources under
-controlled conditions.
+weak signals. The aim of these experiments is to test the hypothesis that
+Doppler fusion may improve temporal tracking stability for moving narrowband
+sources under controlled conditions; reported numerical results in this
+document are placeholders pending a dedicated benchmark harness (see
+[`experiments.md`](experiments.md)).
 
 ---
 
@@ -282,9 +284,11 @@ Mirrors the canonical list in [`../README.md`](../README.md#limitations-and-non-
 
 ## 10. Conclusion
 
-The subproject demonstrates that a modular DSP stack on commodity Java
+The subproject explores whether a modular DSP stack on commodity Java
 infrastructure can produce meaningful tracking of weak narrowband moving sound
 sources under controlled conditions. The combination of TDOA, Doppler estimation
-and a 2D Kalman tracker improves temporal stability compared to single-frame
-beamforming, while strict module boundaries keep the experimental code from
-infecting the stable audio core.
+and a 2D Kalman tracker is intended to improve temporal stability compared to
+single-frame beamforming; a quantitative comparison is future work and depends
+on the benchmark harness sketched in [`experiments.md`](experiments.md). Strict
+module boundaries keep the experimental code from infecting the stable audio
+core.
