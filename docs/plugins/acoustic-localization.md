@@ -132,6 +132,12 @@ Simulation and tests track:
 - Doppler error against known synthetic source velocity;
 - reconstructed velocity-vector error from multi-microphone radial observations.
 
+Formal metric definitions, experimental protocol and the paper-style write-up
+live in the research notes under
+[`acoustic-localization/research/`](acoustic-localization/research/README.md),
+which also bundles JSON ground-truth datasets in
+[`acoustic-localization/research/simulation-datasets/`](acoustic-localization/research/simulation-datasets/README.md).
+
 ## UI integration
 
 The plugin appears under the application's **Plugins** menu. The main application does not

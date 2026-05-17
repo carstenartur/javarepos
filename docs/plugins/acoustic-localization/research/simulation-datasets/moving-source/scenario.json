@@ -1,0 +1,35 @@
+{
+  "name": "moving-source",
+  "description": "One source travelling from (0.5, 1.0) to (2.5, 1.0) at 4 m/s over the scenario duration. Matches SimulationScenarios.movingSource().",
+  "room": {
+    "widthMeters": 3.0,
+    "heightMeters": 2.0,
+    "reflectionGain": 0.0,
+    "noiseAmplitude": 0.0
+  },
+  "array": {
+    "sampleRateHz": 16000,
+    "microphones": [
+      { "id": "m0", "channel": 0, "position": [1.35, 0.0] },
+      { "id": "m1", "channel": 1, "position": [1.65, 0.0] },
+      { "id": "m2", "channel": 2, "position": [1.35, 0.3] },
+      { "id": "m3", "channel": 3, "position": [1.65, 0.3] }
+    ]
+  },
+  "emitters": [
+    {
+      "id": "e0",
+      "position": [0.5, 1.0],
+      "velocity": [4.0, 0.0],
+      "frequencyHz": 660.0,
+      "amplitude": 0.5
+    }
+  ],
+  "durationSeconds": 0.5,
+  "randomSeed": 4,
+  "groundTruth": {
+    "trajectory": "linear",
+    "expectedTrackCount": 1,
+    "endPosition": [2.5, 1.0]
+  }
+}

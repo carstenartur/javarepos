@@ -136,3 +136,7 @@ They are UI-agnostic and can drive Swing panels, web dashboards or offline noteb
 - Better reflection models and measured room impulse responses.
 - Benchmark corpus with real and synthetic mosquito-like recordings.
 
+See the [`research/`](research/README.md) folder for the paper outline,
+reproducible experiments, evaluation metrics, demo scenarios, hardware setup
+notes and JSON simulation datasets.
+

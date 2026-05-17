@@ -1,0 +1,41 @@
+{
+  "name": "dual-source",
+  "description": "Two moving sources with distinct frequencies and velocities. Matches SimulationScenarios.twoMovingSources().",
+  "room": {
+    "widthMeters": 3.0,
+    "heightMeters": 2.0,
+    "reflectionGain": 0.0,
+    "noiseAmplitude": 0.0
+  },
+  "array": {
+    "sampleRateHz": 16000,
+    "microphones": [
+      { "id": "m0", "channel": 0, "position": [1.35, 0.0] },
+      { "id": "m1", "channel": 1, "position": [1.65, 0.0] },
+      { "id": "m2", "channel": 2, "position": [1.35, 0.3] },
+      { "id": "m3", "channel": 3, "position": [1.65, 0.3] }
+    ]
+  },
+  "emitters": [
+    {
+      "id": "e0",
+      "position": [0.8, 1.0],
+      "velocity": [1.4, 0.0],
+      "frequencyHz": 620.0,
+      "amplitude": 0.45
+    },
+    {
+      "id": "e1",
+      "position": [2.2, 1.4],
+      "velocity": [-0.8, -0.4],
+      "frequencyHz": 840.0,
+      "amplitude": 0.45
+    }
+  ],
+  "durationSeconds": 0.5,
+  "randomSeed": 8,
+  "groundTruth": {
+    "trajectory": "linear",
+    "expectedTrackCount": 2
+  }
+}
