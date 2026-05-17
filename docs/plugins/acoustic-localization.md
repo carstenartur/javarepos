@@ -45,23 +45,66 @@ analyses; new work should use `TrackingPipeline`.
 ## Doppler based velocity estimation
 
 The tracking pipeline stabilizes each detected source frequency over a bounded multi-frame
-`FrequencyTrack` before computing Doppler velocity. For low source speeds relative to the speed of
-sound it uses the small-velocity approximation:
+`FrequencyTrack` before computing Doppler velocity. The simulator uses the exact moving-source
+Doppler model for a stationary microphone:
+
+```text
+f_observed = f_reference * c / (c - v_r)
+```
+
+For estimation the default `SimpleDopplerEstimator` intentionally keeps the small-velocity
+linearization:
 
 ```text
 v_r ~= c * (f_observed - f_reference) / f_reference
 ```
 
-`c` is configurable and defaults to 343 m/s. `f_reference` is the stabilized base-frequency
-estimate, while `f_observed` is the current per-frame peak frequency. Positive radial velocity is
-treated as motion toward the microphone, matching the sign of a positive frequency shift in the
-plugin's simulator and reconstructor.
+This approximation is valid when `|v_r| << c`; `ExactDopplerEstimator` is available for validation
+or for experiments where the exact inversion is preferred. `c` is configurable and defaults to 343
+m/s. `f_reference` is the stabilized base-frequency estimate, while `f_observed` is the current
+per-frame peak frequency.
+
+The sign convention is explicit throughout the plugin:
+
+- `radialVelocity > 0`: source moves toward the microphone and frequency increases;
+- `radialVelocity < 0`: source moves away from the microphone and frequency decreases;
+- lateral motion relative to a microphone produces approximately zero radial velocity.
 
 Per-microphone frequency peaks produce individual radial velocities. The default multi-sensor
-estimator applies median absolute-deviation outlier rejection, then `VelocityReconstructor` solves a
-weighted least-squares system from the microphone line-of-sight vectors to estimate a global
-horizontal velocity vector. If the geometry is under-constrained, it falls back to the strongest
-available radial direction.
+estimator normalizes sensor weights from logarithmic SNR-like peak quality into a stable 0-1 range,
+applies median absolute-deviation outlier rejection, then `VelocityReconstructor` solves a weighted
+least-squares system from the microphone line-of-sight vectors to estimate a global horizontal
+velocity vector. If the geometry is under-constrained, fallback uses a weighted average over all
+available microphone radial directions rather than trusting a single microphone.
+
+The tracker adapts Doppler influence per observation. Low `FrequencyTrack.variance()` and low
+per-microphone radial-velocity standard deviation increase Doppler trust; high variance or
+multi-sensor disagreement reduce both Doppler velocity blending and the track confidence gain. For
+debugging or visualization, `TrackedSource` exposes frequency variance, radial velocity, radial
+velocity standard deviation and the adaptive Doppler weight; `TrackingPipeline` also exposes
+per-microphone radial velocities from the last processed frame via `currentDopplerDiagnostics()`.
+
+## Frequency resolution requirements for Doppler estimation
+
+Doppler accuracy is limited by FFT bin spacing and peak interpolation quality. A frame with sample
+rate `sampleRate` and FFT size `N` has nominal frequency spacing:
+
+```text
+delta_f = sampleRate / N
+```
+
+For the linearized estimator, an approximate velocity resolution is:
+
+```text
+delta_v ~= c * delta_f / f_reference
+```
+
+At a 600 Hz wingbeat frequency, 1 m/s of radial motion shifts frequency by only about 1.75 Hz.
+Short windows with 10-20 Hz bin spacing can detect only coarse motion unless peak interpolation or
+multi-frame smoothing is effective. Longer FFT windows improve Doppler resolution but increase
+latency and can smear quickly changing motion, so experiments should choose a window large enough
+that expected insect-scale Doppler shifts are several times larger than the practical peak
+frequency uncertainty.
 
 ## Combining Doppler and TDOA
 
@@ -134,4 +177,3 @@ timing-precision math. The detailed microphone setup discussion is in
 - add plugin settings (microphone geometry, frequency band, TDOA method);
 - richer experiment workflows and visualizations contributed via the plugin API;
 - optional heatmap / confidence display contributed as additional views.
-

@@ -94,12 +94,42 @@ class SourceTrackerTest {
             0.0,
             List.of(
                 new Observation(
-                    600.0, 604.0, new Vector2(1.0, 1.0), new Vector3(0.5, -0.25, 0.0), 2.0, 0.5)));
+                    600.0, 604.0, new Vector2(1.0, 1.0), new Vector3(0.5, -0.25, 0.0), 2.0, 0.0)));
 
     assertEquals(604.0, tracks.get(0).observedFrequencyHz());
     assertEquals(2.0, tracks.get(0).radialVelocityMetersPerSecond());
     assertEquals(0.5, tracks.get(0).velocityMetersPerSecond3d().x());
     assertEquals(-0.25, tracks.get(0).velocityMetersPerSecond().y());
+    assertEquals(1.0, tracks.get(0).dopplerVelocityWeight());
+  }
+
+  @Test
+  void highFrequencyVarianceReducesDopplerInfluenceAndConfidence() {
+    SourceTracker lowVarianceTracker =
+        new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+    SourceTracker highVarianceTracker =
+        new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+
+    lowVarianceTracker.update(
+        0,
+        0.0,
+        List.of(
+            new Observation(
+                600.0, 600.0, new Vector2(0.0, 0.0), new Vector3(10.0, 0.0, 0.0), 1.0, 0.0)));
+    highVarianceTracker.update(
+        0,
+        0.0,
+        List.of(
+            new Observation(
+                600.0, 600.0, new Vector2(0.0, 0.0), new Vector3(10.0, 0.0, 0.0), 1.0, 100.0)));
+
+    TrackedSource lowVariance = lowVarianceTracker.snapshot().get(0);
+    TrackedSource highVariance = highVarianceTracker.snapshot().get(0);
+
+    assertTrue(highVariance.dopplerVelocityWeight() < lowVariance.dopplerVelocityWeight());
+    assertTrue(
+        highVariance.velocityMetersPerSecond3d().x() < lowVariance.velocityMetersPerSecond3d().x());
+    assertTrue(highVariance.confidence() < lowVariance.confidence());
   }
 
   @Test

@@ -58,6 +58,7 @@ public final class TrackingPipeline {
   private final List<Vector2> candidateGrid;
   private final FrameSchedule schedule;
   private final List<PipelineFrequencyTrack> frequencyTracks = new ArrayList<>();
+  private List<DopplerDiagnostics> lastDopplerDiagnostics = List.of();
   private int nextFrequencyTrackId;
 
   /** Configure a pipeline. {@code schedule} may be {@code null} to disable budget reporting. */
@@ -121,6 +122,7 @@ public final class TrackingPipeline {
     evictStaleFrequencyTracks(block.frameIndex());
 
     List<SourceTracker.Observation> observations = new ArrayList<>(clusters.size());
+    List<DopplerDiagnostics> dopplerDiagnostics = new ArrayList<>(clusters.size());
     Set<Integer> usedFrequencyTracks = new HashSet<>();
     for (FrequencyCluster cluster : clusters) {
       // Run TDOA across all pairs purely for consistency reporting; the beamformer is the
@@ -144,6 +146,8 @@ public final class TrackingPipeline {
       Vector3 velocity =
           velocityReconstructor.reconstruct(radialVelocities, array, best.positionMeters());
       double radialVelocity = velocityReconstructor.fusedRadialVelocity(radialVelocities);
+      double radialVelocityStdDev =
+          velocityReconstructor.radialVelocityStandardDeviation(radialVelocities);
       observations.add(
           new SourceTracker.Observation(
               stableFrequency,
@@ -151,8 +155,18 @@ public final class TrackingPipeline {
               best.positionMeters(),
               velocity,
               radialVelocity,
-              frequencyTrack.variance()));
+              frequencyTrack.variance(),
+              radialVelocityStdDev));
+      dopplerDiagnostics.add(
+          new DopplerDiagnostics(
+              stableFrequency,
+              cluster.centerFrequencyHz(),
+              best.positionMeters(),
+              radialVelocities,
+              frequencyTrack.variance(),
+              radialVelocityStdDev));
     }
+    lastDopplerDiagnostics = List.copyOf(dopplerDiagnostics);
 
     double timestampSeconds = block.timestampNanos() / 1.0e9;
     List<TrackedSource> tracks = tracker.update(block.frameIndex(), timestampSeconds, observations);
@@ -166,10 +180,16 @@ public final class TrackingPipeline {
     return tracker.snapshot();
   }
 
+  /** Snapshot of the last per-source Doppler diagnostics emitted by {@link #process}. */
+  public List<DopplerDiagnostics> currentDopplerDiagnostics() {
+    return lastDopplerDiagnostics;
+  }
+
   /** Reset internal tracking state. */
   public void reset() {
     tracker.reset();
     frequencyTracks.clear();
+    lastDopplerDiagnostics = List.of();
     nextFrequencyTrackId = 0;
   }
 
@@ -241,6 +261,37 @@ public final class TrackingPipeline {
       this.track = track;
       this.lastObservedFrequencyHz = lastObservedFrequencyHz;
       this.lastTouchedFrameIndex = lastTouchedFrameIndex;
+    }
+  }
+
+  /** Per-source Doppler diagnostics from the most recently processed frame. */
+  public record DopplerDiagnostics(
+      double referenceFrequencyHz,
+      double observedFrequencyHz,
+      Vector2 positionMeters,
+      List<RadialVelocityEstimate> perMicrophoneRadialVelocities,
+      double frequencyVarianceHzSquared,
+      double radialVelocityStdDevMetersPerSecond) {
+
+    /** Validate diagnostic fields. */
+    public DopplerDiagnostics {
+      Objects.requireNonNull(positionMeters, "positionMeters");
+      Objects.requireNonNull(perMicrophoneRadialVelocities, "perMicrophoneRadialVelocities");
+      perMicrophoneRadialVelocities = List.copyOf(perMicrophoneRadialVelocities);
+      if (!(referenceFrequencyHz > 0.0) || !Double.isFinite(referenceFrequencyHz)) {
+        throw new IllegalArgumentException("referenceFrequencyHz must be finite and > 0");
+      }
+      if (!Double.isFinite(observedFrequencyHz) || observedFrequencyHz < 0.0) {
+        throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
+      }
+      if (!Double.isFinite(frequencyVarianceHzSquared) || frequencyVarianceHzSquared < 0.0) {
+        throw new IllegalArgumentException("frequencyVarianceHzSquared must be finite and >= 0");
+      }
+      if (!Double.isFinite(radialVelocityStdDevMetersPerSecond)
+          || radialVelocityStdDevMetersPerSecond < 0.0) {
+        throw new IllegalArgumentException(
+            "radialVelocityStdDevMetersPerSecond must be finite and >= 0");
+      }
     }
   }
 }

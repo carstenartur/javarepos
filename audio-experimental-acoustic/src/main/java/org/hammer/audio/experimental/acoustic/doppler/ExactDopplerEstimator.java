@@ -1,26 +1,17 @@
 package org.hammer.audio.experimental.acoustic.doppler;
 
-/**
- * Linearized small-velocity Doppler estimator using {@code v_r ~= c * (f_observed - f_reference) /
- * f_reference}.
- *
- * <p>This approximation is intended for source speeds much smaller than the speed of sound.
- * Positive radial velocity means the source moves toward the microphone.
- */
-public final class SimpleDopplerEstimator implements DopplerEstimator {
-
-  /** Default speed of sound in air in m/s. */
-  public static final double DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND = 343.0;
+/** Exact source-motion Doppler estimator for a stationary microphone and moving source. */
+public final class ExactDopplerEstimator implements DopplerEstimator {
 
   private final double speedOfSoundMetersPerSecond;
 
   /** Create an estimator with the default speed of sound. */
-  public SimpleDopplerEstimator() {
-    this(DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND);
+  public ExactDopplerEstimator() {
+    this(SimpleDopplerEstimator.DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND);
   }
 
   /** Create an estimator with a configurable speed of sound. */
-  public SimpleDopplerEstimator(double speedOfSoundMetersPerSecond) {
+  public ExactDopplerEstimator(double speedOfSoundMetersPerSecond) {
     if (!(speedOfSoundMetersPerSecond > 0.0) || !Double.isFinite(speedOfSoundMetersPerSecond)) {
       throw new IllegalArgumentException("speedOfSoundMetersPerSecond must be finite and > 0");
     }
@@ -29,15 +20,13 @@ public final class SimpleDopplerEstimator implements DopplerEstimator {
 
   @Override
   public double estimateRadialVelocity(double observedFrequencyHz, double referenceFrequencyHz) {
-    if (!Double.isFinite(observedFrequencyHz) || observedFrequencyHz < 0.0) {
-      throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
+    if (!(observedFrequencyHz > 0.0) || !Double.isFinite(observedFrequencyHz)) {
+      throw new IllegalArgumentException("observedFrequencyHz must be finite and > 0");
     }
     if (!(referenceFrequencyHz > 0.0) || !Double.isFinite(referenceFrequencyHz)) {
       throw new IllegalArgumentException("referenceFrequencyHz must be finite and > 0");
     }
-    return speedOfSoundMetersPerSecond
-        * (observedFrequencyHz - referenceFrequencyHz)
-        / referenceFrequencyHz;
+    return speedOfSoundMetersPerSecond * (1.0 - referenceFrequencyHz / observedFrequencyHz);
   }
 
   /** Configured speed of sound in m/s. */

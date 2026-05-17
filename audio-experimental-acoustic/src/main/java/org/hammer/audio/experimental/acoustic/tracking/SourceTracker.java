@@ -24,6 +24,9 @@ import org.hammer.audio.geometry.Vector3;
  */
 public final class SourceTracker {
 
+  private static final double DOPPLER_VARIANCE_SCALE_HZ_SQUARED = 4.0;
+  private static final double DOPPLER_CONSISTENCY_SCALE_METERS_PER_SECOND = 2.0;
+
   private final double frequencyMatchHz;
   private final int missingFramesToDrop;
   private final double processNoiseDensity;
@@ -153,12 +156,22 @@ public final class SourceTracker {
         track.observedFrequencyHz = observation.observedFrequencyHz();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
+        track.radialVelocityStdDevMetersPerSecond =
+            observation.radialVelocityStdDevMetersPerSecond();
+        track.dopplerVelocityWeight = adaptiveDopplerWeight(observation);
         track.fusedVelocityMetersPerSecond3d =
-            blendVelocity(track.filter.velocity(), observation.velocityMetersPerSecond3d());
+            blendVelocity(
+                track.filter.velocity(),
+                observation.velocityMetersPerSecond3d(),
+                track.dopplerVelocityWeight);
         track.lastUpdatedFrameIndex = frameIndex;
         track.consecutiveMissedFrames = 0;
         track.observationCount++;
-        track.confidence = Math.min(1.0, track.confidence * confidenceDecay + confidenceGain);
+        track.confidence =
+            Math.min(
+                1.0,
+                track.confidence * confidenceDecay
+                    + confidenceGain * dopplerReliability(observation));
         taken[matched] = true;
       } else {
         Track track = new Track();
@@ -175,10 +188,14 @@ public final class SourceTracker {
         track.lastUpdatedFrameIndex = frameIndex;
         track.consecutiveMissedFrames = 0;
         track.observationCount = 1;
-        track.confidence = confidenceGain;
-        track.fusedVelocityMetersPerSecond3d = observation.velocityMetersPerSecond3d();
+        track.confidence = confidenceGain * dopplerReliability(observation);
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
+        track.radialVelocityStdDevMetersPerSecond =
+            observation.radialVelocityStdDevMetersPerSecond();
+        track.dopplerVelocityWeight = adaptiveDopplerWeight(observation);
+        track.fusedVelocityMetersPerSecond3d =
+            observation.velocityMetersPerSecond3d().scale(track.dopplerVelocityWeight);
         tracks.add(track);
       }
     }
@@ -218,7 +235,9 @@ public final class SourceTracker {
               track.frequencyVarianceHzSquared,
               track.confidence,
               track.lastUpdatedFrameIndex,
-              track.observationCount));
+              track.observationCount,
+              track.dopplerVelocityWeight,
+              track.radialVelocityStdDevMetersPerSecond));
     }
     sources.sort((left, right) -> Integer.compare(left.id(), right.id()));
     return Collections.unmodifiableList(sources);
@@ -249,11 +268,29 @@ public final class SourceTracker {
     return best;
   }
 
-  private Vector3 blendVelocity(Vector2 positionDeltaVelocity, Vector3 dopplerVelocity) {
+  private Vector3 blendVelocity(
+      Vector2 positionDeltaVelocity, Vector3 dopplerVelocity, double dopplerWeight) {
     Vector3 positional = Vector3.from(positionDeltaVelocity);
-    return positional
-        .scale(1.0 - dopplerVelocityWeight)
-        .plus(dopplerVelocity.scale(dopplerVelocityWeight));
+    return positional.scale(1.0 - dopplerWeight).plus(dopplerVelocity.scale(dopplerWeight));
+  }
+
+  private double adaptiveDopplerWeight(Observation observation) {
+    return dopplerVelocityWeight * dopplerReliability(observation);
+  }
+
+  private double dopplerReliability(Observation observation) {
+    double varianceReliability =
+        1.0 / (1.0 + observation.frequencyVarianceHzSquared() / DOPPLER_VARIANCE_SCALE_HZ_SQUARED);
+    double consistencyReliability =
+        1.0
+            / (1.0
+                + observation.radialVelocityStdDevMetersPerSecond()
+                    / DOPPLER_CONSISTENCY_SCALE_METERS_PER_SECOND);
+    return clamp01(varianceReliability * consistencyReliability);
+  }
+
+  private static double clamp01(double value) {
+    return Math.max(0.0, Math.min(1.0, value));
   }
 
   /** One frame observation: cluster frequency + localized 2D position. */
@@ -263,11 +300,30 @@ public final class SourceTracker {
       Vector2 position,
       Vector3 velocityMetersPerSecond3d,
       double radialVelocityMetersPerSecond,
-      double frequencyVarianceHzSquared) {
+      double frequencyVarianceHzSquared,
+      double radialVelocityStdDevMetersPerSecond) {
 
     /** Create an observation without Doppler data. */
     public Observation(double frequencyHz, Vector2 position) {
-      this(frequencyHz, frequencyHz, position, Vector3.ZERO, 0.0, 0.0);
+      this(frequencyHz, frequencyHz, position, Vector3.ZERO, 0.0, 0.0, 0.0);
+    }
+
+    /** Create an observation with Doppler data but no explicit consistency metric. */
+    public Observation(
+        double frequencyHz,
+        double observedFrequencyHz,
+        Vector2 position,
+        Vector3 velocityMetersPerSecond3d,
+        double radialVelocityMetersPerSecond,
+        double frequencyVarianceHzSquared) {
+      this(
+          frequencyHz,
+          observedFrequencyHz,
+          position,
+          velocityMetersPerSecond3d,
+          radialVelocityMetersPerSecond,
+          frequencyVarianceHzSquared,
+          0.0);
     }
 
     /** Validate fields. */
@@ -286,6 +342,11 @@ public final class SourceTracker {
       if (!Double.isFinite(frequencyVarianceHzSquared) || frequencyVarianceHzSquared < 0.0) {
         throw new IllegalArgumentException("frequencyVarianceHzSquared must be finite and >= 0");
       }
+      if (!Double.isFinite(radialVelocityStdDevMetersPerSecond)
+          || radialVelocityStdDevMetersPerSecond < 0.0) {
+        throw new IllegalArgumentException(
+            "radialVelocityStdDevMetersPerSecond must be finite and >= 0");
+      }
     }
   }
 
@@ -298,6 +359,8 @@ public final class SourceTracker {
     Vector3 fusedVelocityMetersPerSecond3d = Vector3.ZERO;
     double radialVelocityMetersPerSecond;
     double frequencyVarianceHzSquared;
+    double radialVelocityStdDevMetersPerSecond;
+    double dopplerVelocityWeight;
     long lastUpdatedFrameIndex;
     int consecutiveMissedFrames;
     int observationCount;

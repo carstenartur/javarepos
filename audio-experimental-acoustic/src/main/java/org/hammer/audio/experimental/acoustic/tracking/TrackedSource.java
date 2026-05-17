@@ -23,7 +23,38 @@ public record TrackedSource(
     double frequencyVarianceHzSquared,
     double confidence,
     long lastUpdatedFrameIndex,
-    int observationCount) {
+    int observationCount,
+    double dopplerVelocityWeight,
+    double radialVelocityStdDevMetersPerSecond) {
+
+  /** Create a source snapshot without explicit Doppler diagnostics. */
+  public TrackedSource(
+      int id,
+      double frequencyHz,
+      double observedFrequencyHz,
+      Vector2 positionMeters,
+      Vector2 velocityMetersPerSecond,
+      Vector3 velocityMetersPerSecond3d,
+      double radialVelocityMetersPerSecond,
+      double frequencyVarianceHzSquared,
+      double confidence,
+      long lastUpdatedFrameIndex,
+      int observationCount) {
+    this(
+        id,
+        frequencyHz,
+        observedFrequencyHz,
+        positionMeters,
+        velocityMetersPerSecond,
+        velocityMetersPerSecond3d,
+        radialVelocityMetersPerSecond,
+        frequencyVarianceHzSquared,
+        confidence,
+        lastUpdatedFrameIndex,
+        observationCount,
+        0.0,
+        0.0);
+  }
 
   /** Validate fields. */
   public TrackedSource {
@@ -50,6 +81,16 @@ public record TrackedSource(
     }
     if (observationCount < 1) {
       throw new IllegalArgumentException("observationCount must be >= 1");
+    }
+    if (!Double.isFinite(dopplerVelocityWeight)
+        || dopplerVelocityWeight < 0.0
+        || dopplerVelocityWeight > 1.0) {
+      throw new IllegalArgumentException("dopplerVelocityWeight must be finite and in [0,1]");
+    }
+    if (!Double.isFinite(radialVelocityStdDevMetersPerSecond)
+        || radialVelocityStdDevMetersPerSecond < 0.0) {
+      throw new IllegalArgumentException(
+          "radialVelocityStdDevMetersPerSecond must be finite and >= 0");
     }
   }
 }

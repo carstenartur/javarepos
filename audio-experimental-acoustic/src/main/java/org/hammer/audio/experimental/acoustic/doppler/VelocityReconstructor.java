@@ -44,10 +44,7 @@ public final class VelocityReconstructor {
     }
     double determinant = a00 * a11 - a01 * a01;
     if (Math.abs(determinant) < SINGULAR_GEOMETRY_DETERMINANT_EPSILON) {
-      double radial = fusedRadialVelocity(radialVelocities);
-      Microphone microphone = geometry.microphone(radialVelocities.get(0).channel());
-      return Vector3.from(
-          sourcePositionMeters.minus(microphone.positionMeters()).normalized().scale(-radial));
+      return degenerateGeometryFallback(radialVelocities, geometry, sourcePositionMeters);
     }
     double vx = (b0 * a11 - b1 * a01) / determinant;
     double vy = (a00 * b1 - a01 * b0) / determinant;
@@ -65,5 +62,41 @@ public final class VelocityReconstructor {
       totalWeight += weight;
     }
     return totalWeight > 0.0 ? weighted / totalWeight : 0.0;
+  }
+
+  /** Weighted standard deviation of per-microphone radial velocities. */
+  public double radialVelocityStandardDeviation(List<RadialVelocityEstimate> radialVelocities) {
+    Objects.requireNonNull(radialVelocities, "radialVelocities");
+    if (radialVelocities.size() < 2) {
+      return 0.0;
+    }
+    double mean = fusedRadialVelocity(radialVelocities);
+    double weightedVariance = 0.0;
+    double totalWeight = 0.0;
+    for (RadialVelocityEstimate radial : radialVelocities) {
+      double weight = radial.weight() > 0.0 ? radial.weight() : 1.0;
+      double error = radial.radialVelocityMetersPerSecond() - mean;
+      weightedVariance += weight * error * error;
+      totalWeight += weight;
+    }
+    return totalWeight > 0.0 ? Math.sqrt(weightedVariance / totalWeight) : 0.0;
+  }
+
+  private Vector3 degenerateGeometryFallback(
+      List<RadialVelocityEstimate> radialVelocities,
+      MicrophoneArray geometry,
+      Vector2 sourcePositionMeters) {
+    Vector2 weightedVelocity = Vector2.ZERO;
+    double totalWeight = 0.0;
+    for (RadialVelocityEstimate radial : radialVelocities) {
+      Microphone microphone = geometry.microphone(radial.channel());
+      Vector2 direction =
+          sourcePositionMeters.minus(microphone.positionMeters()).normalized().scale(-1.0);
+      double weight = radial.weight() > 0.0 ? radial.weight() : 1.0;
+      weightedVelocity =
+          weightedVelocity.plus(direction.scale(radial.radialVelocityMetersPerSecond() * weight));
+      totalWeight += weight;
+    }
+    return totalWeight > 0.0 ? Vector3.from(weightedVelocity.scale(1.0 / totalWeight)) : Vector3.ZERO;
   }
 }

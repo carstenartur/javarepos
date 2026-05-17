@@ -138,7 +138,11 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
       Vector2 microphonePosition) {
     Vector2 sourceToMicrophone = microphonePosition.minus(sourcePosition).normalized();
     double radialTowardMicrophone = sourceVelocity.dot(sourceToMicrophone);
+    if (radialTowardMicrophone >= DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND) {
+      throw new IllegalArgumentException("radial source speed must be below the speed of sound");
+    }
     return sourceFrequencyHz
-        * (1.0 + radialTowardMicrophone / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND);
+        * (DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND
+            / (DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND - radialTowardMicrophone));
   }
 }
