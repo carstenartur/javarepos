@@ -35,9 +35,9 @@ JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64 ./mvnw -B clean verify
 
 Result: exit code 0.
 
-Static-analysis report counts captured from that baseline are stored in
-`quality-baseline.properties`. Existing findings remain technical debt; CI blocks increases above
-that baseline rather than claiming a clean static-analysis state.
+Static-analysis report counts after this pass are stored in `quality-baseline.properties`. Existing
+findings remain technical debt; CI blocks increases above that baseline rather than claiming a clean
+static-analysis state.
 
 ## Confirmed alignment between docs and code
 

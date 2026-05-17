@@ -47,6 +47,7 @@ import org.hammer.audio.ui.theme.PlotRenderTheme;
  * screenshot is written to {@code screenshot.png}; feature images are written to the {@code
  * features/} child directory.
  */
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public final class DocImageRenderer {
 
   private static final int W = 760;
@@ -72,7 +73,6 @@ public final class DocImageRenderer {
     writePng(featureDir.resolve("spectrum-peak-hold.png"), renderSpectrumPeakHold());
     writePng(featureDir.resolve("recording-format.png"), renderRecordingFormat());
     writePng(featureDir.resolve("ab-comparison.png"), renderAbComparison());
-    System.out.println("Wrote documentation screenshots to " + imageDir.toAbsolutePath());
   }
 
   /**
