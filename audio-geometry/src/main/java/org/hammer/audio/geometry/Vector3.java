@@ -1,6 +1,6 @@
 package org.hammer.audio.geometry;
 
-/** Immutable three-dimensional velocity vector in meters or meters per second. */
+/** Immutable three-dimensional vector in meters or meters per second. */
 public record Vector3(double x, double y, double z) {
 
   /** Zero vector. */
