@@ -189,9 +189,9 @@ jobs:
         import glob
         import html
         import json
-        import os
         import pathlib
         import shutil
+        import urllib.parse
         import xml.etree.ElementTree as ET
 
         tests_dir = pathlib.Path("target/gh-pages/tests")
@@ -254,7 +254,7 @@ jobs:
                 missed += int(counter.get("missed", 0))
           total = covered + missed
           if total > 0:
-            coverage_pct = int(round((covered / total) * 100, 0))
+            coverage_pct = round((covered / total) * 100)
             if coverage_pct >= 80:
               coverage_color = "brightgreen"
             elif coverage_pct >= 60:
@@ -294,7 +294,7 @@ jobs:
 
         if copied_modules:
           links = "\n".join(
-              f'<li><a href="{html.escape(name)}/index.html">{html.escape(name)}</a></li>'
+              f'<li><a href="{urllib.parse.quote(name)}/index.html">{html.escape(name)}</a></li>'
               for name in sorted(copied_modules)
           )
           (coverage_dir / "index.html").write_text(
