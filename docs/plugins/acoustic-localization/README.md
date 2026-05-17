@@ -36,9 +36,9 @@ Still experimental:
 
 ## Practical microphone setup
 
-- Use a synchronized multi-channel interface when possible; independent USB microphones are usually
-  unsuitable for precise TDOA unless repeated calibration beacons, drift checks and residual-error
-  rejection are part of the workflow.
+- Use a synchronized multi-channel interface when possible. A practical low-cost experimental
+  alternative is a set of stereo USB microphones with known local baselines plus an ultrasonic
+  reference beacon for inter-device offset, drift and cycle-slip estimation.
 - Start with 2D arrays on a rigid frame and known coordinates in meters.
 - Keep microphone spacing large enough for measurable delay but below room-reflection dominance.
 - Record calibration clicks or chirps to estimate channel polarity, gain and sample offsets.
@@ -54,8 +54,8 @@ per-channel latency. Real microphone rigs should capture calibration impulses be
 experiment and reject data when drift exceeds the localization error budget.
 
 See [Physics and latency limits](physics-and-latency-limits.md) for the hard physical limits,
-consumer-hardware constraints, calibration-reducible errors and AR-display implications behind these
-requirements.
+consumer-hardware constraints, ultrasonic reference-beacon calibration, calibration-reducible errors
+and AR-display implications behind these requirements.
 
 ## DSP concepts
 

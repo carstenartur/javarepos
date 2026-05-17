@@ -29,8 +29,10 @@ experiments.
 ## Hardware checklist
 
 - **Synchronous capture device.** Use one multichannel audio interface with a
-  single shared clock. Independent USB microphones drift and break TDOA before
-  any other source of error.
+  single shared clock for precise TDOA. For low-cost experiments, three stereo
+  USB microphones can be treated as locally synchronized pairs when an
+  ultrasonic reference beacon is used to estimate inter-device delay offset,
+  clock drift and cycle slips.
 - **Rigid frame.** Mount all microphones on a single rigid board; submillimetre
   position errors already swamp the integer-sample resolution of the current
   TDOA implementation.

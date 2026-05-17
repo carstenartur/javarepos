@@ -103,25 +103,125 @@ Reflections and multipath are hard environmental limits, not just implementation
 Calibration can characterize some rooms or reject some states, but it cannot guarantee unique
 localization in reflective scenes. Ambiguity must therefore be treated as part of the output.
 
-## Independent USB microphones, clock drift and calibration beacons
+## Independent USB microphones and ultrasonic reference-beacon calibration
 
-Independent USB microphones are not suitable for **precise** TDOA unless synchronization or repeated
-calibration is added.
+Independent USB microphones are a poor default for passive precision TDOA, but they can be useful in
+controlled experiments when an ultrasonic reference beacon provides a continuously observed timing
+reference.
 
-Each USB microphone normally has its own ADC clock. Even small parts-per-million drift accumulates
-into timing error over time, and the resulting error can exceed the true inter-microphone delay of a
-small array.
+### Baseline problem
 
-Nuanced guidance:
+Independent USB microphones usually do not share a hardware sample clock. For passive TDOA this
+creates several coupled timing errors:
 
-- independent USB microphones are usually unsuitable for precise TDOA out of the box;
-- they can still be used experimentally if repeated calibration beacons, drift estimation and
-  residual-error checks are part of the workflow;
-- the system should reject or down-rank estimates when the residual synchronization error exceeds the
-  localization error budget.
+- unknown relative clock offset at the start of capture;
+- clock drift between devices over time;
+- device and operating-system buffering latency;
+- possible discontinuities when the USB stack, driver or host resamples or drops frames.
 
-Calibration beacons can help estimate relative offsets and drift before, during or after a run, but
-they do not create perfect synchronization. Residual error remains.
+These errors can be larger than the inter-microphone delays the localization pipeline is trying to
+measure. Shared-clock multi-channel audio interfaces therefore remain the preferred hardware for
+precise TDOA localization.
+
+### Experimental workaround
+
+Independent USB stereo microphones can still be useful in experiments if the setup contains a known
+ultrasonic reference beacon. The beacon can be a fixed ultrasonic source at a known position, for
+example a 35-45 kHz sine, multitone, chirp or coded source.
+
+Each microphone observes the same reference signal. By tracking the beacon's phase and frequency
+over time, the system can estimate:
+
+- relative phase offset;
+- sample-clock drift;
+- Doppler shift caused by microphone movement;
+- sudden timing discontinuities or cycle slips.
+
+This creates a virtual timing reference from the observed carrier. It is not equivalent to a true
+shared hardware clock because the estimate still depends on SNR, line of sight, propagation path,
+motion modelling and cycle-count continuity.
+
+### Recommended experimental low-cost setup
+
+A practical low-cost experiment should prefer three stereo USB microphones over six independent mono
+USB microphones. Treat each stereo device as a locally synchronized microphone pair. Arrange the
+three stereo pairs with known positions and different baseline orientations so the combined array
+observes multiple spatial directions.
+
+Calibrate and record:
+
+- the 3D position of every capsule;
+- the baseline direction and spacing inside each stereo device;
+- the fixed relative delay within each stereo device;
+- the relative delay, drift and cycle-slip state between the three USB devices;
+- the ultrasonic beacon position and waveform.
+
+This is still an experimental alternative, not a replacement for shared-clock capture. The beacon
+helps align the USB devices over time, while the stereo baselines provide redundant local direction
+information.
+
+### Carrier-phase tracking
+
+Carrier phase connects acoustic phase to path length. For a reference frequency `f`:
+
+```text
+lambda = c / f
+Δd = N * lambda + (Δphi / 2π) * lambda
+```
+
+where `lambda` is wavelength, `N` is an integer cycle count and `Δphi` is the wrapped phase change.
+At 40 kHz and `c ≈ 343 m/s`, `lambda ≈ 8.6 mm`.
+
+Continuous phase tracking can count cycles during smooth motion and therefore provide
+high-resolution relative movement information. The ambiguity is that a single pure sine is only
+known modulo one wavelength after signal loss, restart or cycle slip unless a motion model or
+additional reference information recovers the missing cycle count.
+
+### Motion model and re-lock after dropouts
+
+Short signal dropouts do not necessarily invalidate the approach. If the user moves the microphone
+approximately smoothly from the reference beacon toward the target location, the system can use a
+velocity/acceleration model to interpolate missing phase and frequency through the dropout.
+
+Frequency deviation and Doppler shift provide information about radial velocity. The observed
+Doppler/frequency trend before and after a dropout can help reconstruct the likely number of missed
+cycles. If the reconstructed trajectory is inconsistent with the motion model, geometry or beacon
+observations, the system should warn the user and ask them to repeat the calibration movement.
+
+### Better beacon waveforms
+
+A single sine is useful for continuous carrier-phase tracking, but it is fragile after signal loss.
+For robust re-acquisition, prefer one of:
+
+- multiple ultrasonic carrier frequencies;
+- chirp;
+- coded beacon / PRBS / MLS-like sequence;
+- sine carrier plus periodic sync marker.
+
+Multi-frequency or coded beacons increase the unambiguous range and help detect cycle slips. They
+also make it easier to distinguish true clock drift from propagation-path changes, reflections or
+temporary signal loss.
+
+### Suggested pipeline
+
+```mermaid
+flowchart LR
+  B[Ultrasonic reference beacon<br>known position] --> M1[USB stereo mic 1]
+  B --> M2[USB stereo mic 2]
+  B --> M3[USB stereo mic 3]
+  M1 --> P[Carrier phase / frequency tracking]
+  M2 --> P
+  M3 --> P
+  P --> D[Offset + drift + cycle-slip estimation]
+  D --> K[Motion model / Kalman or PLL/FLL tracker]
+  K --> C[Corrected virtual time base]
+  C --> T[TDOA / beamforming / localization]
+  K --> Q[Quality check + repeat-calibration warning]
+```
+
+The quality check is essential. If residual offset, drift or cycle-slip uncertainty exceeds the
+localization error budget, the system should reject the calibration or mark the localization output
+as demonstration-grade only.
 
 ## Shared-clock multi-channel interfaces as preferred hardware
 

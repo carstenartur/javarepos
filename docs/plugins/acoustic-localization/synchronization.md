@@ -6,11 +6,12 @@ sample-accurate alignment of the channels feeding it. This document captures the
 synchronization assumptions the plugin makes and the practical implications for hardware
 selection.
 
-## Mandatory: a shared sample clock
+## Preferred: a shared sample clock
 
-All microphones must share a single sample clock. The plugin assumes that frame `n` on
-channel A and frame `n` on channel B are captured at the same instant. Sources that satisfy
-this requirement include:
+Precise passive TDOA is best served by microphones sharing a single sample clock. The plugin assumes
+that frame `n` on channel A and frame `n` on channel B are captured at the same instant unless an
+experimental calibration workflow explicitly estimates and corrects inter-device timing. Sources
+that satisfy the shared-clock requirement include:
 
 - a single multi-channel audio interface (Focusrite Scarlett, RME Babyface, MOTU M-series,
   Behringer UMC, etc.) where every input is sampled from the same crystal;
@@ -21,7 +22,7 @@ this requirement include:
 In all cases the host audio framework must deliver the channels as a single multi-channel
 stream so that the platform receives one `AudioBlock` per frame with `channels = N`.
 
-## Independent USB microphones: experimental only with calibration
+## Independent USB microphones with reference-beacon calibration
 
 USB microphones each contain their own crystal and ADC. Even nominally identical devices
 drift relative to each other at typical rates of a few PPM (parts per million), which
@@ -31,15 +32,20 @@ accumulates to:
 - multi-millisecond drift over a few minutes — orders of magnitude larger than the
   inter-microphone delays the pipeline tries to estimate.
 
-Two arbitrary USB microphones are therefore unsuitable for **precise** TDOA work unless repeated
-calibration or explicit synchronization is added. They remain useful for non-TDOA demos
-(frequency tracking on a single channel, sample-rate calibration of the simulator), and they can be
-used experimentally for TDOA only if calibration beacons, drift estimation and residual-error checks
-are part of the workflow. Without those controls, `TdoaEstimator` and downstream beamforming may
-produce arbitrary results.
+For passive TDOA, arbitrary independent USB microphones therefore need explicit calibration before
+their relative timing can be trusted. They remain useful for non-TDOA demos (frequency tracking on a
+single channel, sample-rate calibration of the simulator), and they can be used experimentally for
+TDOA when an ultrasonic reference beacon, drift estimation and residual-error checks are part of the
+workflow.
+
+A practical low-cost experimental setup is three stereo USB microphones rather than six independent
+mono USB microphones. Treat each stereo device as a locally synchronized pair, arrange the three
+pairs with known positions and different baseline orientations, and use an ultrasonic reference
+beacon to estimate inter-device delay offset, clock drift and cycle slips between the USB devices.
 
 See [Physics and latency limits](physics-and-latency-limits.md) for the underlying path-difference,
-drift, ambiguity and AR-latency bounds that motivate this guidance.
+ultrasonic reference-beacon calibration, drift, ambiguity and AR-latency bounds that motivate this
+guidance.
 
 ## Timing precision requirements
 
