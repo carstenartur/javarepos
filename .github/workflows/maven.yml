@@ -18,6 +18,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      checks: write
 
     env:
       JAVA_VERSION: '21'
@@ -74,6 +77,15 @@ jobs:
       with:
         name: surefire-html
         path: '**/target/site/'
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Upload Surefire standalone HTML report
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: surefire-standalone-html
+        path: '**/target/reports/surefire.html'
         if-no-files-found: ignore
         retention-days: 30
     
@@ -169,6 +181,169 @@ jobs:
         files: '**/target/site/jacoco/jacoco.xml'
         fail_ci_if_error: false
         verbose: true
+
+    - name: Prepare GitHub Pages reports and badges
+      if: always()
+      run: |
+        python3 - <<'PY'
+        import glob
+        import html
+        import json
+        import os
+        import pathlib
+        import shutil
+        import xml.etree.ElementTree as ET
+
+        tests_dir = pathlib.Path("target/gh-pages/tests")
+        coverage_dir = pathlib.Path("target/gh-pages/coverage")
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        coverage_dir.mkdir(parents=True, exist_ok=True)
+
+        surefire_html = pathlib.Path("target/reports/surefire.html")
+        if surefire_html.exists():
+          shutil.copy2(surefire_html, tests_dir / "surefire-report.html")
+        else:
+          (tests_dir / "surefire-report.html").write_text(
+              "<html><body><h1>Surefire report not available</h1></body></html>",
+              encoding="utf-8",
+          )
+
+        test_files = (
+            glob.glob("**/target/surefire-reports/TEST-*.xml", recursive=True)
+            + glob.glob("**/target/failsafe-reports/TEST-*.xml", recursive=True)
+        )
+        if test_files:
+          total_tests = total_failures = total_errors = 0
+          for path in test_files:
+            root = ET.parse(path).getroot()
+            total_tests += int(root.get("tests", 0))
+            total_failures += int(root.get("failures", 0))
+            total_errors += int(root.get("errors", 0))
+          failed = total_failures + total_errors
+          passed = max(total_tests - failed, 0)
+          if failed > 0:
+            tests_message = f"{failed}/{total_tests} failed"
+            tests_color = "red"
+          else:
+            tests_message = f"{passed} passed"
+            tests_color = "brightgreen"
+        else:
+          tests_message = "unknown"
+          tests_color = "lightgrey"
+        (tests_dir / "badge.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "label": "tests",
+                    "message": tests_message,
+                    "color": tests_color,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        jacoco_xml_paths = glob.glob("**/target/site/jacoco/jacoco.xml", recursive=True)
+        covered = 0
+        missed = 0
+        if jacoco_xml_paths:
+          for jacoco_xml in jacoco_xml_paths:
+            root = ET.parse(jacoco_xml).getroot()
+            for counter in root.iter("counter"):
+              if counter.get("type") == "LINE":
+                covered += int(counter.get("covered", 0))
+                missed += int(counter.get("missed", 0))
+          total = covered + missed
+          if total > 0:
+            coverage_pct = round((covered / total) * 100)
+            if coverage_pct >= 80:
+              coverage_color = "brightgreen"
+            elif coverage_pct >= 60:
+              coverage_color = "yellow"
+            else:
+              coverage_color = "red"
+            coverage_message = f"{coverage_pct}%"
+          else:
+            coverage_message = "unknown"
+            coverage_color = "lightgrey"
+        else:
+          coverage_message = "unknown"
+          coverage_color = "lightgrey"
+        (coverage_dir / "badge.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "label": "coverage",
+                    "message": coverage_message,
+                    "color": coverage_color,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        copied_modules = []
+        for jacoco_dir in glob.glob("**/target/site/jacoco", recursive=True):
+          module_path = jacoco_dir.split("/target/site/jacoco")[0].strip("./")
+          module_name = module_path if module_path else "root"
+          destination = coverage_dir / module_name
+          if destination.exists():
+            shutil.rmtree(destination)
+          shutil.copytree(jacoco_dir, destination)
+          copied_modules.append(module_name)
+
+        if copied_modules:
+          links = "\n".join(
+              f'<li><a href="{html.escape(name)}/index.html">{html.escape(name)}</a></li>'
+              for name in sorted(copied_modules)
+          )
+          (coverage_dir / "index.html").write_text(
+              (
+                  "<!doctype html><html><head><meta charset=\"utf-8\">"
+                  "<title>JaCoCo Coverage Reports</title></head><body>"
+                  "<h1>JaCoCo Coverage Reports</h1><ul>"
+                  f"{links}</ul></body></html>"
+              ),
+              encoding="utf-8",
+          )
+        else:
+          (coverage_dir / "index.html").write_text(
+              "<!doctype html><html><head><meta charset=\"utf-8\"><title>No coverage report</title>"
+              "</head><body><h1>No coverage report generated</h1></body></html>",
+              encoding="utf-8",
+          )
+        PY
+
+    - name: Upload GitHub Pages reports bundle
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: github-pages-reports
+        path: target/gh-pages/
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Deploy test report to GitHub Pages
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: target/gh-pages/tests
+        destination_dir: tests
+        keep_files: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy Surefire test report ${{ github.sha }}'
+
+    - name: Deploy coverage report to GitHub Pages
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: target/gh-pages/coverage
+        destination_dir: coverage
+        keep_files: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy JaCoCo coverage report ${{ github.sha }}'
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
 #    - name: Update dependency graph
