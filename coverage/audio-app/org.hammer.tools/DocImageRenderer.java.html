@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DocImageRenderer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Audio Analyzer App</a> &gt; <a href="index.source.html" class="el_package">org.hammer.tools</a> &gt; <span class="el_source">DocImageRenderer.java</span></div><h1>DocImageRenderer.java</h1><pre class="source lang-java linenums">package org.hammer.tools;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import javax.imageio.ImageIO;
+import org.hammer.audio.analysis.MeasurementCalculator;
+import org.hammer.audio.analysis.MeasurementSnapshot;
+import org.hammer.audio.analysis.PeakHoldSpectrum;
+import org.hammer.audio.analysis.SpectrumAnalyzer;
+import org.hammer.audio.analysis.SpectrumAverager;
+import org.hammer.audio.analysis.SpectrumSnapshot;
+import org.hammer.audio.analysis.WaveformTrigger;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.core.AudioFormatDescriptor;
+import org.hammer.audio.diagnosis.DiagnosisAnalyzer;
+import org.hammer.audio.diagnosis.DiagnosisFinding;
+import org.hammer.audio.diagnosis.DiagnosisSnapshot;
+import org.hammer.audio.signal.SineGenerator;
+import org.hammer.audio.signal.SquareGenerator;
+import org.hammer.audio.spectrogram.SpectrogramAnalyzer;
+import org.hammer.audio.spectrogram.SpectrogramHistory;
+import org.hammer.audio.ui.theme.PlotRenderTheme;
+
+/**
+ * Headless utility that renders deterministic PNG screenshots used in the README and feature
+ * documentation.
+ *
+ * &lt;p&gt;Re-run with:
+ *
+ * &lt;pre&gt;
+ *   ./mvnw -pl audio-app -am package -DskipTests
+ *   java -cp &quot;audio-app/target/audio-app-0.0.1-SNAPSHOT.jar:audio-app/target/lib/*&quot; \
+ *        org.hammer.tools.DocImageRenderer docs/images
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;The output directory defaults to {@code docs/images} when no argument is given. The README
+ * screenshot is written to {@code screenshot.png}; feature images are written to the {@code
+ * features/} child directory.
+ */
+@SuppressWarnings(&quot;PMD.CouplingBetweenObjects&quot;)
+public final class DocImageRenderer {
+
+  private static final int W = 760;
+  private static final int H = 320;
+  private static final int DASHBOARD_W = 1600;
+  private static final int DASHBOARD_H = 1000;
+  private static final int DASHBOARD_SPECTROGRAM_HISTORY_FRAMES = 180;
+  private static final int DASHBOARD_SPECTROGRAM_SEED_BLOCKS = 64;
+  private static final int DASHBOARD_WAVEFORM_VISIBLE_SAMPLES = 2200;
+  private static final float SYNTHETIC_SPECTROGRAM_PULSE_BASE = 0.45f;
+  private static final float SYNTHETIC_SPECTROGRAM_PULSE_SWING = 0.55f;
+  private static final double SYNTHETIC_SPECTROGRAM_PULSE_PERIOD = 18.0;
+  private static final float SYNTHETIC_SPECTROGRAM_BAND_POSITION = 0.72f;
+  private static final float SYNTHETIC_SPECTROGRAM_BAND_WIDTH = 18f;
+<span class="fc" id="L65">  private static final AudioFormatDescriptor MONO_44K = new AudioFormatDescriptor(44100f, 1, 16);</span>
+  private static final int FFT = 1024;
+
+  private DocImageRenderer() {}
+
+  /**
+   * @param args optional output directory; defaults to {@code docs/images/features}
+   * @throws IOException if any of the PNGs cannot be written
+   */
+  public static void main(String[] args) throws IOException {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">    Path imageDir = Path.of(args.length &gt; 0 ? args[0] : &quot;docs/images&quot;);</span>
+<span class="nc" id="L76">    Path featureDir = imageDir.resolve(&quot;features&quot;);</span>
+<span class="nc" id="L77">    Files.createDirectories(featureDir);</span>
+
+<span class="nc" id="L79">    writePng(imageDir.resolve(&quot;screenshot.png&quot;), renderDashboardScreenshot());</span>
+<span class="nc" id="L80">    writePng(featureDir.resolve(&quot;waveform-trigger.png&quot;), renderTrigger());</span>
+<span class="nc" id="L81">    writePng(featureDir.resolve(&quot;spectrum-peak-hold.png&quot;), renderSpectrumPeakHold());</span>
+<span class="nc" id="L82">    writePng(featureDir.resolve(&quot;recording-format.png&quot;), renderRecordingFormat());</span>
+<span class="nc" id="L83">    writePng(featureDir.resolve(&quot;ab-comparison.png&quot;), renderAbComparison());</span>
+<span class="nc" id="L84">  }</span>
+
+  /**
+   * Render the deterministic README dashboard screenshot.
+   *
+   * @return a 1600x1000 PNG-ready image showing a 440 Hz demo signal and the main dashboard panels
+   */
+  public static BufferedImage renderDashboardScreenshot() {
+<span class="fc" id="L92">    SineGenerator gen = new SineGenerator(MONO_44K, 440.0, 0.7f);</span>
+<span class="fc" id="L93">    AudioBlock block = gen.nextBlock(4096);</span>
+<span class="fc" id="L94">    SpectrumAnalyzer spectrumAnalyzer = new SpectrumAnalyzer(FFT, 0, MONO_44K.sampleRate());</span>
+<span class="fc" id="L95">    SpectrumSnapshot spectrum = spectrumAnalyzer.analyze(block);</span>
+<span class="fc" id="L96">    MeasurementSnapshot measurement = new MeasurementCalculator().calculate(block, spectrum);</span>
+<span class="fc" id="L97">    SpectrogramAnalyzer spectrogramAnalyzer =</span>
+        new SpectrogramAnalyzer(
+<span class="fc" id="L99">            FFT, 0, MONO_44K.sampleRate(), DASHBOARD_SPECTROGRAM_HISTORY_FRAMES);</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">    for (int i = 0; i &lt; DASHBOARD_SPECTROGRAM_SEED_BLOCKS; i++) {</span>
+<span class="fc" id="L101">      spectrogramAnalyzer.analyze(gen.nextBlock(FFT));</span>
+    }
+<span class="fc" id="L103">    SpectrogramHistory history = spectrogramAnalyzer.history();</span>
+<span class="fc" id="L104">    DiagnosisSnapshot diagnosis = new DiagnosisAnalyzer().analyze(block, spectrum, history, null);</span>
+
+<span class="fc" id="L106">    BufferedImage img = new BufferedImage(DASHBOARD_W, DASHBOARD_H, BufferedImage.TYPE_INT_RGB);</span>
+<span class="fc" id="L107">    Graphics2D g = img.createGraphics();</span>
+    try {
+<span class="fc" id="L109">      applyHints(g);</span>
+<span class="fc" id="L110">      g.setColor(new Color(19, 24, 32));</span>
+<span class="fc" id="L111">      g.fillRect(0, 0, DASHBOARD_W, DASHBOARD_H);</span>
+<span class="fc" id="L112">      drawAppChrome(g);</span>
+<span class="fc" id="L113">      drawControlBar(g, measurement, spectrum);</span>
+<span class="fc" id="L114">      drawWaveform(g, new Rectangle(28, 150, 1544, 330), block);</span>
+<span class="fc" id="L115">      drawSpectrumPanel(</span>
+          g,
+          new Rectangle(28, 508, 754, 245),
+          spectrum,
+          &quot;Spectrum — 440 Hz sine demo&quot;,
+          PlotRenderTheme.SPECTRUM_LINE);
+<span class="fc" id="L121">      drawMeasurements(g, new Rectangle(810, 508, 762, 245), measurement);</span>
+<span class="fc" id="L122">      drawSpectrogram(g, new Rectangle(28, 782, 1050, 180));</span>
+<span class="fc" id="L123">      drawDiagnosis(g, new Rectangle(1104, 782, 468, 180), diagnosis);</span>
+    } finally {
+<span class="fc" id="L125">      g.dispose();</span>
+    }
+<span class="fc" id="L127">    return img;</span>
+  }
+
+  private static void drawAppChrome(Graphics2D g) {
+<span class="fc" id="L131">    g.setColor(new Color(31, 38, 48));</span>
+<span class="fc" id="L132">    g.fillRect(0, 0, DASHBOARD_W, 56);</span>
+<span class="fc" id="L133">    g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="fc" id="L134">    g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));</span>
+<span class="fc" id="L135">    g.drawString(&quot;Audio Analyzer&quot;, 24, 35);</span>
+<span class="fc" id="L136">    g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="fc" id="L137">    g.setColor(PlotRenderTheme.TEXT_MUTED);</span>
+<span class="fc" id="L138">    g.drawString(&quot;File   View   Plugins   Help&quot;, 210, 35);</span>
+<span class="fc" id="L139">    g.setColor(new Color(52, 168, 83));</span>
+<span class="fc" id="L140">    g.fillRoundRect(DASHBOARD_W - 170, 16, 132, 24, 12, 12);</span>
+<span class="fc" id="L141">    g.setColor(Color.WHITE);</span>
+<span class="fc" id="L142">    g.drawString(&quot;Demo frozen&quot;, DASHBOARD_W - 148, 33);</span>
+<span class="fc" id="L143">  }</span>
+
+  private static void drawControlBar(
+      Graphics2D g, MeasurementSnapshot measurement, SpectrumSnapshot spectrum) {
+<span class="fc" id="L147">    Rectangle controls = new Rectangle(28, 76, 1544, 50);</span>
+<span class="fc" id="L148">    g.setColor(new Color(35, 43, 55));</span>
+<span class="fc" id="L149">    g.fillRoundRect(controls.x, controls.y, controls.width, controls.height, 14, 14);</span>
+<span class="fc" id="L150">    g.setColor(new Color(72, 84, 102));</span>
+<span class="fc" id="L151">    g.drawRoundRect(controls.x, controls.y, controls.width, controls.height, 14, 14);</span>
+<span class="fc" id="L152">    String[] items = {</span>
+      &quot;Input: Demo mode&quot;,
+      &quot;Demo: Sine&quot;,
+      &quot;Format: 44.1 kHz / mono / 16-bit&quot;,
+<span class="fc" id="L156">      String.format(Locale.ROOT, &quot;Peak: %.1f Hz&quot;, strongestFrequency(spectrum)),</span>
+<span class="fc" id="L157">      String.format(Locale.ROOT, &quot;RMS: %.3f&quot;, measurement.rms()),</span>
+<span class="fc" id="L158">      String.format(Locale.ROOT, &quot;Level: %.2f&quot;, measurement.peakLevel())</span>
+    };
+<span class="fc" id="L160">    g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="fc" id="L161">    int x = controls.x + 18;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">    for (String item : items) {</span>
+<span class="fc" id="L163">      drawPill(g, x, controls.y + 12, item);</span>
+<span class="fc" id="L164">      x += g.getFontMetrics().stringWidth(item) + 42;</span>
+    }
+<span class="fc" id="L166">  }</span>
+
+  private static void drawPill(Graphics2D g, int x, int y, String text) {
+<span class="fc" id="L169">    int width = g.getFontMetrics().stringWidth(text) + 20;</span>
+<span class="fc" id="L170">    g.setColor(new Color(47, 58, 74));</span>
+<span class="fc" id="L171">    g.fillRoundRect(x, y, width, 26, 13, 13);</span>
+<span class="fc" id="L172">    g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="fc" id="L173">    g.drawString(text, x + 10, y + 18);</span>
+<span class="fc" id="L174">  }</span>
+
+  private static void drawWaveform(Graphics2D g, Rectangle plot, AudioBlock block) {
+<span class="fc" id="L177">    PlotRenderTheme.drawPlotBackground(g, plot.width, plot.height, plot);</span>
+<span class="fc" id="L178">    PlotRenderTheme.drawGrid(g, plot, 16, 8);</span>
+<span class="fc" id="L179">    PlotRenderTheme.drawTitle(g, plot.x + 12, plot.y + 22, &quot;Waveform — reproducible 440 Hz sine&quot;);</span>
+<span class="fc" id="L180">    PlotRenderTheme.drawYAxisLabel(g, plot, &quot;Amplitude [-1..1]&quot;);</span>
+<span class="fc" id="L181">    PlotRenderTheme.drawYTicks(</span>
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;+1&quot;, &quot;0&quot;, &quot;-1&quot;});
+<span class="fc" id="L183">    PlotRenderTheme.drawXAxisLabel(g, plot, &quot;Time [ms]&quot;);</span>
+<span class="fc" id="L184">    float[] samples = block.channelView(0);</span>
+<span class="fc" id="L185">    int visible = Math.min(samples.length, DASHBOARD_WAVEFORM_VISIBLE_SAMPLES);</span>
+<span class="fc" id="L186">    double durationMs = 1000.0d * Math.max(0, visible - 1) / MONO_44K.sampleRate();</span>
+<span class="fc" id="L187">    PlotRenderTheme.drawXTicks(</span>
+        g,
+        plot,
+        new double[] {0.0d, 0.5d, 1.0d},
+        new String[] {
+          &quot;0 ms&quot;,
+<span class="fc" id="L193">          String.format(Locale.ROOT, &quot;%.1f ms&quot;, durationMs / 2.0d),</span>
+<span class="fc" id="L194">          String.format(Locale.ROOT, &quot;%.1f ms&quot;, durationMs)</span>
+        });
+<span class="fc" id="L196">    int centerY = plot.y + plot.height / 2;</span>
+<span class="fc" id="L197">    int amplitude = plot.height / 2 - 38;</span>
+<span class="fc" id="L198">    Path2D path = new Path2D.Float();</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">    for (int i = 0; i &lt; visible; i++) {</span>
+<span class="fc" id="L200">      double x = plot.x + (double) i * (plot.width - 1) / Math.max(1, visible - 1);</span>
+<span class="fc" id="L201">      double y = centerY - Math.max(-1f, Math.min(1f, samples[i])) * amplitude;</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">      if (i == 0) {</span>
+<span class="fc" id="L203">        path.moveTo(x, y);</span>
+      } else {
+<span class="fc" id="L205">        path.lineTo(x, y);</span>
+      }
+    }
+<span class="fc" id="L208">    g.setColor(PlotRenderTheme.CENTER_LINE);</span>
+<span class="fc" id="L209">    g.drawLine(plot.x, centerY, plot.x + plot.width, centerY);</span>
+<span class="fc" id="L210">    g.setColor(PlotRenderTheme.WAVEFORM_LEFT);</span>
+<span class="fc" id="L211">    g.setStroke(PlotRenderTheme.TRACE_STROKE);</span>
+<span class="fc" id="L212">    g.draw(path);</span>
+<span class="fc" id="L213">    g.setColor(PlotRenderTheme.TEXT_MUTED);</span>
+<span class="fc" id="L214">    g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="fc" id="L215">    g.drawString(&quot;Frozen demo buffer, amplitude 0.70, no clipping&quot;, plot.x + 12, plot.y + 44);</span>
+<span class="fc" id="L216">  }</span>
+
+  private static void drawMeasurements(
+      Graphics2D g, Rectangle panel, MeasurementSnapshot measurement) {
+<span class="fc" id="L220">    drawPanelShell(g, panel, &quot;Measurements&quot;);</span>
+<span class="fc" id="L221">    String[] rows = {</span>
+<span class="fc" id="L222">      String.format(</span>
+<span class="fc" id="L223">          Locale.ROOT, &quot;Dominant frequency     %.1f Hz&quot;, measurement.dominantFrequencyHz()),</span>
+<span class="fc" id="L224">      String.format(Locale.ROOT, &quot;RMS level              %.3f&quot;, measurement.rms()),</span>
+<span class="fc" id="L225">      String.format(Locale.ROOT, &quot;Peak level             %.3f&quot;, measurement.peakLevel()),</span>
+      &quot;Clipping               no&quot;,
+      &quot;Stereo delay           n/a (mono demo)&quot;,
+      &quot;Confidence             n/a&quot;
+    };
+<span class="fc" id="L230">    g.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 18));</span>
+<span class="fc" id="L231">    int y = panel.y + 66;</span>
+<span class="fc bfc" id="L232" title="All 2 branches covered.">    for (String row : rows) {</span>
+<span class="fc" id="L233">      g.setColor(new Color(43, 53, 68));</span>
+<span class="fc" id="L234">      g.fillRoundRect(panel.x + 24, y - 24, panel.width - 48, 34, 10, 10);</span>
+<span class="fc" id="L235">      g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="fc" id="L236">      g.drawString(row, panel.x + 42, y);</span>
+<span class="fc" id="L237">      y += 34;</span>
+    }
+<span class="fc" id="L239">  }</span>
+
+  private static void drawSpectrogram(Graphics2D g, Rectangle panel) {
+<span class="fc" id="L242">    drawPanelShell(g, panel, &quot;Spectrogram / waterfall&quot;);</span>
+<span class="fc" id="L243">    int x0 = panel.x + 20;</span>
+<span class="fc" id="L244">    int y0 = panel.y + 44;</span>
+<span class="fc" id="L245">    int w = panel.width - 40;</span>
+<span class="fc" id="L246">    int h = panel.height - 64;</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">    for (int x = 0; x &lt; w; x++) {</span>
+<span class="fc" id="L248">      float pulse =</span>
+          SYNTHETIC_SPECTROGRAM_PULSE_BASE
+              + SYNTHETIC_SPECTROGRAM_PULSE_SWING
+<span class="fc" id="L251">                  * (float) Math.sin(x / SYNTHETIC_SPECTROGRAM_PULSE_PERIOD);</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">      for (int y = 0; y &lt; h; y++) {</span>
+<span class="fc" id="L253">        float band =</span>
+<span class="fc" id="L254">            Math.max(</span>
+                    0f,
+                    1f
+<span class="fc" id="L257">                        - Math.abs(y - h * SYNTHETIC_SPECTROGRAM_BAND_POSITION)</span>
+                            / SYNTHETIC_SPECTROGRAM_BAND_WIDTH)
+                * pulse;
+<span class="fc" id="L260">        g.setColor(</span>
+            new Color(
+                16,
+<span class="fc" id="L263">                Math.min(210, 55 + (int) (band * 155)),</span>
+<span class="fc" id="L264">                Math.min(255, 90 + (int) (band * 165))));</span>
+<span class="fc" id="L265">        g.drawLine(x0 + x, y0 + y, x0 + x, y0 + y);</span>
+      }
+    }
+<span class="fc" id="L268">    Rectangle plot = new Rectangle(x0, y0, w, h);</span>
+<span class="fc" id="L269">    PlotRenderTheme.drawGrid(g, plot, 8, 4);</span>
+<span class="fc" id="L270">    PlotRenderTheme.drawYAxisLabel(g, plot, &quot;Frequency [Hz]&quot;);</span>
+<span class="fc" id="L271">    PlotRenderTheme.drawYTicks(</span>
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;22.1 kHz&quot;, &quot;11.0 kHz&quot;, &quot;0 Hz&quot;});
+<span class="fc" id="L273">    PlotRenderTheme.drawXTicks(</span>
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;0.0 s&quot;, &quot;0.5 s&quot;, &quot;1.0 s&quot;});
+<span class="fc" id="L275">    PlotRenderTheme.drawXAxisLabel(g, plot, &quot;Time [s; older → newer]&quot;);</span>
+<span class="fc" id="L276">    PlotRenderTheme.drawLabel(g, x0 + w - 132, y0 + 14, &quot;Color: relative magnitude [-]&quot;);</span>
+<span class="fc" id="L277">  }</span>
+
+  private static void drawDiagnosis(Graphics2D g, Rectangle panel, DiagnosisSnapshot diagnosis) {
+<span class="fc" id="L280">    drawPanelShell(g, panel, &quot;Diagnosis&quot;);</span>
+<span class="fc" id="L281">    g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="fc" id="L282">    int y = panel.y + 58;</span>
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">    if (diagnosis.findings().isEmpty()) {</span>
+<span class="nc" id="L284">      g.setColor(new Color(150, 210, 180));</span>
+<span class="nc" id="L285">      g.drawString(&quot;INFO   Stable single-tone demo; no findings.&quot;, panel.x + 24, y);</span>
+<span class="nc" id="L286">      return;</span>
+    }
+<span class="fc bfc" id="L288" title="All 2 branches covered.">    for (DiagnosisFinding finding : diagnosis.findings()) {</span>
+<span class="fc" id="L289">      g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="fc" id="L290">      g.drawString(</span>
+<span class="fc" id="L291">          String.format(</span>
+              Locale.ROOT,
+              &quot;%s   %s (conf %.2f)&quot;,
+<span class="fc" id="L294">              finding.severity(),</span>
+<span class="fc" id="L295">              finding.message(),</span>
+<span class="fc" id="L296">              finding.confidence()),</span>
+          panel.x + 24,
+          y);
+<span class="fc" id="L299">      y += 28;</span>
+<span class="pc bpc" id="L300" title="1 of 2 branches missed.">      if (y &gt; panel.y + panel.height - 22) {</span>
+<span class="nc" id="L301">        break;</span>
+      }
+<span class="fc" id="L303">    }</span>
+<span class="fc" id="L304">  }</span>
+
+  private static void drawPanelShell(Graphics2D g, Rectangle panel, String title) {
+<span class="fc" id="L307">    g.setColor(PlotRenderTheme.PANEL_BACKGROUND);</span>
+<span class="fc" id="L308">    g.fillRoundRect(panel.x, panel.y, panel.width, panel.height, 14, 14);</span>
+<span class="fc" id="L309">    g.setColor(new Color(72, 84, 102));</span>
+<span class="fc" id="L310">    g.drawRoundRect(panel.x, panel.y, panel.width, panel.height, 14, 14);</span>
+<span class="fc" id="L311">    g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="fc" id="L312">    g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));</span>
+<span class="fc" id="L313">    g.drawString(title, panel.x + 16, panel.y + 28);</span>
+<span class="fc" id="L314">  }</span>
+
+  private static double strongestFrequency(SpectrumSnapshot spectrum) {
+<span class="fc" id="L317">    int peakBin = 0;</span>
+<span class="fc" id="L318">    float peak = 0f;</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">    for (int i = 1; i &lt; spectrum.binCount(); i++) {</span>
+<span class="fc bfc" id="L320" title="All 2 branches covered.">      if (spectrum.magnitude(i) &gt; peak) {</span>
+<span class="fc" id="L321">        peak = spectrum.magnitude(i);</span>
+<span class="fc" id="L322">        peakBin = i;</span>
+      }
+    }
+<span class="fc" id="L325">    return spectrum.frequencyOfBin(peakBin);</span>
+  }
+
+  private static BufferedImage renderTrigger() {
+<span class="nc" id="L329">    SineGenerator gen = new SineGenerator(MONO_44K, 220.0, 0.7f);</span>
+<span class="nc" id="L330">    AudioBlock block = gen.nextBlock(4096);</span>
+<span class="nc" id="L331">    WaveformTrigger trigger = new WaveformTrigger(1024);</span>
+<span class="nc" id="L332">    trigger.setMode(WaveformTrigger.Mode.NORMAL);</span>
+<span class="nc" id="L333">    trigger.setHoldoffFrames(64);</span>
+<span class="nc" id="L334">    WaveformTrigger.TriggeredView view = trigger.process(block, 0).orElseThrow();</span>
+
+<span class="nc" id="L336">    BufferedImage img = createImage();</span>
+<span class="nc" id="L337">    Graphics2D g = img.createGraphics();</span>
+    try {
+<span class="nc" id="L339">      applyHints(g);</span>
+<span class="nc" id="L340">      Rectangle plot = new Rectangle(48, 24, W - 64, H - 58);</span>
+<span class="nc" id="L341">      PlotRenderTheme.drawPlotBackground(g, W, H, plot);</span>
+<span class="nc" id="L342">      PlotRenderTheme.drawGrid(g, plot, 10, 8);</span>
+<span class="nc" id="L343">      PlotRenderTheme.drawTitle(g, plot.x, 16, &quot;Waveform (triggered)&quot;);</span>
+<span class="nc" id="L344">      PlotRenderTheme.drawYAxisLabel(g, plot, &quot;Amplitude [-1..1]&quot;);</span>
+<span class="nc" id="L345">      PlotRenderTheme.drawYTicks(</span>
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;+1&quot;, &quot;0&quot;, &quot;-1&quot;});
+<span class="nc" id="L347">      PlotRenderTheme.drawXAxisLabel(g, plot, &quot;Sample index&quot;);</span>
+
+<span class="nc" id="L349">      float[] samples = view.samplesView();</span>
+<span class="nc" id="L350">      int n = samples.length;</span>
+<span class="nc" id="L351">      int centerY = plot.y + plot.height / 2;</span>
+<span class="nc" id="L352">      int amplitude = plot.height / 2 - 8;</span>
+<span class="nc" id="L353">      int[] xs = new int[n];</span>
+<span class="nc" id="L354">      int[] ys = new int[n];</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">      for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L356">        xs[i] = plot.x + (int) ((long) i * (plot.width - 1) / Math.max(1, n - 1));</span>
+<span class="nc" id="L357">        ys[i] = centerY - (int) (Math.max(-1f, Math.min(1f, samples[i])) * amplitude);</span>
+      }
+<span class="nc" id="L359">      g.setColor(PlotRenderTheme.CENTER_LINE);</span>
+<span class="nc" id="L360">      g.setStroke(PlotRenderTheme.AXIS_STROKE);</span>
+<span class="nc" id="L361">      g.drawLine(plot.x, centerY, plot.x + plot.width - 1, centerY);</span>
+
+<span class="nc" id="L363">      g.setColor(PlotRenderTheme.WAVEFORM_LEFT);</span>
+<span class="nc" id="L364">      g.setStroke(PlotRenderTheme.TRACE_STROKE);</span>
+<span class="nc" id="L365">      g.drawPolyline(xs, ys, n);</span>
+
+<span class="nc" id="L367">      g.setColor(PlotRenderTheme.TEXT_MUTED);</span>
+<span class="nc" id="L368">      g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="nc" id="L369">      g.drawString(</span>
+<span class="nc" id="L370">          String.format(</span>
+              Locale.ROOT,
+              &quot;Trig: FIRED  Slope: rising  Level: %+.2f  view=1024 samples&quot;,
+<span class="nc" id="L373">              view.level()),</span>
+          plot.x,
+          32);
+<span class="nc" id="L376">      PlotRenderTheme.drawXTicks(</span>
+          g,
+          plot,
+          new double[] {0.0d, 0.5d, 1.0d},
+<span class="nc" id="L380">          new String[] {&quot;0&quot;, Integer.toString(n / 2), Integer.toString(n - 1)});</span>
+    } finally {
+<span class="nc" id="L382">      g.dispose();</span>
+    }
+<span class="nc" id="L384">    return img;</span>
+  }
+
+  private static BufferedImage renderSpectrumPeakHold() {
+<span class="nc" id="L388">    SineGenerator gen = new SineGenerator(MONO_44K, 1200.0, 0.6f);</span>
+<span class="nc" id="L389">    SpectrumAnalyzer analyzer = new SpectrumAnalyzer(FFT, 0, MONO_44K.sampleRate());</span>
+<span class="nc" id="L390">    SpectrumAverager avg = new SpectrumAverager(0.3f);</span>
+<span class="nc" id="L391">    PeakHoldSpectrum peak = new PeakHoldSpectrum(0.999f);</span>
+
+<span class="nc bnc" id="L393" title="All 2 branches missed.">    for (int i = 0; i &lt; 12; i++) {</span>
+<span class="nc" id="L394">      AudioBlock b = gen.nextBlock(FFT);</span>
+<span class="nc" id="L395">      SpectrumSnapshot s = analyzer.analyze(b);</span>
+<span class="nc" id="L396">      avg.update(s.magnitudesView());</span>
+<span class="nc" id="L397">      peak.update(s.magnitudesView());</span>
+    }
+<span class="nc" id="L399">    SquareGenerator extra = new SquareGenerator(MONO_44K, 4400.0, 0.4f);</span>
+<span class="nc" id="L400">    AudioBlock burst = extra.nextBlock(FFT);</span>
+<span class="nc" id="L401">    SpectrumSnapshot burstSnap = analyzer.analyze(burst);</span>
+<span class="nc" id="L402">    peak.update(burstSnap.magnitudesView());</span>
+
+<span class="nc" id="L404">    BufferedImage img = createImage();</span>
+<span class="nc" id="L405">    Graphics2D g = img.createGraphics();</span>
+    try {
+<span class="nc" id="L407">      applyHints(g);</span>
+<span class="nc" id="L408">      Rectangle plot = new Rectangle(52, 24, W - 68, H - 58);</span>
+<span class="nc" id="L409">      PlotRenderTheme.drawPlotBackground(g, W, H, plot);</span>
+<span class="nc" id="L410">      PlotRenderTheme.drawGrid(g, plot, 10, 8);</span>
+<span class="nc" id="L411">      PlotRenderTheme.drawTitle(g, plot.x, 16, &quot;Spectrum (averaged + peak hold)&quot;);</span>
+<span class="nc" id="L412">      PlotRenderTheme.drawYAxisLabel(g, plot, &quot;Magnitude [dB rel. peak]&quot;);</span>
+<span class="nc" id="L413">      PlotRenderTheme.drawYTicks(</span>
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;0 dB&quot;, &quot;-40 dB&quot;, &quot;-80 dB&quot;});
+<span class="nc" id="L415">      PlotRenderTheme.drawXTicks(</span>
+          g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;0 Hz&quot;, &quot;11025 Hz&quot;, &quot;22050 Hz&quot;});
+<span class="nc" id="L417">      PlotRenderTheme.drawXAxisLabel(g, plot, &quot;Frequency [Hz]&quot;);</span>
+
+<span class="nc" id="L419">      float[] live = avg.averageView();</span>
+<span class="nc" id="L420">      float[] held = peak.peaks();</span>
+<span class="nc" id="L421">      int bins = live.length;</span>
+<span class="nc" id="L422">      float maxMag = 1e-6f;</span>
+<span class="nc bnc" id="L423" title="All 2 branches missed.">      for (float v : live) {</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">        if (Math.abs(v) &gt; maxMag) {</span>
+<span class="nc" id="L425">          maxMag = Math.abs(v);</span>
+        }
+      }
+<span class="nc bnc" id="L428" title="All 2 branches missed.">      for (float v : held) {</span>
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        if (Math.abs(v) &gt; maxMag) {</span>
+<span class="nc" id="L430">          maxMag = Math.abs(v);</span>
+        }
+      }
+<span class="nc" id="L433">      int floor = plot.y + plot.height - 1;</span>
+<span class="nc" id="L434">      int top = plot.y + 36;</span>
+<span class="nc" id="L435">      int[] xs = new int[bins];</span>
+<span class="nc" id="L436">      int[] ysLive = new int[bins];</span>
+<span class="nc" id="L437">      int[] ysPeak = new int[bins];</span>
+<span class="nc bnc" id="L438" title="All 2 branches missed.">      for (int i = 0; i &lt; bins; i++) {</span>
+<span class="nc" id="L439">        xs[i] = plot.x + (int) ((long) i * (plot.width - 1) / Math.max(1, bins - 1));</span>
+<span class="nc" id="L440">        ysLive[i] = floor - (int) ((Math.abs(live[i]) / maxMag) * (floor - top));</span>
+<span class="nc" id="L441">        ysPeak[i] = floor - (int) ((Math.abs(held[i]) / maxMag) * (floor - top));</span>
+      }
+<span class="nc" id="L443">      g.setColor(PlotRenderTheme.SPECTRUM_LINE);</span>
+<span class="nc" id="L444">      g.setStroke(PlotRenderTheme.TRACE_STROKE);</span>
+<span class="nc" id="L445">      g.drawPolyline(xs, ysLive, bins);</span>
+<span class="nc" id="L446">      g.setColor(PlotRenderTheme.HIGHLIGHT);</span>
+<span class="nc" id="L447">      g.setStroke(PlotRenderTheme.PEAK_STROKE);</span>
+<span class="nc" id="L448">      g.drawPolyline(xs, ysPeak, bins);</span>
+
+<span class="nc" id="L450">      g.setColor(PlotRenderTheme.TEXT_MUTED);</span>
+<span class="nc" id="L451">      g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="nc" id="L452">      g.drawString(&quot;Legend: blue averaged live spectrum, orange peak hold&quot;, plot.x, 32);</span>
+    } finally {
+<span class="nc" id="L454">      g.dispose();</span>
+    }
+<span class="nc" id="L456">    return img;</span>
+  }
+
+  private static BufferedImage renderRecordingFormat() {
+<span class="nc" id="L460">    BufferedImage img = createImage();</span>
+<span class="nc" id="L461">    Graphics2D g = img.createGraphics();</span>
+    try {
+<span class="nc" id="L463">      applyHints(g);</span>
+<span class="nc" id="L464">      g.setColor(PlotRenderTheme.PANEL_BACKGROUND);</span>
+<span class="nc" id="L465">      g.fillRect(0, 0, W, H);</span>
+<span class="nc" id="L466">      g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="nc" id="L467">      g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));</span>
+<span class="nc" id="L468">      g.drawString(&quot;AudioAnalyzer .aar recording layout (big-endian)&quot;, 16, 26);</span>
+
+<span class="nc" id="L470">      int y = 56;</span>
+<span class="nc" id="L471">      int x = 16;</span>
+<span class="nc" id="L472">      int w = W - 32;</span>
+<span class="nc" id="L473">      int rowH = 28;</span>
+
+<span class="nc" id="L475">      drawBlock(g, x, y, w, rowH, &quot;Header&quot;, PlotRenderTheme.SPECTRUM_LINE);</span>
+<span class="nc" id="L476">      y += rowH;</span>
+<span class="nc" id="L477">      drawField(g, x + 16, y, &quot;u32 magic 'AAR1'&quot;, &quot;u16 version&quot;, &quot;u16 channels&quot;);</span>
+<span class="nc" id="L478">      y += rowH;</span>
+<span class="nc" id="L479">      drawField(g, x + 16, y, &quot;f32 sampleRate&quot;, &quot;u16 bitsPerSample&quot;, &quot;u16 reserved=0&quot;);</span>
+<span class="nc" id="L480">      y += rowH + 12;</span>
+
+<span class="nc" id="L482">      drawBlock(g, x, y, w, rowH, &quot;Frame record (repeats until EOF)&quot;, PlotRenderTheme.HIGHLIGHT);</span>
+<span class="nc" id="L483">      y += rowH;</span>
+<span class="nc" id="L484">      drawField(g, x + 16, y, &quot;u32 frames&quot;, &quot;i64 frameIndex&quot;, &quot;i64 timestampNanos&quot;);</span>
+<span class="nc" id="L485">      y += rowH;</span>
+<span class="nc" id="L486">      drawField(g, x + 16, y, &quot;f32 ch0 sample[0..frames)&quot;, &quot;f32 ch1 sample[0..frames)&quot;, &quot;...&quot;);</span>
+<span class="nc" id="L487">      y += rowH + 8;</span>
+<span class="nc" id="L488">      g.setColor(PlotRenderTheme.TEXT_MUTED);</span>
+<span class="nc" id="L489">      g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="nc" id="L490">      g.drawString(&quot;Channels are stored non-interleaved within each frame record.&quot;, x + 4, y + 16);</span>
+<span class="nc" id="L491">      g.drawString(</span>
+          &quot;Reader/writer live in audio-dsp; the format is stable from version 1 onward.&quot;,
+          x + 4,
+          y + 32);
+    } finally {
+<span class="nc" id="L496">      g.dispose();</span>
+    }
+<span class="nc" id="L498">    return img;</span>
+  }
+
+  private static void drawBlock(
+      Graphics2D g, int x, int y, int w, int h, String label, Color color) {
+<span class="nc" id="L503">    g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 60));</span>
+<span class="nc" id="L504">    g.fillRect(x, y, w, h);</span>
+<span class="nc" id="L505">    g.setColor(color);</span>
+<span class="nc" id="L506">    g.setStroke(new BasicStroke(1.2f));</span>
+<span class="nc" id="L507">    g.drawRect(x, y, w, h);</span>
+<span class="nc" id="L508">    g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="nc" id="L509">    g.setFont(PlotRenderTheme.TITLE_FONT);</span>
+<span class="nc" id="L510">    g.drawString(label, x + 8, y + h - 9);</span>
+<span class="nc" id="L511">  }</span>
+
+  private static void drawField(Graphics2D g, int x, int y, String a, String b, String c) {
+<span class="nc" id="L514">    int colW = (W - 64) / 3;</span>
+<span class="nc" id="L515">    drawCell(g, x, y, colW, a);</span>
+<span class="nc" id="L516">    drawCell(g, x + colW + 4, y, colW, b);</span>
+<span class="nc" id="L517">    drawCell(g, x + 2 * (colW + 4), y, colW, c);</span>
+<span class="nc" id="L518">  }</span>
+
+  private static void drawCell(Graphics2D g, int x, int y, int w, String label) {
+<span class="nc" id="L521">    g.setColor(PlotRenderTheme.PLOT_BACKGROUND);</span>
+<span class="nc" id="L522">    g.fillRect(x, y, w, 24);</span>
+<span class="nc" id="L523">    g.setColor(PlotRenderTheme.AXIS_COLOR);</span>
+<span class="nc" id="L524">    g.drawRect(x, y, w, 24);</span>
+<span class="nc" id="L525">    g.setColor(PlotRenderTheme.TEXT_PRIMARY);</span>
+<span class="nc" id="L526">    g.setFont(PlotRenderTheme.LABEL_FONT);</span>
+<span class="nc" id="L527">    g.drawString(label, x + 6, y + 16);</span>
+<span class="nc" id="L528">  }</span>
+
+  private static BufferedImage renderAbComparison() {
+<span class="nc" id="L531">    SpectrumAnalyzer analyzer = new SpectrumAnalyzer(FFT, 0, MONO_44K.sampleRate());</span>
+<span class="nc" id="L532">    SineGenerator a = new SineGenerator(MONO_44K, 440.0, 0.6f);</span>
+<span class="nc" id="L533">    SineGenerator b = new SineGenerator(MONO_44K, 880.0, 0.6f);</span>
+<span class="nc" id="L534">    SpectrumSnapshot sa = null;</span>
+<span class="nc" id="L535">    SpectrumSnapshot sb = null;</span>
+<span class="nc bnc" id="L536" title="All 2 branches missed.">    for (int i = 0; i &lt; 6; i++) {</span>
+<span class="nc" id="L537">      sa = analyzer.analyze(a.nextBlock(FFT));</span>
+    }
+<span class="nc bnc" id="L539" title="All 2 branches missed.">    for (int i = 0; i &lt; 6; i++) {</span>
+<span class="nc" id="L540">      sb = analyzer.analyze(b.nextBlock(FFT));</span>
+    }
+
+<span class="nc" id="L543">    BufferedImage img = createImage();</span>
+<span class="nc" id="L544">    Graphics2D g = img.createGraphics();</span>
+    try {
+<span class="nc" id="L546">      applyHints(g);</span>
+<span class="nc" id="L547">      g.setColor(PlotRenderTheme.PANEL_BACKGROUND);</span>
+<span class="nc" id="L548">      g.fillRect(0, 0, W, H);</span>
+<span class="nc" id="L549">      int halfW = W / 2 - 4;</span>
+<span class="nc" id="L550">      Rectangle leftPlot = new Rectangle(44, 24, halfW - 56, H - 58);</span>
+<span class="nc" id="L551">      Rectangle rightPlot = new Rectangle(halfW + 52, 24, halfW - 56, H - 58);</span>
+
+<span class="nc" id="L553">      drawSpectrumPanel(g, leftPlot, sa, &quot;A — 440 Hz&quot;, PlotRenderTheme.SPECTRUM_LINE);</span>
+<span class="nc" id="L554">      drawSpectrumPanel(g, rightPlot, sb, &quot;B — 880 Hz&quot;, PlotRenderTheme.WAVEFORM_RIGHT);</span>
+
+<span class="nc" id="L556">      g.setColor(PlotRenderTheme.HIGHLIGHT);</span>
+<span class="nc" id="L557">      g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));</span>
+<span class="nc" id="L558">      g.drawString(&quot;|delta dominant freq| ~ 440 Hz&quot;, W / 2 - 96, H - 12);</span>
+    } finally {
+<span class="nc" id="L560">      g.dispose();</span>
+    }
+<span class="nc" id="L562">    return img;</span>
+  }
+
+  private static void drawSpectrumPanel(
+      Graphics2D g, Rectangle plot, SpectrumSnapshot snap, String title, Color color) {
+<span class="fc" id="L567">    g.setColor(PlotRenderTheme.PLOT_BACKGROUND);</span>
+<span class="fc" id="L568">    g.fillRect(plot.x, plot.y, plot.width, plot.height);</span>
+<span class="fc" id="L569">    PlotRenderTheme.drawGrid(g, plot, 10, 8);</span>
+<span class="fc" id="L570">    PlotRenderTheme.drawTitle(g, plot.x + 8, plot.y + 16, title);</span>
+<span class="fc" id="L571">    PlotRenderTheme.drawYAxisLabel(g, plot, &quot;Magnitude [dB rel. peak]&quot;);</span>
+<span class="fc" id="L572">    PlotRenderTheme.drawYTicks(</span>
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;0 dB&quot;, &quot;-40 dB&quot;, &quot;-80 dB&quot;});
+<span class="fc" id="L574">    PlotRenderTheme.drawXTicks(</span>
+        g, plot, new double[] {0.0d, 0.5d, 1.0d}, new String[] {&quot;0 Hz&quot;, &quot;11025 Hz&quot;, &quot;22050 Hz&quot;});
+<span class="fc" id="L576">    PlotRenderTheme.drawXAxisLabel(g, plot, &quot;Frequency [Hz]&quot;);</span>
+<span class="fc" id="L577">    float[] mag = snap.magnitudesView();</span>
+<span class="fc" id="L578">    int bins = mag.length;</span>
+<span class="fc" id="L579">    float max = 1e-6f;</span>
+<span class="fc bfc" id="L580" title="All 2 branches covered.">    for (float v : mag) {</span>
+<span class="fc bfc" id="L581" title="All 2 branches covered.">      if (Math.abs(v) &gt; max) {</span>
+<span class="fc" id="L582">        max = Math.abs(v);</span>
+      }
+    }
+<span class="fc" id="L585">    int floor = plot.y + plot.height - 1;</span>
+<span class="fc" id="L586">    int top = plot.y + 36;</span>
+<span class="fc" id="L587">    int[] xs = new int[bins];</span>
+<span class="fc" id="L588">    int[] ys = new int[bins];</span>
+<span class="fc bfc" id="L589" title="All 2 branches covered.">    for (int i = 0; i &lt; bins; i++) {</span>
+<span class="fc" id="L590">      xs[i] = plot.x + (int) ((long) i * (plot.width - 1) / Math.max(1, bins - 1));</span>
+<span class="fc" id="L591">      ys[i] = floor - (int) ((Math.abs(mag[i]) / max) * (floor - top));</span>
+    }
+<span class="fc" id="L593">    g.setColor(color);</span>
+<span class="fc" id="L594">    g.setStroke(PlotRenderTheme.TRACE_STROKE);</span>
+<span class="fc" id="L595">    g.drawPolyline(xs, ys, bins);</span>
+<span class="fc" id="L596">  }</span>
+
+  private static BufferedImage createImage() {
+<span class="nc" id="L599">    return new BufferedImage(W, H, BufferedImage.TYPE_INT_RGB);</span>
+  }
+
+  private static void applyHints(Graphics2D g) {
+<span class="fc" id="L603">    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);</span>
+<span class="fc" id="L604">    g.setRenderingHint(</span>
+        RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+<span class="fc" id="L606">    g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);</span>
+<span class="fc" id="L607">  }</span>
+
+  private static void writePng(Path out, BufferedImage img) throws IOException {
+<span class="nc bnc" id="L610" title="All 2 branches missed.">    if (!ImageIO.write(img, &quot;png&quot;, out.toFile())) {</span>
+<span class="nc" id="L611">      throw new IOException(&quot;PNG writer not available for &quot; + out);</span>
+    }
+<span class="nc" id="L613">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

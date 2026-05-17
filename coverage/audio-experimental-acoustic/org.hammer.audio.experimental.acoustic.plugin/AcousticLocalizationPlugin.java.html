@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AcousticLocalizationPlugin.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Audio Analyzer Experimental Acoustic</a> &gt; <a href="index.source.html" class="el_package">org.hammer.audio.experimental.acoustic.plugin</a> &gt; <span class="el_source">AcousticLocalizationPlugin.java</span></div><h1>AcousticLocalizationPlugin.java</h1><pre class="source lang-java linenums">package org.hammer.audio.experimental.acoustic.plugin;
+
+import java.awt.BorderLayout;
+import java.util.List;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import org.hammer.audio.plugin.AnalysisContribution;
+import org.hammer.audio.plugin.AudioAnalyzerPlugin;
+import org.hammer.audio.plugin.DemoSignalContribution;
+import org.hammer.audio.plugin.MenuContribution;
+import org.hammer.audio.plugin.PluginDescriptor;
+import org.hammer.audio.plugin.ViewContribution;
+
+/**
+ * Reference plugin that exposes the experimental acoustic-localization research code (wingbeat
+ * frequency tracking, TDOA estimators, delay-and-sum beamforming and the 2D room simulator) to the
+ * host application as a set of contributions.
+ *
+ * &lt;p&gt;This class deliberately only describes contributions through the stable plugin API. The
+ * concrete DSP types remain in the {@code org.hammer.audio.experimental.acoustic} packages so the
+ * stable plugin API does not need to depend on any audio-domain module.
+ */
+<span class="fc" id="L25">public final class AcousticLocalizationPlugin implements AudioAnalyzerPlugin {</span>
+
+<span class="fc" id="L27">  private static final PluginDescriptor DESCRIPTOR =</span>
+      new PluginDescriptor(
+          &quot;acoustic-localization&quot;,
+          &quot;Experimental Acoustic Localization&quot;,
+          &quot;0.1.0&quot;,
+          &quot;Experimental localization of weak, intermittent or insect-like acoustic sources.&quot;,
+          &quot;docs/plugins/acoustic-localization.md&quot;,
+          true);
+
+  @Override
+  public PluginDescriptor descriptor() {
+<span class="fc" id="L38">    return DESCRIPTOR;</span>
+  }
+
+  @Override
+  public List&lt;AnalysisContribution&gt; analysisContributions() {
+<span class="fc" id="L43">    return List.of(</span>
+<span class="fc" id="L44">        contribution(</span>
+            &quot;wingbeat-frequency-tracker&quot;,
+            &quot;Tracks the dominant wingbeat frequency inside a configurable band.&quot;),
+<span class="fc" id="L47">        contribution(</span>
+            &quot;cross-correlation-tdoa&quot;,
+            &quot;Time-domain cross-correlation TDOA estimator for microphone pairs.&quot;),
+<span class="fc" id="L50">        contribution(</span>
+            &quot;gcc-phat-tdoa&quot;,
+            &quot;Frequency-domain GCC-PHAT TDOA estimator robust against narrow-band signals.&quot;),
+<span class="fc" id="L53">        contribution(</span>
+            &quot;delay-and-sum-beamformer&quot;,
+            &quot;Delay-and-sum beamformer producing a 2D heatmap over a candidate grid.&quot;),
+<span class="fc" id="L56">        contribution(</span>
+            &quot;doppler-velocity-tracking&quot;,
+            &quot;Doppler-based radial velocity estimation fused with multi-frame source tracking.&quot;),
+<span class="fc" id="L59">        contribution(</span>
+            &quot;mosquito-localization-pipeline&quot;,
+            &quot;Orchestrates frequency tracking, TDOA estimation and beamforming into a snapshot.&quot;));
+  }
+
+  @Override
+  public List&lt;DemoSignalContribution&gt; demoSignalContributions() {
+<span class="fc" id="L66">    return List.of(</span>
+<span class="fc" id="L67">        demo(</span>
+            &quot;insect-burst&quot;,
+            &quot;Insect-like high-frequency burst&quot;,
+            &quot;Short, narrow-band burst around typical mosquito wingbeat frequencies.&quot;),
+<span class="fc" id="L71">        demo(</span>
+            &quot;moving-source&quot;,
+            &quot;Moving acoustic source&quot;,
+            &quot;Synthetic source moving across a 2D array, useful for tracking experiments.&quot;));
+  }
+
+  @Override
+  public List&lt;MenuContribution&gt; menuContributions() {
+<span class="fc" id="L79">    return List.of(</span>
+<span class="fc" id="L80">        new MenuContribution() {</span>
+          @Override
+          public String id() {
+<span class="nc" id="L83">            return &quot;log-info&quot;;</span>
+          }
+
+          @Override
+          public String label() {
+<span class="nc" id="L88">            return &quot;Log plugin info&quot;;</span>
+          }
+
+          @Override
+          public Runnable action() {
+<span class="fc" id="L93">            return () -&gt;</span>
+<span class="fc" id="L94">                java.util.logging.Logger.getLogger(AcousticLocalizationPlugin.class.getName())</span>
+<span class="fc" id="L95">                    .info(</span>
+                        () -&gt;
+<span class="fc" id="L97">                            &quot;Acoustic Localization plugin active: see &quot;</span>
+<span class="fc" id="L98">                                + DESCRIPTOR.documentationPath());</span>
+          }
+        });
+  }
+
+  @Override
+  public List&lt;ViewContribution&gt; viewContributions() {
+<span class="fc" id="L105">    return List.of(</span>
+<span class="fc" id="L106">        new ViewContribution() {</span>
+          @Override
+          public String id() {
+<span class="nc" id="L109">            return &quot;acoustic-localization-overview&quot;;</span>
+          }
+
+          @Override
+          public String title() {
+<span class="nc" id="L114">            return &quot;Acoustic Localization (overview)&quot;;</span>
+          }
+
+          @Override
+          public java.util.function.Supplier&lt;JPanel&gt; componentFactory() {
+<span class="fc" id="L119">            return AcousticLocalizationPlugin::createOverviewPanel;</span>
+          }
+        });
+  }
+
+  private static JPanel createOverviewPanel() {
+<span class="fc" id="L125">    JPanel panel = new JPanel(new BorderLayout(8, 8));</span>
+<span class="fc" id="L126">    panel.add(new JLabel(&quot;Experimental Acoustic Localization plugin&quot;), BorderLayout.NORTH);</span>
+<span class="fc" id="L127">    JTextArea text = new JTextArea();</span>
+<span class="fc" id="L128">    text.setEditable(false);</span>
+<span class="fc" id="L129">    text.setLineWrap(true);</span>
+<span class="fc" id="L130">    text.setWrapStyleWord(true);</span>
+<span class="fc" id="L131">    text.setText(</span>
+        &quot;&quot;&quot;
+        This panel is contributed by the acoustic-localization plugin.
+
+        The plugin provides experimental wingbeat frequency tracking, GCC-PHAT /
+        cross-correlation TDOA estimators, delay-and-sum beamforming and a 2D
+        room simulator. The tracking pipeline also estimates Doppler radial
+        velocity, frequency shift and a smoothed velocity vector per source.
+        See docs/plugins/acoustic-localization.md for details and limitations.
+
+        Plugin-specific views, analyzers and demo signals are loaded dynamically
+        by the host through the audio-plugin-api ServiceLoader contract; the
+        main application does not depend on this code at compile time.
+        &quot;&quot;&quot;);
+<span class="fc" id="L145">    panel.add(new JScrollPane(text), BorderLayout.CENTER);</span>
+<span class="fc" id="L146">    return panel;</span>
+  }
+
+  private static AnalysisContribution contribution(String id, String description) {
+<span class="fc" id="L150">    return new AnalysisContribution() {</span>
+      @Override
+      public String id() {
+<span class="nc" id="L153">        return id;</span>
+      }
+
+      @Override
+      public String description() {
+<span class="nc" id="L158">        return description;</span>
+      }
+    };
+  }
+
+  private static DemoSignalContribution demo(String id, String label, String description) {
+<span class="fc" id="L164">    return new DemoSignalContribution() {</span>
+      @Override
+      public String id() {
+<span class="nc" id="L167">        return id;</span>
+      }
+
+      @Override
+      public String label() {
+<span class="nc" id="L172">        return label;</span>
+      }
+
+      @Override
+      public String description() {
+<span class="nc" id="L177">        return description;</span>
+      }
+    };
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

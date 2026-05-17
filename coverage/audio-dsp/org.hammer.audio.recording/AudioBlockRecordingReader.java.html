@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AudioBlockRecordingReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Audio Analyzer DSP and Analysis</a> &gt; <a href="index.source.html" class="el_package">org.hammer.audio.recording</a> &gt; <span class="el_source">AudioBlockRecordingReader.java</span></div><h1>AudioBlockRecordingReader.java</h1><pre class="source lang-java linenums">package org.hammer.audio.recording;
+
+import java.io.Closeable;
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.core.AudioFormatDescriptor;
+
+/**
+ * Reads {@link AudioBlock}s from a binary recording file written by {@link
+ * AudioBlockRecordingWriter}.
+ *
+ * &lt;p&gt;Instances are &lt;strong&gt;not thread-safe&lt;/strong&gt;.
+ */
+public final class AudioBlockRecordingReader implements Closeable {
+
+  private final DataInputStream in;
+  private final AudioFormatDescriptor format;
+  private boolean closed;
+
+  /** Open a reader for the given file and parse its header. */
+  public static AudioBlockRecordingReader open(Path file) throws IOException {
+<span class="fc" id="L32">    Objects.requireNonNull(file, &quot;file&quot;);</span>
+<span class="fc" id="L33">    return new AudioBlockRecordingReader(Files.newInputStream(file));</span>
+  }
+
+  /**
+   * Read the entire recording into memory. Suitable for short recordings used by replay or A/B
+   * comparison; long recordings should stream via repeated {@link #next()} calls instead.
+   */
+  public static List&lt;AudioBlock&gt; readAll(Path file) throws IOException {
+<span class="fc" id="L41">    try (AudioBlockRecordingReader reader = open(file)) {</span>
+<span class="fc" id="L42">      List&lt;AudioBlock&gt; blocks = new ArrayList&lt;&gt;();</span>
+      Optional&lt;AudioBlock&gt; next;
+<span class="fc bfc" id="L44" title="All 2 branches covered.">      while ((next = reader.next()).isPresent()) {</span>
+<span class="fc" id="L45">        blocks.add(next.get());</span>
+      }
+<span class="fc" id="L47">      return Collections.unmodifiableList(blocks);</span>
+    }
+  }
+
+  /**
+   * Wrap an existing input stream. The stream's header is read immediately.
+   *
+   * @throws IOException if the header is missing, truncated or uses an unsupported format
+   */
+<span class="fc" id="L56">  public AudioBlockRecordingReader(InputStream stream) throws IOException {</span>
+<span class="fc" id="L57">    this.in = new DataInputStream(Objects.requireNonNull(stream, &quot;stream&quot;));</span>
+<span class="fc" id="L58">    this.format = readHeader();</span>
+<span class="fc" id="L59">  }</span>
+
+  private AudioFormatDescriptor readHeader() throws IOException {
+<span class="fc" id="L62">    int magic = in.readInt();</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">    if (magic != AudioBlockRecordingFormat.MAGIC) {</span>
+<span class="fc" id="L64">      throw new IOException(</span>
+<span class="fc" id="L65">          String.format(</span>
+              &quot;not an audio block recording: bad magic 0x%08x (expected 0x%08x)&quot;,
+<span class="fc" id="L67">              magic, AudioBlockRecordingFormat.MAGIC));</span>
+    }
+<span class="fc" id="L69">    int version = in.readUnsignedShort();</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">    if (version != AudioBlockRecordingFormat.VERSION) {</span>
+<span class="nc" id="L71">      throw new IOException(</span>
+          &quot;unsupported recording version &quot;
+              + version
+              + &quot; (this build supports &quot;
+              + AudioBlockRecordingFormat.VERSION
+              + &quot;)&quot;);
+    }
+<span class="fc" id="L78">    int channels = in.readUnsignedShort();</span>
+<span class="fc" id="L79">    float sampleRate = in.readFloat();</span>
+<span class="fc" id="L80">    int sourceBits = in.readUnsignedShort();</span>
+<span class="fc" id="L81">    in.readUnsignedShort(); // reserved</span>
+<span class="pc bpc" id="L82" title="4 of 8 branches missed.">    if (channels &lt; 1 || sourceBits &lt; 1 || !(sampleRate &gt; 0f) || Float.isNaN(sampleRate)) {</span>
+<span class="nc" id="L83">      throw new IOException(</span>
+          &quot;invalid header values: channels=&quot;
+              + channels
+              + &quot; sampleRate=&quot;
+              + sampleRate
+              + &quot; sourceBits=&quot;
+              + sourceBits);
+    }
+<span class="fc" id="L91">    return new AudioFormatDescriptor(sampleRate, channels, sourceBits);</span>
+  }
+
+  /**
+   * @return the audio format descriptor parsed from the file header
+   */
+  public AudioFormatDescriptor format() {
+<span class="nc" id="L98">    return format;</span>
+  }
+
+  /**
+   * Read the next block or {@link Optional#empty()} at end-of-file.
+   *
+   * @throws IOException if the file is truncated in the middle of a block
+   */
+  public Optional&lt;AudioBlock&gt; next() throws IOException {
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">    if (closed) {</span>
+<span class="nc" id="L108">      return Optional.empty();</span>
+    }
+    int frames;
+    try {
+<span class="fc" id="L112">      frames = in.readInt();</span>
+<span class="fc" id="L113">    } catch (EOFException eof) {</span>
+<span class="fc" id="L114">      return Optional.empty();</span>
+<span class="fc" id="L115">    }</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">    if (frames &lt; 0) {</span>
+<span class="nc" id="L117">      throw new IOException(&quot;negative frame count: &quot; + frames);</span>
+    }
+<span class="fc" id="L119">    long frameIndex = in.readLong();</span>
+<span class="fc" id="L120">    long timestampNanos = in.readLong();</span>
+<span class="fc" id="L121">    int channels = format.channels();</span>
+<span class="fc" id="L122">    float[][] samples = new float[channels][frames];</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">    for (int ch = 0; ch &lt; channels; ch++) {</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">      for (int i = 0; i &lt; frames; i++) {</span>
+<span class="fc" id="L125">        samples[ch][i] = in.readFloat();</span>
+      }
+    }
+<span class="fc" id="L128">    return Optional.of(new AudioBlock(format, samples, frameIndex, timestampNanos));</span>
+  }
+
+  @Override
+  public void close() throws IOException {
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">    if (closed) {</span>
+<span class="nc" id="L134">      return;</span>
+    }
+<span class="fc" id="L136">    closed = true;</span>
+<span class="fc" id="L137">    in.close();</span>
+<span class="fc" id="L138">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

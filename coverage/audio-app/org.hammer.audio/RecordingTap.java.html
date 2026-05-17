@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecordingTap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Audio Analyzer App</a> &gt; <a href="index.source.html" class="el_package">org.hammer.audio</a> &gt; <span class="el_source">RecordingTap.java</span></div><h1>RecordingTap.java</h1><pre class="source lang-java linenums">package org.hammer.audio;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.Timer;
+import org.hammer.audio.core.AudioBlock;
+import org.hammer.audio.recording.AudioBlockRecordingWriter;
+
+/**
+ * Best-effort recorder that polls an {@link AudioCaptureService} on the Swing EDT and persists
+ * every newly observed {@link AudioBlock} to an {@code .aar} file via {@link
+ * AudioBlockRecordingWriter}.
+ *
+ * &lt;p&gt;Blocks are deduplicated by {@link AudioBlock#frameIndex()}. The poll interval should be at
+ * least as fast as the capture service produces blocks; otherwise blocks may be missed. With the
+ * default capture/demo configuration (≥10 ms per block) the standard UI refresh of a few tens of
+ * milliseconds is fast enough for diagnostic recordings.
+ *
+ * &lt;p&gt;This class lives in {@code audio-app} because it relies on the Swing {@link Timer}; the
+ * underlying file format and writer are in {@code audio-dsp}.
+ */
+public final class RecordingTap {
+
+<span class="nc" id="L28">  private static final Logger LOGGER = Logger.getLogger(RecordingTap.class.getName());</span>
+
+  private final AudioCaptureService service;
+  private final AudioBlockRecordingWriter writer;
+  private final Timer pollTimer;
+<span class="nc" id="L33">  private final AtomicBoolean closed = new AtomicBoolean(false);</span>
+  private final Path file;
+
+<span class="nc" id="L36">  private long lastSeenFrameIndex = Long.MIN_VALUE;</span>
+  private long blocksWritten;
+  private boolean firstBlockSeen;
+
+  /**
+   * Start recording from {@code service} into {@code file}.
+   *
+   * @param service capture service to poll
+   * @param file destination file (will be created or truncated)
+   * @param pollIntervalMs how often to poll for new blocks
+   */
+  public static RecordingTap start(AudioCaptureService service, Path file, int pollIntervalMs)
+      throws IOException {
+<span class="nc" id="L49">    Objects.requireNonNull(service, &quot;service&quot;);</span>
+<span class="nc" id="L50">    Objects.requireNonNull(file, &quot;file&quot;);</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">    if (pollIntervalMs &lt; 1) {</span>
+<span class="nc" id="L52">      throw new IllegalArgumentException(&quot;pollIntervalMs must be &gt;= 1, was &quot; + pollIntervalMs);</span>
+    }
+<span class="nc" id="L54">    AudioBlockRecordingWriter writer = AudioBlockRecordingWriter.open(file);</span>
+<span class="nc" id="L55">    RecordingTap tap = new RecordingTap(service, writer, file, pollIntervalMs);</span>
+<span class="nc" id="L56">    tap.pollTimer.start();</span>
+<span class="nc" id="L57">    return tap;</span>
+  }
+
+  private RecordingTap(
+      AudioCaptureService service,
+      AudioBlockRecordingWriter writer,
+      Path file,
+<span class="nc" id="L64">      int pollIntervalMs) {</span>
+<span class="nc" id="L65">    this.service = service;</span>
+<span class="nc" id="L66">    this.writer = writer;</span>
+<span class="nc" id="L67">    this.file = file;</span>
+<span class="nc" id="L68">    this.pollTimer = new Timer(pollIntervalMs, e -&gt; pollOnce());</span>
+<span class="nc" id="L69">    this.pollTimer.setRepeats(true);</span>
+<span class="nc" id="L70">  }</span>
+
+  /**
+   * @return the destination file passed to {@link #start}
+   */
+  public Path file() {
+<span class="nc" id="L76">    return file;</span>
+  }
+
+  /**
+   * @return number of blocks written so far
+   */
+  public long blocksWritten() {
+<span class="nc" id="L83">    return blocksWritten;</span>
+  }
+
+  /**
+   * @return true if {@link #stop()} has been invoked
+   */
+  public boolean isClosed() {
+<span class="nc" id="L90">    return closed.get();</span>
+  }
+
+  private void pollOnce() {
+<span class="nc bnc" id="L94" title="All 2 branches missed.">    if (closed.get()) {</span>
+<span class="nc" id="L95">      return;</span>
+    }
+<span class="nc" id="L97">    AudioBlock block = service.getLatestBlock();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">    if (block == null) {</span>
+<span class="nc" id="L99">      return;</span>
+    }
+<span class="nc" id="L101">    long frameIndex = block.frameIndex();</span>
+<span class="nc bnc" id="L102" title="All 4 branches missed.">    if (firstBlockSeen &amp;&amp; frameIndex == lastSeenFrameIndex) {</span>
+<span class="nc" id="L103">      return;</span>
+    }
+<span class="nc bnc" id="L105" title="All 4 branches missed.">    if (firstBlockSeen &amp;&amp; frameIndex &lt; lastSeenFrameIndex) {</span>
+      // Source restarted (e.g. service was stopped/started). Accept it.
+<span class="nc" id="L107">      LOGGER.fine(() -&gt; &quot;frame index moved backwards; treating as restart&quot;);</span>
+    }
+    try {
+<span class="nc" id="L110">      writer.write(block);</span>
+<span class="nc" id="L111">      blocksWritten++;</span>
+<span class="nc" id="L112">      lastSeenFrameIndex = frameIndex;</span>
+<span class="nc" id="L113">      firstBlockSeen = true;</span>
+<span class="nc" id="L114">    } catch (IOException ex) {</span>
+<span class="nc" id="L115">      LOGGER.log(Level.WARNING, &quot;failed to write block to recording, stopping tap&quot;, ex);</span>
+<span class="nc" id="L116">      stopQuietly();</span>
+<span class="nc" id="L117">    } catch (RuntimeException ex) {</span>
+      // Format mismatch (capture service reconfigured mid-recording), writer already closed,
+      // etc. Stop the tap rather than letting the Swing Timer spam the EDT.
+<span class="nc" id="L120">      LOGGER.log(Level.WARNING, &quot;runtime error while writing block, stopping tap&quot;, ex);</span>
+<span class="nc" id="L121">      stopQuietly();</span>
+<span class="nc" id="L122">    }</span>
+<span class="nc" id="L123">  }</span>
+
+  /** Stop the tap and close the underlying writer. Safe to call multiple times. */
+  public void stop() throws IOException {
+<span class="nc bnc" id="L127" title="All 2 branches missed.">    if (closed.getAndSet(true)) {</span>
+<span class="nc" id="L128">      return;</span>
+    }
+<span class="nc" id="L130">    pollTimer.stop();</span>
+<span class="nc" id="L131">    writer.close();</span>
+<span class="nc" id="L132">  }</span>
+
+  private void stopQuietly() {
+    try {
+<span class="nc" id="L136">      stop();</span>
+<span class="nc" id="L137">    } catch (IOException ignored) {</span>
+      // already logged above
+<span class="nc" id="L139">    }</span>
+<span class="nc" id="L140">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
