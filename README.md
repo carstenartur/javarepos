@@ -42,10 +42,11 @@ live waveform, spectrum, phase and stereo-delay readouts for microphone input or
   replay it as if it were live, and produce a Markdown A/B report comparing two recordings'
   measurements, spectrum and diagnosis findings. See [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md)
   and [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
-- **Experimental acoustic localization** (`audio-experimental-acoustic`) — isolated research
-  plugin with wingbeat frequency tracking, GCC-PHAT / cross-correlation TDOA estimators,
-  delay-and-sum beamforming and a deterministic 2D room simulator. Not a production tracker —
-  see the [experimental docs](docs/plugins/acoustic-localization/README.md) for limitations.
+- **Experimental acoustic localization plugin** — wingbeat frequency tracking, GCC-PHAT /
+  cross-correlation TDOA estimators, delay-and-sum beamforming and a deterministic 2D room
+  simulator, shipped as an optional plugin discovered through `audio-plugin-api` and
+  surfaced in the application's **Plugins** menu. See the
+  [Extensions and plugins](#extensions-and-plugins) section below.
 - **Headless-friendly tests** — unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -121,17 +122,36 @@ audio-core
 audio-geometry
 audio-acquisition          -> audio-core, audio-geometry
 audio-dsp                  -> audio-core
-audio-experimental-acoustic -> audio-core, audio-geometry, audio-acquisition, audio-dsp
-audio-app                  -> audio-core, audio-dsp
+audio-plugin-api           (stable API contract, no audio-* dependencies)
+audio-experimental-acoustic -> audio-core, audio-geometry, audio-acquisition, audio-dsp,
+                               audio-plugin-api   (optional plugin)
+audio-app                  -> audio-core, audio-dsp, audio-plugin-api
+                              (concrete plugins are picked up at runtime via ServiceLoader)
 ```
 
 - `audio-core` — immutable audio-domain types, snapshots and the ring buffer.
 - `audio-geometry` — reusable 2D geometry and localization constraints.
 - `audio-acquisition` — microphone metadata, arrays, multichannel sources and sample clocks.
 - `audio-dsp` — FFT, DSP pipeline, analysis, diagnostics, spectrogram and stereo-delay logic.
-- `audio-experimental-acoustic` — isolated acoustic localization experiments built only on stable
-  modules.
-- `audio-app` — Swing UI, JavaSound/demo wiring, export and the application entry point.
+- `audio-plugin-api` — stable plugin contracts (`AudioAnalyzerPlugin`, `PluginDescriptor`,
+  contribution interfaces). No audio-domain dependencies; never imports concrete plugins or
+  the host application.
+- `audio-experimental-acoustic` — isolated acoustic localization experiments, shipped as a
+  plugin via `AudioAnalyzerPlugin` + `META-INF/services`.
+- `audio-app` — Swing UI, JavaSound/demo wiring, export, plugin host (`PluginManager`,
+  `PluginRegistry`) and the application entry point.
+
+## Extensions and plugins
+
+Audio Analyzer supports optional plugins for domain-specific workflows. Plugins are
+discovered at runtime through the stable [`audio-plugin-api`](audio-plugin-api) module via
+Java `ServiceLoader`; the host application never imports concrete plugin classes.
+
+Available plugin documentation:
+
+- [Experimental Acoustic Localization](docs/plugins/acoustic-localization.md) — research
+  plugin for weak, intermittent and insect-like acoustic sources, including the deeper
+  [DSP / hardware notes](docs/plugins/acoustic-localization/README.md).
 
 ## Documentation
 

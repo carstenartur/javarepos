@@ -6,29 +6,12 @@
     <artifactId>audioin-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>audio-experimental-acoustic</artifactId>
-  <name>Audio Analyzer Experimental Acoustic</name>
+  <artifactId>audio-plugin-api</artifactId>
+  <name>Audio Analyzer Plugin API</name>
+  <description>Stable plugin contracts (descriptors, contributions, plugin interface) between the
+    Audio Analyzer host application and optional plugins. Contains API only, no Swing UI,
+    no JavaSound and no concrete plugin implementations.</description>
   <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>audio-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>audio-geometry</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>audio-acquisition</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>audio-dsp</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>audio-plugin-api</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
