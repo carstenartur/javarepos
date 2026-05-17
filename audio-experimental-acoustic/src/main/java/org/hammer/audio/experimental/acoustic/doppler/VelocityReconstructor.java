@@ -9,7 +9,9 @@ import org.hammer.audio.geometry.Vector2;
 /** Reconstructs a global velocity vector from microphone radial velocities and array geometry. */
 public final class VelocityReconstructor {
 
-  /** Reconstruct horizontal velocity by weighted least squares over microphone line-of-sight axes. */
+  /**
+   * Reconstruct horizontal velocity by weighted least squares over microphone line-of-sight axes.
+   */
   public Vector3 reconstruct(
       List<RadialVelocityEstimate> radialVelocities,
       MicrophoneArray geometry,
@@ -28,7 +30,8 @@ public final class VelocityReconstructor {
     double b1 = 0.0;
     for (RadialVelocityEstimate radial : radialVelocities) {
       Microphone microphone = geometry.microphone(radial.channel());
-      Vector2 direction = sourcePositionMeters.minus(microphone.positionMeters()).normalized().scale(-1.0);
+      Vector2 direction =
+          sourcePositionMeters.minus(microphone.positionMeters()).normalized().scale(-1.0);
       double weight = radial.weight() > 0.0 ? radial.weight() : 1.0;
       a00 += weight * direction.x() * direction.x();
       a01 += weight * direction.x() * direction.y();

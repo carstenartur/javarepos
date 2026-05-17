@@ -47,7 +47,11 @@ public final class SimpleMultiSensorDopplerEstimator implements MultiSensorDoppl
     if (estimates.size() < 3 || outlierThresholdMetersPerSecond == 0.0) {
       return List.copyOf(estimates);
     }
-    double median = median(estimates.stream().mapToDouble(RadialVelocityEstimate::radialVelocityMetersPerSecond).toArray());
+    double median =
+        median(
+            estimates.stream()
+                .mapToDouble(RadialVelocityEstimate::radialVelocityMetersPerSecond)
+                .toArray());
     double mad =
         median(
             estimates.stream()

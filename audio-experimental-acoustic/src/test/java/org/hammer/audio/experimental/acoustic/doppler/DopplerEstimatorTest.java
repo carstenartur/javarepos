@@ -66,8 +66,8 @@ class DopplerEstimatorTest {
     Vector3 velocity =
         reconstructor.reconstruct(
             List.of(
-                new RadialVelocityEstimate(0, 602.0, 600.0, -1.0, 1.0),
-                new RadialVelocityEstimate(1, 602.0, 600.0, -2.0, 1.0)),
+                new RadialVelocityEstimate(0, 602.0, 600.0, 1.0, 1.0),
+                new RadialVelocityEstimate(1, 602.0, 600.0, 2.0, 1.0)),
             array,
             new Vector2(0.0, 0.0));
 

@@ -20,10 +20,10 @@ import org.hammer.audio.geometry.Vector2;
  *   <li>{@link #twoCloseFrequencies()} — two stationary sources at different positions whose
  *       frequencies are close enough to challenge naive single-peak trackers.
  *   <li>{@link #noisyRoom()} — single source with significant background noise.
-   *   <li>{@link #movingSource()} — one source travelling across the room with constant velocity.
-   *   <li>{@link #movingAcrossArray()} — one source travelling laterally across the array.
-   *   <li>{@link #twoMovingSources()} — two tones with distinct velocities.
-   *   <li>{@link #reflectedEnvironment()} — single source with wall reflections enabled.
+ *   <li>{@link #movingSource()} — one source travelling across the room with constant velocity.
+ *   <li>{@link #movingAcrossArray()} — one source travelling laterally across the array.
+ *   <li>{@link #twoMovingSources()} — two tones with distinct velocities.
+ *   <li>{@link #reflectedEnvironment()} — single source with wall reflections enabled.
  * </ul>
  */
 public final class SimulationScenarios {

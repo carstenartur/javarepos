@@ -29,7 +29,9 @@ public final class SimpleDopplerEstimator implements DopplerEstimator {
     if (!(referenceFrequencyHz > 0.0) || !Double.isFinite(referenceFrequencyHz)) {
       throw new IllegalArgumentException("referenceFrequencyHz must be finite and > 0");
     }
-    return speedOfSoundMetersPerSecond * (observedFrequencyHz - referenceFrequencyHz) / referenceFrequencyHz;
+    return speedOfSoundMetersPerSecond
+        * (observedFrequencyHz - referenceFrequencyHz)
+        / referenceFrequencyHz;
   }
 
   /** Configured speed of sound in m/s. */

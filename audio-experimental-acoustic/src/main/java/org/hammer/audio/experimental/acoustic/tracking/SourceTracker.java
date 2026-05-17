@@ -140,6 +140,7 @@ public final class SourceTracker {
     for (Track track : tracks) {
       track.filter.predict(dt);
       track.consecutiveMissedFrames++;
+      track.updatedThisFrame = false;
     }
 
     boolean[] taken = new boolean[tracks.size()];
@@ -152,11 +153,13 @@ public final class SourceTracker {
         track.observedFrequencyHz = observation.observedFrequencyHz();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
-        track.velocityMetersPerSecond = blendVelocity(track.filter.velocity(), observation.velocity());
+        track.velocityMetersPerSecond =
+            blendVelocity(track.filter.velocity(), observation.velocity());
         track.lastUpdatedFrameIndex = frameIndex;
         track.consecutiveMissedFrames = 0;
         track.observationCount++;
         track.confidence = Math.min(1.0, track.confidence * confidenceDecay + confidenceGain);
+        track.updatedThisFrame = true;
         taken[matched] = true;
       } else {
         Track track = new Track();
@@ -177,15 +180,15 @@ public final class SourceTracker {
         track.velocityMetersPerSecond = observation.velocity();
         track.radialVelocityMetersPerSecond = observation.radialVelocityMetersPerSecond();
         track.frequencyVarianceHzSquared = observation.frequencyVarianceHzSquared();
+        track.updatedThisFrame = true;
         tracks.add(track);
       }
     }
     // Decay confidence for missed tracks.
-    for (int i = 0; i < tracks.size(); i++) {
-      if (i < taken.length && taken[i]) {
+    for (Track track : tracks) {
+      if (track.updatedThisFrame) {
         continue;
       }
-      Track track = tracks.get(i);
       track.confidence *= confidenceDecay;
       track.velocityMetersPerSecond = Vector3.from(track.filter.velocity());
     }
@@ -252,7 +255,9 @@ public final class SourceTracker {
 
   private Vector3 blendVelocity(Vector2 positionDeltaVelocity, Vector3 dopplerVelocity) {
     Vector3 positional = Vector3.from(positionDeltaVelocity);
-    return positional.scale(1.0 - dopplerVelocityWeight).plus(dopplerVelocity.scale(dopplerVelocityWeight));
+    return positional
+        .scale(1.0 - dopplerVelocityWeight)
+        .plus(dopplerVelocity.scale(dopplerVelocityWeight));
   }
 
   /** One frame observation: cluster frequency + localized 2D position. */
@@ -301,5 +306,6 @@ public final class SourceTracker {
     int consecutiveMissedFrames;
     int observationCount;
     double confidence;
+    boolean updatedThisFrame;
   }
 }

@@ -51,8 +51,8 @@ public final class AcousticLocalizationPlugin implements AudioAnalyzerPlugin {
             "gcc-phat-tdoa",
             "Frequency-domain GCC-PHAT TDOA estimator robust against narrow-band signals."),
         contribution(
-             "delay-and-sum-beamformer",
-             "Delay-and-sum beamformer producing a 2D heatmap over a candidate grid."),
+            "delay-and-sum-beamformer",
+            "Delay-and-sum beamformer producing a 2D heatmap over a candidate grid."),
         contribution(
             "doppler-velocity-tracking",
             "Doppler-based radial velocity estimation fused with multi-frame source tracking."),

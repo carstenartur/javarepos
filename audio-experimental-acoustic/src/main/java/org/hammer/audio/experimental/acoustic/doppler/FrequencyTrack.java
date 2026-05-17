@@ -33,7 +33,8 @@ public final class FrequencyTrack {
     if (history.isEmpty()) {
       stableFrequency = observedFrequencyHz;
     } else {
-      stableFrequency = smoothingAlpha * observedFrequencyHz + (1.0 - smoothingAlpha) * stableFrequency;
+      stableFrequency =
+          smoothingAlpha * observedFrequencyHz + (1.0 - smoothingAlpha) * stableFrequency;
     }
     history.addLast(observedFrequencyHz);
     while (history.size() > maxHistory) {
@@ -76,7 +77,8 @@ public final class FrequencyTrack {
   }
 
   /** Immutable frequency-track state for metrics and visualization. */
-  public record FrequencyTrackSnapshot(double stableFrequency, List<Double> history, double variance) {
+  public record FrequencyTrackSnapshot(
+      double stableFrequency, List<Double> history, double variance) {
 
     /** Validate and copy fields. */
     public FrequencyTrackSnapshot {
