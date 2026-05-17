@@ -54,6 +54,14 @@ public final class DocImageRenderer {
   private static final int H = 320;
   private static final int DASHBOARD_W = 1600;
   private static final int DASHBOARD_H = 1000;
+  private static final int DASHBOARD_SPECTROGRAM_HISTORY_FRAMES = 180;
+  private static final int DASHBOARD_SPECTROGRAM_SEED_BLOCKS = 64;
+  private static final int DASHBOARD_WAVEFORM_VISIBLE_SAMPLES = 2200;
+  private static final float SYNTHETIC_SPECTROGRAM_PULSE_BASE = 0.45f;
+  private static final float SYNTHETIC_SPECTROGRAM_PULSE_SWING = 0.55f;
+  private static final double SYNTHETIC_SPECTROGRAM_PULSE_PERIOD = 18.0;
+  private static final float SYNTHETIC_SPECTROGRAM_BAND_POSITION = 0.72f;
+  private static final float SYNTHETIC_SPECTROGRAM_BAND_WIDTH = 18f;
   private static final AudioFormatDescriptor MONO_44K = new AudioFormatDescriptor(44100f, 1, 16);
   private static final int FFT = 1024;
 
@@ -87,8 +95,9 @@ public final class DocImageRenderer {
     SpectrumSnapshot spectrum = spectrumAnalyzer.analyze(block);
     MeasurementSnapshot measurement = new MeasurementCalculator().calculate(block, spectrum);
     SpectrogramAnalyzer spectrogramAnalyzer =
-        new SpectrogramAnalyzer(FFT, 0, MONO_44K.sampleRate(), 180);
-    for (int i = 0; i < 64; i++) {
+        new SpectrogramAnalyzer(
+            FFT, 0, MONO_44K.sampleRate(), DASHBOARD_SPECTROGRAM_HISTORY_FRAMES);
+    for (int i = 0; i < DASHBOARD_SPECTROGRAM_SEED_BLOCKS; i++) {
       spectrogramAnalyzer.analyze(gen.nextBlock(FFT));
     }
     SpectrogramHistory history = spectrogramAnalyzer.history();
@@ -169,7 +178,7 @@ public final class DocImageRenderer {
     PlotRenderTheme.drawGrid(g, plot, 16, 8);
     PlotRenderTheme.drawTitle(g, plot.x + 12, plot.y + 22, "Waveform — reproducible 440 Hz sine");
     float[] samples = block.channelView(0);
-    int visible = Math.min(samples.length, 2200);
+    int visible = Math.min(samples.length, DASHBOARD_WAVEFORM_VISIBLE_SAMPLES);
     int centerY = plot.y + plot.height / 2;
     int amplitude = plot.height / 2 - 38;
     Path2D path = new Path2D.Float();
@@ -222,9 +231,18 @@ public final class DocImageRenderer {
     int w = panel.width - 40;
     int h = panel.height - 64;
     for (int x = 0; x < w; x++) {
-      float pulse = 0.45f + 0.55f * (float) Math.sin(x / 18.0);
+      float pulse =
+          SYNTHETIC_SPECTROGRAM_PULSE_BASE
+              + SYNTHETIC_SPECTROGRAM_PULSE_SWING
+                  * (float) Math.sin(x / SYNTHETIC_SPECTROGRAM_PULSE_PERIOD);
       for (int y = 0; y < h; y++) {
-        float band = Math.max(0f, 1f - Math.abs(y - h * 0.72f) / 18f) * pulse;
+        float band =
+            Math.max(
+                    0f,
+                    1f
+                        - Math.abs(y - h * SYNTHETIC_SPECTROGRAM_BAND_POSITION)
+                            / SYNTHETIC_SPECTROGRAM_BAND_WIDTH)
+                * pulse;
         g.setColor(
             new Color(
                 16,
