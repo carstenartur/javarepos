@@ -1,10 +1,11 @@
 # Audio Analyzer
 
-[![Java CI with Maven](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/carstenartur/javarepos/actions/workflows/maven.yml)
-[![Coverage](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
-[![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
-[![License](https://img.shields.io/github/license/carstenartur/javarepos)](LICENSE)
-[![SBOM](https://img.shields.io/badge/SBOM-CycloneDX-informational?logo=owasp)](https://github.com/carstenartur/javarepos/dependency-graph/sbom)
+[![Java CI with Maven](https://github.com/carstenartur/audio-analyzer/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/carstenartur/audio-analyzer/actions/workflows/maven.yml)
+[![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/audio-analyzer/tests/badge.json)](https://carstenartur.github.io/audio-analyzer/tests/surefire-report.html)
+[![Coverage](https://img.shields.io/endpoint?url=https://carstenartur.github.io/audio-analyzer/coverage/badge.json)](https://carstenartur.github.io/audio-analyzer/coverage/)
+[![CodeQL](https://github.com/carstenartur/audio-analyzer/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/carstenartur/audio-analyzer/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/github/license/carstenartur/audio-analyzer)](LICENSE)
+[![SBOM](https://img.shields.io/badge/SBOM-CycloneDX-informational?logo=owasp)](https://github.com/carstenartur/audio-analyzer/dependency-graph/sbom)
 
 **Audio Analyzer** is a Java 21 / Swing **audio and DSP laboratory**. It is useful for
 repeatable signal demos, audio-analysis experiments, UI visualization and plugin research. It is
