@@ -15,9 +15,9 @@ import org.hammer.audio.experimental.acoustic.doppler.MultiSensorDopplerEstimato
 import org.hammer.audio.experimental.acoustic.doppler.RadialVelocityEstimate;
 import org.hammer.audio.experimental.acoustic.doppler.SimpleMultiSensorDopplerEstimator;
 import org.hammer.audio.experimental.acoustic.doppler.SourceObservation;
-import org.hammer.audio.geometry.Vector3;
 import org.hammer.audio.experimental.acoustic.doppler.VelocityReconstructor;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 
 /**
  * Coherent real-time multi-source tracking pipeline.
@@ -197,8 +197,7 @@ public final class TrackingPipeline {
       best =
           new PipelineFrequencyTrack(
               nextFrequencyTrackId++,
-              new FrequencyTrack(
-                  FREQUENCY_TRACK_HISTORY_FRAMES, FREQUENCY_TRACK_SMOOTHING_ALPHA),
+              new FrequencyTrack(FREQUENCY_TRACK_HISTORY_FRAMES, FREQUENCY_TRACK_SMOOTHING_ALPHA),
               frequencyHz,
               frameIndex);
       frequencyTracks.add(best);
@@ -232,10 +231,7 @@ public final class TrackingPipeline {
     long lastTouchedFrameIndex;
 
     PipelineFrequencyTrack(
-        int id,
-        FrequencyTrack track,
-        double lastObservedFrequencyHz,
-        long lastTouchedFrameIndex) {
+        int id, FrequencyTrack track, double lastObservedFrequencyHz, long lastTouchedFrameIndex) {
       this.id = id;
       this.track = track;
       this.lastObservedFrequencyHz = lastObservedFrequencyHz;

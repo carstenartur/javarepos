@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import org.hammer.audio.geometry.Vector3;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 
 /**
  * Maintains a set of {@link TrackedSource}s over time, providing identity persistence and temporal
