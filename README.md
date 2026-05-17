@@ -42,11 +42,8 @@ live waveform, spectrum, phase and stereo-delay readouts for microphone input or
   replay it as if it were live, and produce a Markdown A/B report comparing two recordings'
   measurements, spectrum and diagnosis findings. See [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md)
   and [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
-- **Experimental acoustic localization plugin** — wingbeat frequency tracking, GCC-PHAT /
-  cross-correlation TDOA estimators, delay-and-sum beamforming and a deterministic 2D room
-  simulator, shipped as an optional plugin discovered through `audio-plugin-api` and
-  surfaced in the application's **Plugins** menu. See the
-  [Extensions and plugins](#extensions-and-plugins) section below.
+- **Plugin architecture** — optional domain-specific plugins are discovered at runtime through
+  `audio-plugin-api` and surfaced in the application's **Plugins** menu.
 - **Headless-friendly tests** — unit tests covering immutability, FFT correctness, SPSC
   concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
 - **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
@@ -106,8 +103,6 @@ dominant frequency, RMS/peak level and clipping status visible in one view._
 - **Estimate stereo delay / broad left-right sound direction** from inter-channel
   cross-correlation and microphone spacing. See
   [Stereo localization](docs/use-cases/stereo-localization.md).
-- **Inspect high-frequency intermittent sounds** with the mosquito-like burst scenario, framed as a
-  localized high-frequency intermittent sound source rather than species detection.
 - **Validate generated test signals** by comparing the selected demo signal with the measured
   dominant frequency and level.
 - **Export evidence** as CSV or PNG for reports, diagnostics or bug tickets.
@@ -143,15 +138,13 @@ audio-app                  -> audio-core, audio-dsp, audio-plugin-api
 
 ## Extensions and plugins
 
-Audio Analyzer supports optional plugins for domain-specific workflows. Plugins are
-discovered at runtime through the stable [`audio-plugin-api`](audio-plugin-api) module via
-Java `ServiceLoader`; the host application never imports concrete plugin classes.
+Audio Analyzer supports optional plugins for domain-specific workflows. Plugins implement
+the stable [`audio-plugin-api`](audio-plugin-api) contracts and are discovered at runtime
+by the host application.
 
 Available plugin documentation:
 
-- [Experimental Acoustic Localization](docs/plugins/acoustic-localization.md) — research
-  plugin for weak, intermittent and insect-like acoustic sources, including the deeper
-  [DSP / hardware notes](docs/plugins/acoustic-localization/README.md).
+- [Experimental Acoustic Localization](docs/plugins/acoustic-localization.md)
 
 ## Documentation
 
@@ -175,21 +168,20 @@ Available plugin documentation:
   can and cannot infer, microphone spacing, cross-correlation and demo usage.
 - [Experimental acoustic localization architecture](docs/architecture/experimental-acoustic-localization.md) —
   module boundaries for reusable core APIs versus research plugin code.
-- [Acoustic localization plugin](docs/plugins/acoustic-localization/README.md) — DSP concepts,
-  microphone setup, simulator, limitations and future research directions.
+- [Acoustic localization plugin](docs/plugins/acoustic-localization.md) — plugin summary, setup,
+  UI integration and limitations.
 - [Roadmap](ROADMAP.md) — planned features and next issues.
 
 ## Project status
 
-This repository is best read as **a reusable Java audio/DSP laboratory with experimental
-acoustic-localization extensions**, not a finished production acoustic tracking platform:
+This repository is best read as **a reusable Java audio/DSP laboratory with optional
+plugin-based domain extensions**, not a finished production tracking platform:
 
 - The capture, ring-buffer, DSP-pipeline, FFT, spectrum, RMS/peak, stereo-delay, spectrogram,
   rule-based diagnosis and Swing visualization layers are **stable infrastructure** with unit
   tests and architecture-boundary tests.
-- The contents of `audio-experimental-acoustic` (wingbeat tracking, TDOA, beamforming, room
-  simulation) are **experimental research code** and intentionally isolated from stable modules.
-  They are validated mostly against synthetic signals.
+- Domain-specific workflows stay in optional plugins and are intentionally isolated from stable
+  modules.
 - Quality gates are reporting-only today; see [docs/quality.md](docs/quality.md) for the
   hardening roadmap.
 
