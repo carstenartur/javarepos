@@ -6,7 +6,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -45,7 +44,8 @@ public final class DiagnosisPanel extends JPanel {
   public DiagnosisPanel() {
     super(new BorderLayout(4, 4));
     setBorder(new EmptyBorder(4, 4, 4, 4));
-    setPreferredSize(new Dimension(320, 110));
+    setPreferredSize(new Dimension(380, 160));
+    setMinimumSize(new Dimension(280, 120));
 
     JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
     JLabel title = new JLabel("Diagnosis");
@@ -120,17 +120,17 @@ public final class DiagnosisPanel extends JPanel {
   }
 
   private static Component createFindingRow(DiagnosisFinding finding) {
-    JPanel row = new JPanel(new GridLayout(1, 2, 6, 0));
+    JPanel row = new JPanel(new BorderLayout(8, 0));
     JLabel severityLabel = new JLabel(badgeText(finding.severity()), SwingConstants.LEFT);
     severityLabel.setForeground(severityForeground(finding.severity()));
     severityLabel.setFont(severityLabel.getFont().deriveFont(Font.BOLD));
     severityLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
-    row.add(severityLabel);
+    row.add(severityLabel, BorderLayout.WEST);
 
     JLabel message =
         new JLabel(String.format("%s (conf %.2f)", finding.message(), finding.confidence()));
     message.setForeground(severityForeground(finding.severity()));
-    row.add(message);
+    row.add(message, BorderLayout.CENTER);
     return row;
   }
 

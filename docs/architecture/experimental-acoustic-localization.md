@@ -63,29 +63,24 @@ or assumptions about a room experiment.
 This code may evolve quickly and may be benchmarked or replaced without changing the stable
 application model.
 
-## Modularization plan
+## Maven modularization
 
-Full Maven modularization is intentionally deferred for this PR. Splitting the existing
-single-artifact Swing application into `audio-core`, `audio-acquisition`, `audio-dsp`,
-`audio-experimental-acoustic` and `audio-app` is feasible, but it would be a broad build-layout
-change unrelated to proving the acoustic experiment boundary.
-
-The current decision is:
-
-1. Keep the current Maven artifact as the compatibility boundary for now.
-2. Treat package roots as modules: stable `audio.*` APIs versus `audio.experimental.*` plugins.
-3. Enforce the dependency direction with `ArchitectureBoundaryTest` in the Maven test suite.
-4. Promote only proven generic interfaces from the plugin into core.
-5. Split Maven modules later when either dependency sets diverge or the acoustic plugin needs an
-   independent release cadence.
-
-The Maven module split now enforces this direction:
+The repository now uses a seven-module Maven reactor. The split is the build-level compatibility
+boundary for stable audio APIs, plugin contracts, Swing application code and research-only acoustic
+localization code.
 
 - `audio-core` for `AudioBlock`, format metadata and generic immutable domain models;
+- `audio-geometry` for reusable 2D geometry primitives and localization constraints;
 - `audio-acquisition` for synchronized source and microphone-array contracts;
-- `audio-dsp` / `audio-analysis` for reusable FFT, DSP and analyzer contracts;
+- `audio-dsp` for reusable FFT, DSP, analyzer, spectrogram, diagnosis and stereo-delay logic;
+- `audio-plugin-api` for stable plugin contracts with no dependencies on concrete audio modules,
+  host code or plugins;
 - `audio-experimental-acoustic` for mosquito/insect-specific research components;
-- `audio-app` for Swing UI, JavaSound wiring and packaging.
+- `audio-app` for Swing UI, JavaSound/demo wiring, export, plugin hosting and packaging.
+
+The acoustic plugin depends on stable modules plus `audio-plugin-api`. The Swing app compiles
+against `audio-plugin-api` and includes the concrete acoustic plugin only as a runtime dependency so
+Java `ServiceLoader` can discover it.
 
 ## Enforced dependency guards
 
@@ -94,8 +89,10 @@ if:
 
 - stable modules import `org.hammer.audio.experimental.*`;
 - stable modules import UI packages or top-level Swing application packages;
-- stable module POMs depend on `audio-app` or `audio-experimental-acoustic`;
-- `audio-app` requires `audio-experimental-acoustic`.
+- stable module POMs depend on `audio-app`, `audio-plugin-api` or
+  `audio-experimental-acoustic`;
+- `audio-plugin-api` imports host or concrete plugin packages;
+- `audio-app` has a compile-scope dependency on `audio-experimental-acoustic`.
 
 This keeps experimental acoustic code dependent on stable APIs only, while preventing stable core,
 DSP, acquisition or geometry code from depending on the plugin or app/UI layers.

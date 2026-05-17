@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 
 /** Shared plot colors, fonts and drawing helpers for Swing renderers. */
 public final class PlotRenderTheme {
@@ -40,6 +41,7 @@ public final class PlotRenderTheme {
 
   private static final double DB_FLOOR = -80.0d;
   private static final double MAG_EPSILON = 1.0e-7d;
+  private static final int TICK_SIZE = 4;
 
   private PlotRenderTheme() {}
 
@@ -113,6 +115,95 @@ public final class PlotRenderTheme {
     g2.setFont(LABEL_FONT);
     g2.setColor(TEXT_MUTED);
     g2.drawString(label, x, y);
+  }
+
+  /** Draws a centered X-axis label in the bottom plot margin. */
+  public static void drawXAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
+    g2.setFont(LABEL_FONT);
+    g2.setColor(TEXT_MUTED);
+    int textWidth = g2.getFontMetrics().stringWidth(label);
+    int x = plotBounds.x + Math.max(0, (plotBounds.width - textWidth) / 2);
+    int y = plotBounds.y + plotBounds.height + 16;
+    g2.drawString(label, x, y);
+  }
+
+  /** Draws a rotated Y-axis label in the left plot margin. */
+  public static void drawYAxisLabel(Graphics2D g2, Rectangle plotBounds, String label) {
+    g2.setFont(LABEL_FONT);
+    g2.setColor(TEXT_MUTED);
+    int textWidth = g2.getFontMetrics().stringWidth(label);
+    int x = Math.max(10, plotBounds.x - 34);
+    int y = plotBounds.y + plotBounds.height / 2 + textWidth / 2;
+    AffineTransform savedTransform = g2.getTransform();
+    try {
+      g2.rotate(-Math.PI / 2.0, x, y);
+      g2.drawString(label, x, y);
+    } finally {
+      g2.setTransform(savedTransform);
+    }
+  }
+
+  /**
+   * Draws bottom X-axis ticks at normalized positions in {@code [0, 1]}.
+   *
+   * @param g2 graphics context to draw into
+   * @param plotBounds plot rectangle whose bottom edge receives the ticks
+   * @param positions normalized left-to-right tick positions
+   * @param labels tick labels, one per position
+   */
+  public static void drawXTicks(
+      Graphics2D g2, Rectangle plotBounds, double[] positions, String[] labels) {
+    validateTicks(positions, labels);
+    g2.setFont(LABEL_FONT);
+    g2.setStroke(AXIS_STROKE);
+    int baseline = plotBounds.y + plotBounds.height - 1;
+    for (int i = 0; i < positions.length; i++) {
+      int x = plotBounds.x + (int) Math.round(clamp01(positions[i]) * (plotBounds.width - 1));
+      g2.setColor(AXIS_COLOR);
+      g2.drawLine(x, baseline, x, baseline + TICK_SIZE);
+      g2.setColor(TEXT_MUTED);
+      int textWidth = g2.getFontMetrics().stringWidth(labels[i]);
+      int labelX = clamp(x - textWidth / 2, 0, plotBounds.x + plotBounds.width - textWidth);
+      g2.drawString(labels[i], labelX, baseline + 16);
+    }
+  }
+
+  /**
+   * Draws left Y-axis ticks at normalized top-to-bottom positions in {@code [0, 1]}.
+   *
+   * @param g2 graphics context to draw into
+   * @param plotBounds plot rectangle whose left edge receives the ticks
+   * @param positions normalized top-to-bottom tick positions
+   * @param labels tick labels, one per position
+   */
+  public static void drawYTicks(
+      Graphics2D g2, Rectangle plotBounds, double[] positions, String[] labels) {
+    validateTicks(positions, labels);
+    g2.setFont(LABEL_FONT);
+    g2.setStroke(AXIS_STROKE);
+    for (int i = 0; i < positions.length; i++) {
+      int y = plotBounds.y + (int) Math.round(clamp01(positions[i]) * (plotBounds.height - 1));
+      g2.setColor(AXIS_COLOR);
+      g2.drawLine(plotBounds.x - TICK_SIZE, y, plotBounds.x, y);
+      g2.setColor(TEXT_MUTED);
+      int textWidth = g2.getFontMetrics().stringWidth(labels[i]);
+      int labelX = Math.max(0, plotBounds.x - TICK_SIZE - 4 - textWidth);
+      g2.drawString(labels[i], labelX, y + 4);
+    }
+  }
+
+  private static void validateTicks(double[] positions, String[] labels) {
+    if (positions.length != labels.length) {
+      throw new IllegalArgumentException("positions and labels must have the same length");
+    }
+  }
+
+  private static double clamp01(double value) {
+    return Math.max(0.0d, Math.min(1.0d, value));
+  }
+
+  private static int clamp(int value, int min, int max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   /** Converts linear magnitude to clipped dB FS display value. */

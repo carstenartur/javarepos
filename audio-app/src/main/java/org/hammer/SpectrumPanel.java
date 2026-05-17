@@ -199,7 +199,10 @@ public final class SpectrumPanel extends javax.swing.JPanel {
     PlotRenderTheme.drawPlotBackground(g, width, height, plotBounds);
     PlotRenderTheme.drawGrid(g, plotBounds, 8, 6);
     PlotRenderTheme.drawTitle(g, plotBounds.x, 14, "Spectrum");
-    drawSpectrumAxes(g, plotBounds);
+    PlotRenderTheme.drawXAxisLabel(g, plotBounds, "Frequency [Hz]");
+    PlotRenderTheme.drawYAxisLabel(g, plotBounds, "Magnitude [dB rel. peak]");
+    PlotRenderTheme.drawYTicks(
+        g, plotBounds, new double[] {0.0d, 0.5d, 1.0d}, new String[] {"0 dB", "-40 dB", "-80 dB"});
 
     SpectrumSnapshot spectrum = getCurrentSpectrum();
     if (spectrum == null) {
@@ -251,15 +254,14 @@ public final class SpectrumPanel extends javax.swing.JPanel {
           String.format("Peak %.1f Hz", peakHz));
     }
 
-    PlotRenderTheme.drawLabel(g, plotBounds.x, height - 8, "0 Hz");
-    PlotRenderTheme.drawLabel(
-        g, width - 84, height - 8, String.format("%.0f Hz", spectrum.sampleRate() / 2.0));
-  }
-
-  private void drawSpectrumAxes(Graphics2D g, Rectangle plotBounds) {
-    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 4, "0 dB");
-    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height / 2 + 4, "-40 dB");
-    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "-80 dB");
+    double nyquist = spectrum.sampleRate() / 2.0;
+    PlotRenderTheme.drawXTicks(
+        g,
+        plotBounds,
+        new double[] {0.0d, 0.5d, 1.0d},
+        new String[] {
+          "0 Hz", String.format("%.0f Hz", nyquist / 2.0), String.format("%.0f Hz", nyquist)
+        });
   }
 
   private void drawSpectrumShape(

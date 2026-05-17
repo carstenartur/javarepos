@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
@@ -25,6 +24,7 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
@@ -79,8 +79,8 @@ public class AudioAnalyseFrame extends JFrame {
   private static final int CONTENT_PANE_HGAP = 5;
   private static final int CONTENT_PANE_VGAP = 5;
   private static final int CONTENT_PANE_PADDING = 8;
-  private static final int DEFAULT_WINDOW_WIDTH = 900;
-  private static final int DEFAULT_WINDOW_HEIGHT = 680;
+  private static final int DEFAULT_WINDOW_WIDTH = 1440;
+  private static final int DEFAULT_WINDOW_HEIGHT = 1000;
 
   // Keep the historic capture format so existing tests and supported-device checks stay aligned.
   private static final float DEFAULT_SAMPLE_RATE = 16000.0f;
@@ -386,11 +386,17 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private void initTopSettingsPanel() {
-    JPanel topContainer = new JPanel(new GridLayout(2, 1, 0, TOP_PANEL_HGAP));
+    JPanel topContainer = new JPanel();
+    topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
     topContainer.setBorder(new EmptyBorder(0, 0, 4, 0));
     contentPane.add(topContainer, BorderLayout.NORTH);
-    topContainer.add(createSettingsPanel());
-    topContainer.add(createMeasurementPanel());
+    JPanel settingsPanel = createSettingsPanel();
+    JPanel measurementPanel = createMeasurementPanel();
+    settingsPanel.setAlignmentX(LEFT_ALIGNMENT);
+    measurementPanel.setAlignmentX(LEFT_ALIGNMENT);
+    topContainer.add(settingsPanel);
+    topContainer.add(Box.createVerticalStrut(TOP_PANEL_HGAP));
+    topContainer.add(measurementPanel);
     updateModeControls();
     updateUIFromModel();
   }
@@ -455,7 +461,7 @@ public class AudioAnalyseFrame extends JFrame {
   }
 
   private JPanel createMeasurementPanel() {
-    JPanel measurementPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    JPanel measurementPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
     measurementPanel.setBorder(UiTheme.createPanelBorder());
 
     measurementPanel.add(new JLabel("RMS"));
@@ -508,7 +514,7 @@ public class AudioAnalyseFrame extends JFrame {
     spectrogramPanel.setBorder(UiTheme.createPanelBorder());
     diagnosisPanel.setBorder(UiTheme.createPanelBorder());
 
-    JPanel lowerPanel = new JPanel(new GridLayout(1, 2, 8, 0));
+    JPanel lowerPanel = new JPanel(new java.awt.GridLayout(1, 2, 8, 0));
     lowerPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
     lowerPanel.add(spectrumPanel);
     lowerPanel.add(phaseDiagramPanel);

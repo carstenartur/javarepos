@@ -28,7 +28,8 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
   private static final long serialVersionUID = 1L;
   private static final int FFT_SIZE = 1024;
   private static final int HISTORY_FRAMES = 256;
-  private static final int LEFT_MARGIN = 44;
+  // Leaves room for frequency tick labels and the rotated Y-axis title.
+  private static final int LEFT_MARGIN = 52;
   private static final int RIGHT_MARGIN = 12;
   private static final int TOP_MARGIN = 18;
   private static final int BOTTOM_MARGIN = 28;
@@ -242,16 +243,44 @@ public final class SpectrogramPanel extends javax.swing.JPanel {
 
   private void drawAxisLabels(Graphics2D g, Rectangle plotBounds, SpectrogramHistory history) {
     g.setColor(Color.WHITE);
-    PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 4, "Hz");
+    PlotRenderTheme.drawYAxisLabel(g, plotBounds, "Frequency [Hz]");
     if (history != null) {
       float nyquist = history.sampleRate() / 2.0f;
-      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + 14, String.format("%.0f", nyquist));
-      PlotRenderTheme.drawLabel(
-          g, 6, plotBounds.y + plotBounds.height / 2 + 4, String.format("%.0f", nyquist / 2.0f));
-      PlotRenderTheme.drawLabel(g, 6, plotBounds.y + plotBounds.height - 2, "0");
+      PlotRenderTheme.drawYTicks(
+          g,
+          plotBounds,
+          new double[] {0.0d, 0.5d, 1.0d},
+          new String[] {
+            String.format("%.0f Hz", nyquist), String.format("%.0f Hz", nyquist / 2.0f), "0 Hz"
+          });
+      PlotRenderTheme.drawXTicks(
+          g, plotBounds, new double[] {0.0d, 0.5d, 1.0d}, spectrogramTimeLabels(history));
     }
-    int yLabel = plotBounds.y + plotBounds.height + 14;
-    PlotRenderTheme.drawLabel(g, plotBounds.x, yLabel, "← older");
-    PlotRenderTheme.drawLabel(g, plotBounds.x + plotBounds.width - 42, yLabel, "newer →");
+    PlotRenderTheme.drawXAxisLabel(g, plotBounds, "Time [frames; older → newer]");
+  }
+
+  /**
+   * Builds left/middle/right time tick labels for the visible spectrogram history.
+   *
+   * @param history rolling spectrogram history; may be empty during startup
+   * @return relative seconds labels when frame indices are available, otherwise frame-count labels
+   */
+  private String[] spectrogramTimeLabels(SpectrogramHistory history) {
+    if (history == null || history.size() <= 1) {
+      return new String[] {"0", "0", "0"};
+    }
+    long startFrame = history.frameAt(0).sourceFrameIndex();
+    long endFrame = history.frameAt(history.size() - 1).sourceFrameIndex();
+    double durationSeconds =
+        Math.max(0.0d, (endFrame - startFrame) / (double) history.sampleRate());
+    if (durationSeconds > 0.0d) {
+      return new String[] {
+        "0.00 s",
+        String.format("%.2f s", durationSeconds / 2.0d),
+        String.format("%.2f s", durationSeconds)
+      };
+    }
+    int lastFrame = history.size() - 1;
+    return new String[] {"0", Integer.toString(lastFrame / 2), Integer.toString(lastFrame)};
   }
 }

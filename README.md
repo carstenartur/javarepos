@@ -4,188 +4,129 @@
 [![codecov](https://codecov.io/gh/carstenartur/javarepos/graph/badge.svg)](https://codecov.io/gh/carstenartur/javarepos)
 [![CodeQL](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml/badge.svg)](https://github.com/carstenartur/javarepos/actions/workflows/codeql.yml)
 
-**Audio Analyzer** is a Maven multi-module real-time audio analysis laboratory built around a
-Java/Swing measurement dashboard. It provides a layered architecture for audio acquisition,
-ring-buffering, DSP, analysis (RMS/peak, FFT spectrum, stereo delay estimation) and visualization,
-with deterministic synthetic signal generators and JMH benchmarks. The bundled Swing UI renders
-live waveform, spectrum, phase and stereo-delay readouts for microphone input or reproducible demos.
+**Audio Analyzer** is a Java 21 / Swing **audio and DSP laboratory**. It is useful for
+repeatable signal demos, audio-analysis experiments, UI visualization and plugin research. It is
+**not** a finished production platform for mosquito tracking.
 
-> The root Maven parent is named `audioin-parent`; the runnable application artifact is
-> `audio-app`.
+The root Maven parent is `audioin-parent`; the runnable desktop application is `audio-app`.
 
-## Features
+## Project status
 
-- **Layered architecture** — capture → ring buffer → DSP pipeline → analysis → snapshots → UI.
-  See [`ARCHITECTURE.md`](ARCHITECTURE.md).
-- **Immutable audio domain** — `AudioBlock` and `AudioFormatDescriptor` carry normalized
-  `float[channels][frames]` samples, frame indices and timestamps; no UI types.
-- **Lock-free SPSC ring buffer** for realtime workloads, with `offer` and `offerOverwrite`.
-- **DSP extension points** — implement `DSPProcessor` and chain stages with `DSPPipeline`.
-- **Analysis modules** — `RmsPeakAnalyzer`, `SpectrumAnalyzer` (pure-Java radix-2 FFT),
-  `StereoDelayAnalyzer`, `SpectrogramAnalyzer` and rule-based `DiagnosisAnalyzer` producing
-  immutable snapshots for UI or other consumers.
-- **Acquisition abstractions** — `Microphone`, `MicrophoneArray`, `MultiChannelAudioSource` and
-  `SampleClock` in `audio-acquisition` provide UI-/JavaSound-free contracts that experimental
-  multi-channel research code (e.g. acoustic localization) builds on.
-- **Deterministic synthetic signals** — sine, square, chirp, hum/harmonics, clipping,
-  stereo-delay, moving-chirp and mosquito-like high-frequency burst presets for tests, headless
-  demos and DSP verification.
-- **Live Swing UI** — selectable microphone input, waveform, phase diagram, FFT spectrum,
-  spectrogram and diagnosis panels, demo mode, pause/freeze, peak-frequency + measurement
-  readouts, stereo-delay / approximate direction estimate, and CSV/PNG / evidence-bundle export
-  for quick acoustic diagnostics.
-- **Oscilloscope-style waveform trigger** (level / slope / holdoff / auto-or-normal mode) for
-  stable inspection of repeating or transient events, plus spectrum **peak hold** and
-  **exponential averaging** display modes. See [docs/features/oscilloscope-trigger.md](docs/features/oscilloscope-trigger.md)
-  and [docs/features/peak-hold-and-averaging.md](docs/features/peak-hold-and-averaging.md).
-- **Recording, replay and A/B comparison** — capture every `AudioBlock` into a small `.aar` file,
-  replay it as if it were live, and produce a Markdown A/B report comparing two recordings'
-  measurements, spectrum and diagnosis findings. See [docs/features/recording-and-replay.md](docs/features/recording-and-replay.md)
-  and [docs/features/ab-comparison.md](docs/features/ab-comparison.md).
-- **Plugin architecture** — optional domain-specific plugins are discovered at runtime through
-  `audio-plugin-api` and surfaced in the application's **Plugins** menu.
-- **Headless-friendly tests** — unit tests covering immutability, FFT correctness, SPSC
-  concurrency stress, signal determinism, DSP pipeline composition and sample decoding.
-- **JMH benchmarks** for ring buffer throughput, FFT throughput and signal-generator
-  allocations.
-- **Java 21**, no heavyweight frameworks.
+Stable infrastructure today:
+
+- immutable `AudioBlock` / format models, SPSC ring buffer and deterministic signal generators;
+- sample decoding, DSP pipelines, FFT spectrum, RMS/peak measurement, spectrogram and diagnosis
+  analyzers;
+- Swing dashboard panels for waveform, phase, spectrum, spectrogram, measurements and diagnosis;
+- recording/replay, evidence export and Markdown A/B comparison tooling;
+- Maven module-boundary tests, unit tests, Spotless, JaCoCo reports/check, Checkstyle/PMD/SpotBugs
+  reports and CI baseline checks.
+
+Experimental / research-oriented:
+
+- acoustic-localization plugin code for wingbeat/frequency tracking, TDOA/GCC-PHAT, beamforming,
+  Doppler experiments and simulations;
+- plugin UI contributions and localization workflows. These are explicitly not validated as a
+  production mosquito detector.
 
 ## Quickstart
 
-Requires **Java 21** or higher.
+Requires **Java 21** or higher. The Maven Wrapper is included.
 
 ```bash
-# Build, test, run static analysis and coverage
+# Build, test, run configured quality checks and produce reports
 ./mvnw clean verify
 
-# Run the application (after package/verify, requires audio-app/target/lib runtime jars)
+# Run the Swing app after package/verify
 java -jar audio-app/target/audio-app-0.0.1-SNAPSHOT.jar
-# Runtime dependencies are copied to audio-app/target/lib during the Maven package phase.
 
-# Run JMH benchmarks
+# Regenerate README + feature screenshots headlessly
+java -cp "audio-app/target/audio-app-0.0.1-SNAPSHOT.jar:audio-app/target/lib/*" \
+  org.hammer.tools.DocImageRenderer docs/images
+
+# Optional JMH benchmarks
 ./mvnw -pl audio-dsp -Pjmh package
 ```
 
-On Windows use `mvnw.cmd` instead of `./mvnw`.
+On Windows use `mvnw.cmd` instead of `./mvnw`; adapt the classpath separator from `:` to `;` for
+manual `java -cp` commands.
 
-## Real-time acoustic use cases
+## Dashboard screenshot
 
-![Audio Analyzer modern dashboard screenshot](docs/images/screenshot.png)
+![Audio Analyzer dashboard showing a reproducible 440 Hz sine demo](docs/images/screenshot.png)
 
-_Staged demo: Demo mode is running a frozen 440 Hz sine signal, with the waveform, FFT peak,
-dominant frequency, RMS/peak level and clipping status visible in one view._
+_Reproducible documentation screenshot generated headlessly by `DocImageRenderer`: demo mode with a
+440 Hz sine signal, waveform, spectrum peak, measurements, spectrogram and diagnosis panels visible
+without clipped labels or empty regions._
 
-### What you can see
+## Feature groups
 
-- **Demo mode** selected with the **Sine** signal.
-- A visible **waveform** for the generated signal.
-- An **FFT spectrum** with a marked peak at **440.0 Hz**.
-- **Peak Frequency** and **Dominant frequency** readouts showing **440.0 Hz**.
-- **RMS**, **Peak level** and **Clipping** readouts.
-- **Stereo delay**, confidence and approximate direction readouts when a stereo signal is present.
-- A **Paused / Frozen demo** state for repeatable inspection.
+### Core audio / DSP platform
 
-### Try it yourself
+- layered capture → ring buffer → DSP → analysis → snapshot flow;
+- immutable audio-domain types and UI-independent analysis snapshots;
+- deterministic sine/square/chirp/demo generators for tests and demos;
+- FFT spectrum, RMS/peak measurement, stereo delay, spectrogram and diagnosis analyzers;
+- JMH benchmarks for selected hot paths.
 
-1. Build and run the app.
-2. Open **Settings** and switch input mode to **Demo mode**.
-3. Select **Sine**, **Chirp**, **Stereo delay test**, **Mosquito-like high-frequency burst**,
-   **Moving chirp source**, **50 Hz hum + harmonics** or **Clipping test** as the demo signal.
-4. Start capture with **File → Start/Stop**.
-5. Freeze the current view with **File → Pause/Freeze**.
-6. Export evidence via **File → Export measurement CSV...** or
-   **File → Export measurement PNG...**.
+### Swing dashboard
 
-### Use cases
+- live/demo input selection, waveform, phase, spectrum, spectrogram, measurements and diagnosis;
+- pause/freeze, oscilloscope-style trigger, peak hold and spectrum averaging;
+- JavaSound microphone input plus deterministic demo mode.
 
-- **Detect dominant frequency** by finding the strongest FFT peak.
-- **Find hum/noise/resonance problems** with the 50 Hz hum + harmonics demo and spectrum readouts.
-- **Estimate stereo delay / broad left-right sound direction** from inter-channel
-  cross-correlation and microphone spacing. See
-  [Stereo localization](docs/use-cases/stereo-localization.md).
-- **Validate generated test signals** by comparing the selected demo signal with the measured
-  dominant frequency and level.
-- **Export evidence** as CSV or PNG for reports, diagnostics or bug tickets.
+### Recording / export / comparison
+
+- `.aar` recording and replay through the normal analysis pipeline;
+- CSV/PNG and evidence-bundle export;
+- Markdown A/B comparison reports for two recordings.
+
+### Plugin / experimental acoustic localization
+
+- `audio-plugin-api` contracts discovered by the app host via Java `ServiceLoader`;
+- optional `audio-experimental-acoustic` runtime plugin for research workflows;
+- details and limits: [Experimental Acoustic Localization](docs/plugins/acoustic-localization.md).
+
+### Quality / tooling
+
+- Maven multi-module build with Java 21 enforcement;
+- Spotless formatting, unit tests and architecture-boundary tests;
+- JaCoCo report plus a low 5% bundle line-coverage check;
+- Checkstyle, PMD and SpotBugs reports; CI fails when report counts exceed the committed baseline;
+- CodeQL workflow with an explicit Maven build.
 
 ## Maven modules
-
-The repository is now split into build-enforced modules so stable audio APIs cannot accidentally
-depend on Swing UI or experimental acoustic localization code:
 
 ```text
 audio-core
 audio-geometry
-audio-acquisition          -> audio-core, audio-geometry
-audio-dsp                  -> audio-core
-audio-plugin-api           (stable API contract, no audio-* dependencies)
-audio-experimental-acoustic -> audio-core, audio-geometry, audio-acquisition, audio-dsp,
-                               audio-plugin-api   (optional plugin)
-audio-app                  -> audio-core, audio-dsp, audio-plugin-api
-                              (concrete plugins are picked up at runtime via ServiceLoader)
+audio-acquisition           -> audio-core, audio-geometry
+audio-dsp                   -> audio-core
+audio-plugin-api            (stable plugin contracts; no audio-* dependencies)
+audio-experimental-acoustic -> audio-core, audio-geometry, audio-acquisition,
+                               audio-dsp, audio-plugin-api
+audio-app                   -> audio-core, audio-dsp, audio-plugin-api
+                               runtime: audio-experimental-acoustic plugin
 ```
 
-- `audio-core` — immutable audio-domain types, snapshots and the ring buffer.
+- `audio-core` — immutable audio-domain types, snapshots and ring buffer.
 - `audio-geometry` — reusable 2D geometry and localization constraints.
 - `audio-acquisition` — microphone metadata, arrays, multichannel sources and sample clocks.
-- `audio-dsp` — FFT, DSP pipeline, analysis, diagnostics, spectrogram and stereo-delay logic.
-- `audio-plugin-api` — stable plugin contracts (`AudioAnalyzerPlugin`, `PluginDescriptor`,
-  contribution interfaces). No audio-domain dependencies; never imports concrete plugins or
-  the host application.
-- `audio-experimental-acoustic` — isolated acoustic localization experiments, shipped as a
-  plugin via `AudioAnalyzerPlugin` + `META-INF/services`.
-- `audio-app` — Swing UI, JavaSound/demo wiring, export, plugin host (`PluginManager`,
-  `PluginRegistry`) and the application entry point.
-
-## Extensions and plugins
-
-Audio Analyzer supports optional plugins for domain-specific workflows. Plugins implement
-the stable [`audio-plugin-api`](audio-plugin-api) contracts and are discovered at runtime
-by the host application.
-
-Available plugin documentation:
-
-- [Experimental Acoustic Localization](docs/plugins/acoustic-localization.md)
+- `audio-dsp` — FFT, DSP pipeline, analyzers, diagnostics, spectrogram and stereo-delay logic.
+- `audio-plugin-api` — plugin contracts only.
+- `audio-experimental-acoustic` — isolated acoustic-localization research plugin.
+- `audio-app` — Swing UI, JavaSound/demo wiring, export, plugin host and entry point.
 
 ## Documentation
 
-- [Architecture](ARCHITECTURE.md) — layered architecture, packages, design choices, capture
-  lifecycle, extension points.
-- [QA findings & technical debt](docs/QA-FINDINGS.md) — current QA-pass summary, known doc/code
-  drift items and prioritized follow-ups.
-- [Contributing guide](docs/contributing/README.md) — where stable APIs vs experiments live,
-  how to add a new analyzer or DSP experiment safely.
-- [Migration notes](docs/MIGRATION.md) — moving from the legacy `WaveformModel`-centric API to
-  the new platform.
-- [Audio configuration & threading](docs/audio-and-threading.md) — capture parameters, threading
-  model, performance notes, logging.
-- [Development](docs/development.md) — build, code style, CI, headless testing, JMH benchmarks,
-  contributing.
-- [Quality gates & coverage](docs/quality.md) — current gates, hardening roadmap, coverage
-  targets.
-- [Feature guides](docs/features/README.md) — oscilloscope-style waveform trigger, spectrum peak
-  hold / averaging, recording & replay, A/B comparison.
-- [Stereo localization](docs/use-cases/stereo-localization.md) — what stereo time-delay analysis
-  can and cannot infer, microphone spacing, cross-correlation and demo usage.
-- [Experimental acoustic localization architecture](docs/architecture/experimental-acoustic-localization.md) —
-  module boundaries for reusable core APIs versus research plugin code.
-- [Acoustic localization plugin](docs/plugins/acoustic-localization.md) — plugin summary, setup,
-  UI integration and limitations.
-- [Roadmap](ROADMAP.md) — planned features and next issues.
-
-## Project status
-
-This repository is best read as **a reusable Java audio/DSP laboratory with optional
-plugin-based domain extensions**, not a finished production tracking platform:
-
-- The capture, ring-buffer, DSP-pipeline, FFT, spectrum, RMS/peak, stereo-delay, spectrogram,
-  rule-based diagnosis and Swing visualization layers are **stable infrastructure** with unit
-  tests and architecture-boundary tests.
-- Domain-specific workflows stay in optional plugins and are intentionally isolated from stable
-  modules.
-- Quality gates are reporting-only today; see [docs/quality.md](docs/quality.md) for the
-  hardening roadmap.
-
-See [docs/QA-FINDINGS.md](docs/QA-FINDINGS.md) for a current list of remaining technical debt.
+- [Architecture](ARCHITECTURE.md)
+- [Quality gates & coverage](docs/quality.md)
+- [QA findings & technical debt](docs/QA-FINDINGS.md)
+- [Development](docs/development.md)
+- [Feature guides](docs/features/README.md)
+- [Stereo localization](docs/use-cases/stereo-localization.md)
+- [Acoustic localization plugin](docs/plugins/acoustic-localization.md)
+- [Roadmap](ROADMAP.md)
 
 ## License
 
