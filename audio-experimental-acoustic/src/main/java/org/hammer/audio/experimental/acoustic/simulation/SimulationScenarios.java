@@ -21,6 +21,8 @@ import org.hammer.audio.geometry.Vector2;
  *       frequencies are close enough to challenge naive single-peak trackers.
  *   <li>{@link #noisyRoom()} — single source with significant background noise.
  *   <li>{@link #movingSource()} — one source travelling across the room with constant velocity.
+ *   <li>{@link #movingAcrossArray()} — one source travelling laterally across the array.
+ *   <li>{@link #twoMovingSources()} — two tones with distinct velocities.
  *   <li>{@link #reflectedEnvironment()} — single source with wall reflections enabled.
  * </ul>
  */
@@ -82,6 +84,44 @@ public final class SimulationScenarios {
         4L);
   }
 
+  /** One source moving primarily toward the array for Doppler validation. */
+  public static Scenario movingTowardArray() {
+    return new Scenario(
+        "moving-toward-array",
+        new Room2D(3.0, 2.0, 0.0, 0.0),
+        defaultArray(),
+        List.of(new SoundEmitter2D(new Vector2(1.5, 1.8), new Vector2(0.0, -2.0), 700.0, 0.5)),
+        SAMPLE_RATE,
+        0.5,
+        6L);
+  }
+
+  /** One source moving laterally across the array. */
+  public static Scenario movingAcrossArray() {
+    return new Scenario(
+        "moving-across-array",
+        new Room2D(3.0, 2.0, 0.0, 0.0),
+        defaultArray(),
+        List.of(new SoundEmitter2D(new Vector2(0.6, 1.0), new Vector2(2.0, 0.0), 760.0, 0.5)),
+        SAMPLE_RATE,
+        0.5,
+        7L);
+  }
+
+  /** Two moving sources with different frequencies and velocities. */
+  public static Scenario twoMovingSources() {
+    return new Scenario(
+        "two-moving-sources",
+        new Room2D(3.0, 2.0, 0.0, 0.0),
+        defaultArray(),
+        List.of(
+            new SoundEmitter2D(new Vector2(0.8, 1.0), new Vector2(1.4, 0.0), 620.0, 0.45),
+            new SoundEmitter2D(new Vector2(2.2, 1.4), new Vector2(-0.8, -0.4), 840.0, 0.45)),
+        SAMPLE_RATE,
+        0.5,
+        8L);
+  }
+
   /** Single source with reflective walls (specular x-axis reflection in the simulator). */
   public static Scenario reflectedEnvironment() {
     return new Scenario(
@@ -97,7 +137,14 @@ public final class SimulationScenarios {
   /** All bundled scenarios in canonical order. */
   public static List<Scenario> all() {
     return List.of(
-        singleSource(), twoCloseFrequencies(), noisyRoom(), movingSource(), reflectedEnvironment());
+        singleSource(),
+        twoCloseFrequencies(),
+        noisyRoom(),
+        movingSource(),
+        movingTowardArray(),
+        movingAcrossArray(),
+        twoMovingSources(),
+        reflectedEnvironment());
   }
 
   /** Default 4-microphone square array spanning roughly 30 cm, centered near (1.5, 0.1). */

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import org.hammer.audio.experimental.acoustic.tracking.SourceTracker.Observation;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 import org.junit.jupiter.api.Test;
 
 class SourceTrackerTest {
@@ -81,6 +82,54 @@ class SourceTrackerTest {
         tracker.update(0, 0.0, List.of(new Observation(800.0, new Vector2(0.0, 0.0))));
     assertEquals(1, tracks.size());
     assertEquals(0, tracks.get(0).id(), "ids restart from 0 after reset");
+  }
+
+  @Test
+  void storesDopplerVelocityAndObservedFrequency() {
+    SourceTracker tracker = new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+
+    List<TrackedSource> tracks =
+        tracker.update(
+            0,
+            0.0,
+            List.of(
+                new Observation(
+                    600.0, 604.0, new Vector2(1.0, 1.0), new Vector3(0.5, -0.25, 0.0), 2.0, 0.0)));
+
+    assertEquals(604.0, tracks.get(0).observedFrequencyHz());
+    assertEquals(2.0, tracks.get(0).radialVelocityMetersPerSecond());
+    assertEquals(0.5, tracks.get(0).velocityMetersPerSecond3d().x());
+    assertEquals(-0.25, tracks.get(0).velocityMetersPerSecond().y());
+    assertEquals(1.0, tracks.get(0).dopplerVelocityWeight());
+  }
+
+  @Test
+  void highFrequencyVarianceReducesDopplerInfluenceAndConfidence() {
+    SourceTracker lowVarianceTracker =
+        new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+    SourceTracker highVarianceTracker =
+        new SourceTracker(20.0, 3, 0.5, 0.04, 1.0, 1.0, 0.8, 0.4, 1.0);
+
+    lowVarianceTracker.update(
+        0,
+        0.0,
+        List.of(
+            new Observation(
+                600.0, 600.0, new Vector2(0.0, 0.0), new Vector3(10.0, 0.0, 0.0), 1.0, 0.0)));
+    highVarianceTracker.update(
+        0,
+        0.0,
+        List.of(
+            new Observation(
+                600.0, 600.0, new Vector2(0.0, 0.0), new Vector3(10.0, 0.0, 0.0), 1.0, 100.0)));
+
+    TrackedSource lowVariance = lowVarianceTracker.snapshot().get(0);
+    TrackedSource highVariance = highVarianceTracker.snapshot().get(0);
+
+    assertTrue(highVariance.dopplerVelocityWeight() < lowVariance.dopplerVelocityWeight());
+    assertTrue(
+        highVariance.velocityMetersPerSecond3d().x() < lowVariance.velocityMetersPerSecond3d().x());
+    assertTrue(highVariance.confidence() < lowVariance.confidence());
   }
 
   @Test

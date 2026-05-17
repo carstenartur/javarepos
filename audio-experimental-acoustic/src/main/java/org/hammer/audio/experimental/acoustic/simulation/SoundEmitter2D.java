@@ -28,4 +28,12 @@ public record SoundEmitter2D(
   public double sampleAt(double seconds) {
     return amplitude * Math.sin(2.0 * Math.PI * frequencyHz * seconds);
   }
+
+  /** Sample emitted at simulation time {@code seconds} with a Doppler-shifted frequency. */
+  public double sampleAt(double seconds, double observedFrequencyHz) {
+    if (!(observedFrequencyHz > 0.0) || !Double.isFinite(observedFrequencyHz)) {
+      throw new IllegalArgumentException("observedFrequencyHz must be finite and > 0");
+    }
+    return amplitude * Math.sin(2.0 * Math.PI * observedFrequencyHz * seconds);
+  }
 }

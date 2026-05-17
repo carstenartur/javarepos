@@ -2,6 +2,7 @@ package org.hammer.audio.experimental.acoustic.tracking;
 
 import java.util.Objects;
 import org.hammer.audio.geometry.Vector2;
+import org.hammer.audio.geometry.Vector3;
 
 /**
  * One acoustic source tracked over time.
@@ -14,11 +15,46 @@ import org.hammer.audio.geometry.Vector2;
 public record TrackedSource(
     int id,
     double frequencyHz,
+    double observedFrequencyHz,
     Vector2 positionMeters,
     Vector2 velocityMetersPerSecond,
+    Vector3 velocityMetersPerSecond3d,
+    double radialVelocityMetersPerSecond,
+    double frequencyVarianceHzSquared,
     double confidence,
     long lastUpdatedFrameIndex,
-    int observationCount) {
+    int observationCount,
+    double dopplerVelocityWeight,
+    double radialVelocityStdDevMetersPerSecond) {
+
+  /** Create a source snapshot without explicit Doppler diagnostics. */
+  public TrackedSource(
+      int id,
+      double frequencyHz,
+      double observedFrequencyHz,
+      Vector2 positionMeters,
+      Vector2 velocityMetersPerSecond,
+      Vector3 velocityMetersPerSecond3d,
+      double radialVelocityMetersPerSecond,
+      double frequencyVarianceHzSquared,
+      double confidence,
+      long lastUpdatedFrameIndex,
+      int observationCount) {
+    this(
+        id,
+        frequencyHz,
+        observedFrequencyHz,
+        positionMeters,
+        velocityMetersPerSecond,
+        velocityMetersPerSecond3d,
+        radialVelocityMetersPerSecond,
+        frequencyVarianceHzSquared,
+        confidence,
+        lastUpdatedFrameIndex,
+        observationCount,
+        0.0,
+        0.0);
+  }
 
   /** Validate fields. */
   public TrackedSource {
@@ -28,13 +64,33 @@ public record TrackedSource(
     if (!Double.isFinite(frequencyHz) || frequencyHz < 0.0) {
       throw new IllegalArgumentException("frequencyHz must be finite and >= 0");
     }
+    if (!Double.isFinite(observedFrequencyHz) || observedFrequencyHz < 0.0) {
+      throw new IllegalArgumentException("observedFrequencyHz must be finite and >= 0");
+    }
     Objects.requireNonNull(positionMeters, "positionMeters");
     Objects.requireNonNull(velocityMetersPerSecond, "velocityMetersPerSecond");
+    Objects.requireNonNull(velocityMetersPerSecond3d, "velocityMetersPerSecond3d");
+    if (!Double.isFinite(radialVelocityMetersPerSecond)) {
+      throw new IllegalArgumentException("radialVelocityMetersPerSecond must be finite");
+    }
+    if (!Double.isFinite(frequencyVarianceHzSquared) || frequencyVarianceHzSquared < 0.0) {
+      throw new IllegalArgumentException("frequencyVarianceHzSquared must be finite and >= 0");
+    }
     if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
       throw new IllegalArgumentException("confidence must be finite and in [0,1]");
     }
     if (observationCount < 1) {
       throw new IllegalArgumentException("observationCount must be >= 1");
+    }
+    if (!Double.isFinite(dopplerVelocityWeight)
+        || dopplerVelocityWeight < 0.0
+        || dopplerVelocityWeight > 1.0) {
+      throw new IllegalArgumentException("dopplerVelocityWeight must be finite and in [0,1]");
+    }
+    if (!Double.isFinite(radialVelocityStdDevMetersPerSecond)
+        || radialVelocityStdDevMetersPerSecond < 0.0) {
+      throw new IllegalArgumentException(
+          "radialVelocityStdDevMetersPerSecond must be finite and >= 0");
     }
   }
 }

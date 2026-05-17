@@ -94,18 +94,55 @@ public final class SimulatedMicrophoneArraySource implements MultiChannelAudioSo
       Vector2 emitterPosition = emitter.positionAt(receiverTimeSeconds);
       double distance = Math.max(0.01, microphonePosition.distanceTo(emitterPosition));
       double travelSeconds = distance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
-      sample += emitter.sampleAt(receiverTimeSeconds - travelSeconds) / distance;
+      double observedFrequency =
+          observedFrequencyAt(emitter, microphonePosition, receiverTimeSeconds);
+      sample += emitter.sampleAt(receiverTimeSeconds - travelSeconds, observedFrequency) / distance;
       if (room.reflectionGain() > 0.0) {
         Vector2 reflected =
             new Vector2(room.widthMeters() - emitterPosition.x(), emitterPosition.y());
         double reflectedDistance = Math.max(0.01, microphonePosition.distanceTo(reflected));
         double reflectedTravel = reflectedDistance / DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND;
+        Vector2 reflectedVelocity =
+            new Vector2(
+                -emitter.velocityMetersPerSecond().x(), emitter.velocityMetersPerSecond().y());
+        double reflectedObservedFrequency =
+            observedFrequencyAt(
+                reflected, reflectedVelocity, emitter.frequencyHz(), microphonePosition);
         sample +=
             room.reflectionGain()
-                * emitter.sampleAt(receiverTimeSeconds - reflectedTravel)
+                * emitter.sampleAt(
+                    receiverTimeSeconds - reflectedTravel, reflectedObservedFrequency)
                 / reflectedDistance;
       }
     }
     return Math.max(-1.0, Math.min(1.0, sample));
+  }
+
+  /**
+   * Doppler-shifted frequency at a microphone; positive radial velocity means motion toward mic.
+   */
+  public static double observedFrequencyAt(
+      SoundEmitter2D emitter, Vector2 microphonePosition, double receiverTimeSeconds) {
+    Vector2 emitterPosition = emitter.positionAt(receiverTimeSeconds);
+    return observedFrequencyAt(
+        emitterPosition,
+        emitter.velocityMetersPerSecond(),
+        emitter.frequencyHz(),
+        microphonePosition);
+  }
+
+  private static double observedFrequencyAt(
+      Vector2 sourcePosition,
+      Vector2 sourceVelocity,
+      double sourceFrequencyHz,
+      Vector2 microphonePosition) {
+    Vector2 sourceToMicrophone = microphonePosition.minus(sourcePosition).normalized();
+    double radialTowardMicrophone = sourceVelocity.dot(sourceToMicrophone);
+    if (radialTowardMicrophone >= DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND) {
+      throw new IllegalArgumentException("radial source speed must be below the speed of sound");
+    }
+    return sourceFrequencyHz
+        * (DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND
+            / (DEFAULT_SPEED_OF_SOUND_METERS_PER_SECOND - radialTowardMicrophone));
   }
 }
