@@ -21,7 +21,7 @@ this requirement include:
 In all cases the host audio framework must deliver the channels as a single multi-channel
 stream so that the platform receives one `AudioBlock` per frame with `channels = N`.
 
-## Not supported: independent USB microphones
+## Independent USB microphones: experimental only with calibration
 
 USB microphones each contain their own crystal and ADC. Even nominally identical devices
 drift relative to each other at typical rates of a few PPM (parts per million), which
@@ -31,10 +31,15 @@ accumulates to:
 - multi-millisecond drift over a few minutes — orders of magnitude larger than the
   inter-microphone delays the pipeline tries to estimate.
 
-Two arbitrary USB microphones are therefore unsuitable for TDOA work. They are still useful
-for non-TDOA demos (frequency tracking on a single channel, sample-rate calibration of the
-simulator), but `TdoaEstimator` and downstream beamforming will produce arbitrary results
-on such streams.
+Two arbitrary USB microphones are therefore unsuitable for **precise** TDOA work unless repeated
+calibration or explicit synchronization is added. They remain useful for non-TDOA demos
+(frequency tracking on a single channel, sample-rate calibration of the simulator), and they can be
+used experimentally for TDOA only if calibration beacons, drift estimation and residual-error checks
+are part of the workflow. Without those controls, `TdoaEstimator` and downstream beamforming may
+produce arbitrary results.
+
+See [Physics and latency limits](physics-and-latency-limits.md) for the underlying path-difference,
+drift, ambiguity and AR-latency bounds that motivate this guidance.
 
 ## Timing precision requirements
 

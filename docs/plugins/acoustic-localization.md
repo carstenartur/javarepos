@@ -26,6 +26,7 @@ is **not** a production mosquito detector, species classifier or validated track
 ## Important limitations
 
 - no guaranteed mosquito detection or species classification;
+- no guaranteed exact AR overlay; any display-time prediction is model-dependent;
 - synthetic validation does not prove real-world reliability;
 - reflections, noise, microphone mismatch and multiple weak sources can dominate results;
 - accurate TDOA requires calibrated geometry and a shared sample clock across channels;
@@ -35,7 +36,7 @@ is **not** a production mosquito detector, species classifier or validated track
 ## Detailed documentation
 
 - [Plugin details, pipeline and boundaries](acoustic-localization/README.md)
+- [Physics and latency limits](acoustic-localization/physics-and-latency-limits.md)
 - [Synchronization requirements](acoustic-localization/synchronization.md)
 - [Tracking pipeline](acoustic-localization/tracking.md)
 - [Research notes and datasets](acoustic-localization/research/README.md)
-
