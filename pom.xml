@@ -37,7 +37,7 @@
 
     <junit.version>6.1.0</junit.version>
     <mockito.version>5.23.0</mockito.version>
-    <flatlaf.version>3.6</flatlaf.version>
+    <flatlaf.version>3.7.1</flatlaf.version>
 
     <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
     <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
