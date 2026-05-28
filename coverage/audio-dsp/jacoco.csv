@@ -1,8 +1,6 @@
 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
-Audio Analyzer DSP and Analysis,org.hammer.audio.recording,AudioBlockRecordingWriter,6,155,2,10,2,37,2,11,0,7
-Audio Analyzer DSP and Analysis,org.hammer.audio.recording,AudioBlockRecordingReader,26,192,8,16,6,42,9,10,1,6
-Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisType,0,51,0,0,0,9,0,1,0,1
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisAnalyzer.DriftResult,0,12,0,0,0,1,0,1,0,1
+Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisType,0,51,0,0,0,9,0,1,0,1
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisAnalyzer,125,1190,50,105,29,235,47,54,0,23
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisAnalyzer.LevelStats,0,12,0,0,0,1,0,1,0,1
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisAnalyzer.HumResult,0,12,0,0,0,1,0,1,0,1
@@ -10,6 +8,8 @@ Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisAnalyzer.Bur
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisFinding,15,62,3,3,4,13,6,5,3,5
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisSeverity,0,21,0,0,0,4,0,1,0,1
 Audio Analyzer DSP and Analysis,org.hammer.audio.diagnosis,DiagnosisSnapshot,39,27,4,0,10,8,7,3,5,3
+Audio Analyzer DSP and Analysis,org.hammer.audio.recording,AudioBlockRecordingWriter,6,155,2,10,2,37,2,11,0,7
+Audio Analyzer DSP and Analysis,org.hammer.audio.recording,AudioBlockRecordingReader,26,192,8,16,6,42,9,10,1,6
 Audio Analyzer DSP and Analysis,org.hammer.audio,DemoSignalType,70,0,0,0,13,0,3,0,3,0
 Audio Analyzer DSP and Analysis,org.hammer.audio.dsp,DSPPipeline,11,86,0,4,2,15,1,8,1,6
 Audio Analyzer DSP and Analysis,org.hammer.audio.dsp,DSPProcessor,0,4,0,0,0,1,0,2,0,2

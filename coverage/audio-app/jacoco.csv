@@ -5,12 +5,12 @@ Audio Analyzer App,org.hammer,AudioAnalyseFrame.InputMode,15,0,0,0,3,0,1,0,1,0
 Audio Analyzer App,org.hammer,AudioAnalyseFrame.AudioDeviceItem,19,0,2,0,4,0,3,0,2,0
 Audio Analyzer App,org.hammer,SpectrogramPanel,730,0,64,0,145,0,46,0,14,0
 Audio Analyzer App,org.hammer,PhaseDiagramCanvas,406,24,18,0,70,6,14,3,5,3
-Audio Analyzer App,org.hammer,SpectrumPanel,718,170,68,16,152,46,54,8,16,4
+Audio Analyzer App,org.hammer,SpectrumPanel,715,173,68,16,151,47,53,9,15,5
 Audio Analyzer App,org.hammer,PhaseDiagramPanel,13,35,2,0,3,8,2,2,1,2
 Audio Analyzer App,org.hammer,WaveformPanel,918,74,82,2,168,19,55,4,13,4
 Audio Analyzer App,org.hammer,AudioAnalyseFrame.SwingAction,19,0,0,0,6,0,2,0,2,0
-Audio Analyzer App,org.hammer,WaveformPanel.new ComponentAdapter() {...},20,45,1,3,1,8,1,3,0,2
 Audio Analyzer App,org.hammer,AudioAnalyseFrame,3037,0,167,0,701,0,149,0,64,0
+Audio Analyzer App,org.hammer,WaveformPanel.new ComponentAdapter() {...},20,45,1,3,1,8,1,3,0,2
 Audio Analyzer App,org.hammer,AudioAnalyseFrame.new ChangeListener() {...},31,0,2,0,7,0,3,0,2,0
 Audio Analyzer App,org.hammer.audio,DemoAudioCaptureService,65,276,13,15,24,66,17,14,6,10
 Audio Analyzer App,org.hammer.audio,RecordingTap,174,0,16,0,52,0,19,0,11,0
